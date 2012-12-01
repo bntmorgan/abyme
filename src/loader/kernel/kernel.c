@@ -97,6 +97,7 @@ void kernel_main(uint32_t magic, uint32_t *address) {
 
   /*
    * TODO: make 0x200000 a macro!
+   * TODO: instead of 2 pages, use reallocation_size!
    */
   vmem_setup(&vmm_info->vmem_info, mod_dest, 0x200000, 2);
 
