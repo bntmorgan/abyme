@@ -100,6 +100,9 @@ void printk(char *format, ...) {
       } else if (c == 's') {
         int8_t *string = __builtin_va_arg(values, int8_t *);
         printk_string(string, minimum_length, padding);
+      } else if (c == 'c') {
+        int32_t character = __builtin_va_arg(values, int32_t);
+        scr_print((uint8_t) character);
       } else {
         scr_print(c);
       }
