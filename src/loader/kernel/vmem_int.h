@@ -5,7 +5,7 @@
 
 #include "include/vmem.h"
 
-void vmem_setup(vmem_info_t *vmem_info, uint32_t physical_mod_dest);
+void vmem_setup(vmem_info_t *vmem_info, uint32_t physical_mod_dest, uint32_t virtual_mod_dest, uint32_t mod_dest_nb_pages_2MB);
 
 void vmem_print_info(void);
 

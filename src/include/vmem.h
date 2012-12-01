@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define VMEM_PDPT_PS_1G 128
+
 typedef struct {
   uint32_t base;
   uint32_t limit;

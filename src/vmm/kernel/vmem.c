@@ -40,6 +40,9 @@ void vmem_get_gdt_desc(uint8_t *gdt_desc, gdt_entry_t *entry) {
   entry->access = (*((uint8_t *)  (gdt_desc + 5)) <<  0) & 0x00ff;
 }
 
+/*
+ * TODO: find a way to make this function common (cr3 size is 32 bits for loader and 64 bits for vmm).
+ */
 void vmem_print_info(void) {
   /*
    * Print informations on GDT.
@@ -68,15 +71,22 @@ void vmem_print_info(void) {
     if (PML4[i] != 0) {
       INFO("  %03d: %08x%08x\n", i, (uint32_t) (PML4[i] >> 32), (uint32_t) PML4[i]);
       INFO("    PDPT at %08x\n", PML4[i] & 0xffffff00);
-      uint64_t *PDPT = (uint64_t *) ((uint64_t) (PML4[i] & 0xffffff00));
+      uint64_t *PDPT = (uint64_t *) (PML4[i] & 0xffffffffffffff00);
       for (uint32_t j = 0; j < 512; j++) {
         if (PDPT[j] != 0) {
-          INFO("    %03d: %08x%08x\n", j, (uint32_t) (PDPT[j] >> 32), (uint32_t) PDPT[j]);
-          INFO("      PD at %08x\n", PDPT[j] & 0xffffff00);
-          uint64_t *PD = (uint64_t *) ((uint64_t) (PDPT[j] & 0xffffff00));
-          for (uint32_t k = 0; k < 512; k++) {
-            if (PD[k] != 0) {
-              INFO("      %03d: %08x%08x\n", k, (uint32_t) (PD[k] >> 32), (uint32_t) PD[k]);
+          if ((PDPT[j] & VMEM_PDPT_PS_1G) != 0) {
+            /*
+             * Will print too many informations:
+             * INFO("    %03d: %08x%08x (1G page)\n", j, (uint32_t) (PDPT[j] >> 32), (uint32_t) PDPT[j]);
+             */
+          } else {
+            INFO("    %03d: %08x%08x\n", j, (uint32_t) (PDPT[j] >> 32), (uint32_t) PDPT[j]);
+            INFO("      PD at %08x\n", PDPT[j] & 0xffffff00);
+            uint64_t *PD = (uint64_t *) (PDPT[j] & 0xffffffffffffff00);
+            for (uint32_t k = 0; k < 512; k++) {
+              if (PD[k] != 0) {
+                INFO("      %03d: %08x%08x\n", k, (uint32_t) (PD[k] >> 32), (uint32_t) PD[k]);
+              }
             }
           }
         }

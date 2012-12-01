@@ -95,7 +95,10 @@ void kernel_main(uint32_t magic, uint32_t *address) {
   kernel_memory_allocation();
   mod_reallocation((uint8_t *) mod_dest);
 
-  vmem_setup(&vmm_info->vmem_info, mod_dest);
+  /*
+   * TODO: make 0x200000 a macro!
+   */
+  vmem_setup(&vmm_info->vmem_info, mod_dest, 0x200000, 2);
 
   kernel_copy_info(&vmm_info->kernel_info);
   mod_copy_info(&vmm_info->mod_info);
