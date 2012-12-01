@@ -83,6 +83,14 @@ void vmem_setup_gdt(vmem_info_t *vmem_info) {
   cpu_write_gdt((uint32_t) &gdt_ptr, 0x8, 0x18);
 }
 
+/*
+ * - All the memory but the vmm memory is mapped with 1 GB pages using identity mapping.
+ *   See "Intel 64 and IA-32 Architectures Software Developer's Manual", figure 4.10.
+ * - The Page-Directory associated to the virtual memory of the vmm is configured using
+ *   identity mapping with 2 MB pages for all memory but the vmm memory.
+ *   See "Intel 64 and IA-32 Architectures Software Developer's Manual", figure 4.9.
+ * - 2 MB pages of the vmm memory are mapped to vmm physical memory.
+ */
 void vmem_setup_paging(vmem_info_t *vmem_info, uint32_t physical_mod_dest, uint32_t virtual_mod_dest, uint32_t mod_dest_nb_pages_2MB) {
   /*
    * We use identity mapping for the vmm in order to use the physical addresses for gdt and others.
