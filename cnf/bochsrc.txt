@@ -5,12 +5,13 @@ display_library: x
 memory: host=32, guest=32
 #romimage: file="/usr/share/bochs/BIOS-bochs-latest"
 #vgaromimage: file="/usr/share/bochs/VGABIOS-lgpl-latest"
-boot: disk
+boot: floppy, disk
 floppy_bootsig_check: disabled=0
 # no floppya
 # no floppyb
+floppya: 1_44=bin/floppy.img, status=inserted
 ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
-ata0-master: type=disk, mode=flat, translation=auto, path="bin/usb.img", cylinders=32, heads=16, spt=63, biosdetect=auto, model="Generic 1234"
+#ata0-master: type=disk, mode=flat, translation=auto, path="bin/debian-3.0r0.img", cylinders=1024, heads=16, spt=63, biosdetect=auto, model="Generic 1234"
 ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15
 ata2: enabled=0
 ata3: enabled=0
