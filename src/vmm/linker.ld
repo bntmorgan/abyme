@@ -25,5 +25,12 @@ SECTIONS
     *(.rodata*)
   }
 
+  .text ALIGN (0x1000) :
+  {
+    trampoline_start = .;
+    INCLUDE "trampoline_bytes.ld" ;
+    trampoline_end = .;
+  }
+
   kernel_end = .;
 }

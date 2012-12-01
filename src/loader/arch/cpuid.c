@@ -160,6 +160,10 @@ void cpuid_read_8xx1_edx(uint32_t value) {
 #undef HANDLE
 }
 
+uint8_t cpuid_has_local_apic(void) {
+  return cpuid_0xx1_edx.intel.apic;
+}
+
 uint8_t cpuid_is_long_mode_supported(void) {
   return cpuid_8xx1_edx.intel.intel_64;
 }

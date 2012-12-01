@@ -11,4 +11,6 @@ uint8_t cpuid_is_pae_supported(void);
 
 uint8_t cpuid_is_vmx_supported(void);
 
+uint8_t cpuid_has_local_apic(void);
+
 #endif

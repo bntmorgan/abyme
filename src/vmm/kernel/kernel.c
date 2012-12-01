@@ -48,6 +48,10 @@ void kernel_main(vmm_info_t *vmm_info) {
   vmem_print_info();
   pmem_print_info(&vmm_info->pmem_mmap);
   /*
+   * Enables core/cpu.
+   */
+  smp_setup();
+  /*
    * Enable virtualisation.
    * See Volume 3, Section 23.7 of intel documentation.
    * See Volume 3, Section 31.5 of intel documentation.

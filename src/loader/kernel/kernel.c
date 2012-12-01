@@ -68,6 +68,12 @@ void kernel_check(void) {
     ERROR("vmx not supported\n");
   }
   /*
+   * Needed to configure smp.
+   */
+  if (cpuid_has_local_apic() == 0) {
+    ERROR("no local apic\n");
+  }
+  /*
    * TODO: BIOS can deactivate VMX instruction.
    * Maybe we need to test using MSR IA32_FEATURE_CONTROL 0x3A
    * See: MODEL-SPECIFIC REGISTERS (MSRS), Chapter 35, Table 35-2.
