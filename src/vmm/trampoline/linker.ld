@@ -1,4 +1,4 @@
-ENTRY(main);
+ENTRY(start16);
 
 SECTIONS
 {
@@ -22,6 +22,10 @@ SECTIONS
   .sig : AT(0x1fe)
   {
     SHORT(0xaa55);
+  }
+  .stack : AT(0x900)
+  {
+    . += 0x100;
   }
   /DISCARD/ :
   {

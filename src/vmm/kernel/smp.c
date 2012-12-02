@@ -297,6 +297,16 @@ void smp_activate_apic(void) {
   msr_write(MSR_IA32_APIC_BASE, eax | 0x800, edx);
 }
 
+void smp_ap_fcn(void) {
+  uint64_t p = 0;
+  for (uint16_t k = 0; k < 0x40; k++)
+    for (uint16_t i = 0; i < 0xffff; i++)
+      p += i;
+
+  printk("I am an AP! %08x%08x\n", (uint32_t) (p >> 32), (uint32_t) p);
+  while (1);
+}
+
 void smp_prepare_trampoline(void) {
   uint8_t *ptr_start = &trampoline_start;
   uint8_t *ptr_end = &trampoline_end;
@@ -306,32 +316,44 @@ void smp_prepare_trampoline(void) {
     ptr_start++;
     ptr_dst++;
   }
-  
-  ptr_start = (uint8_t *) (SMP_AP_VECTOR << 12);
-  ptr_end = (uint8_t *) (((uint64_t) &trampoline_end) - ((uint64_t) &trampoline_start) + 0x1000);
-  uint8_t i = 0;
-  while (ptr_start < ptr_end) {
-    if (i % 16 == 0) {
-      printk("\n");
-    }
-    printk("%02x ", *ptr_start);
-    ptr_start++;
-    i++;
-  }
-  printk("\n");
+  /*
+   * TODO: add a signature into the trampoline to identify the header!
+   */
+  uint64_t *trampoline_cr3 = (uint64_t *) ((uint8_t *) ((SMP_AP_VECTOR << 12) + 12));
+  uint8_t *trampoline_gdt = ((uint8_t *) ((SMP_AP_VECTOR << 12) + 4));
+  uint64_t *trampoline_fcn = ((uint8_t *) ((SMP_AP_VECTOR << 12) + 20));
+  cpu_read_gdt(trampoline_gdt);
+  cpu_read_cr3(trampoline_cr3);
+  *trampoline_fcn = (uint64_t) smp_ap_fcn;
+  INFO("trampoline cr3: %08x%08x\n", (uint32_t) (*trampoline_cr3 >> 32), (uint32_t) *trampoline_cr3);
 }
 
-void smp_print_trampoline(void) {
-  uint8_t *ptr_start = &trampoline_start;
-  uint8_t *ptr_end = &trampoline_end;
-  uint8_t i = 0;
+void smp_print_trampoline(uint8_t *area) {
+  uint8_t *ptr_start = area;
+  uint8_t *ptr_end = (uint8_t *) (((uint64_t) &trampoline_end) - ((uint64_t) &trampoline_start) + area);
+  uint8_t line_size = 16;
+  uint8_t previous_line_hidden = 0;
   while (ptr_start < ptr_end) {
-    if (i % 16 == 0) {
-      printk("\n");
+    uint8_t must_print_line = 0;
+    for (uint8_t j = 0; j < line_size && (&ptr_start[j] < ptr_end); j++) {
+      if (ptr_start[j] != 0x0) {
+        must_print_line = 1;
+        break;
+      }
     }
-    printk("%02x ", *ptr_start);
-    ptr_start++;
-    i++;
+    if (must_print_line == 1) {
+      if (previous_line_hidden == 1) {
+        printk("...\n");
+      }
+      previous_line_hidden = 0;
+      for (uint8_t j = 0; j < line_size && (&ptr_start[j] < ptr_end); j++) {
+        printk("%02x ", ptr_start[j]);
+      }
+      printk("\n");
+    } else {
+      previous_line_hidden = 1;
+    }
+    ptr_start = &ptr_start[line_size];
   }
   printk("\n");
 }
@@ -343,8 +365,9 @@ void smp_setup(void) {
   smp_print_info();
   smp_default_setup();
   smp_activate_apic();
-  smp_print_trampoline();
+  smp_print_trampoline((uint8_t *) &trampoline_start);
   smp_prepare_trampoline();
+  smp_print_trampoline((uint8_t *) (SMP_AP_VECTOR << 12));
   smp_search_mp_configuration_table_header();
   if (smp_mp_configuration_table_header != 0) {
     smp_print_mp_configuration_table_header();
