@@ -321,7 +321,7 @@ void smp_prepare_trampoline(void) {
    */
   uint64_t *trampoline_cr3 = (uint64_t *) ((uint8_t *) ((SMP_AP_VECTOR << 12) + 12));
   uint8_t *trampoline_gdt = ((uint8_t *) ((SMP_AP_VECTOR << 12) + 4));
-  uint64_t *trampoline_fcn = ((uint8_t *) ((SMP_AP_VECTOR << 12) + 20));
+  uint64_t *trampoline_fcn = ((uint64_t *) ((SMP_AP_VECTOR << 12) + 20));
   cpu_read_gdt(trampoline_gdt);
   cpu_read_cr3(trampoline_cr3);
   *trampoline_fcn = (uint64_t) smp_ap_fcn;
