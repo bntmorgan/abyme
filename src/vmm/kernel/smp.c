@@ -286,15 +286,15 @@ void smp_activate_ap(void) {
 void smp_print_info(void) {
   uint32_t eax;
   uint32_t edx;
-  msr_read(MSR_IA32_APIC_BASE, &eax, &edx);
+  msr_read(MSR_ADDRESS_IA32_APIC_BASE, &eax, &edx);
   INFO("apic physical address: %08x%08x\n", edx, eax & 0xfffff000);
 }
 
 void smp_activate_apic(void) {
   uint32_t eax;
   uint32_t edx;
-  msr_read(MSR_IA32_APIC_BASE, &eax, &edx);
-  msr_write(MSR_IA32_APIC_BASE, eax | 0x800, edx);
+  msr_read(MSR_ADDRESS_IA32_APIC_BASE, &eax, &edx);
+  msr_write(MSR_ADDRESS_IA32_APIC_BASE, eax | 0x800, edx);
 }
 
 void smp_prepare_trampoline(void) {
