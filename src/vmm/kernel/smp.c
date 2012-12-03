@@ -303,10 +303,10 @@ void smp_ap_fcn(void) {
     for (uint16_t i = 0; i < 0xffff; i++)
       p += i;
   printk("I am an AP! %08x%08x\n", (uint32_t) (p >> 32), (uint32_t) p);
-  uint32_t counter_x = 0;
+  uint32_t counter_x = 74;
   uint32_t counter_y = 0;
   uint32_t nb_columns = 80;
-  uint16_t *pos = (uint16_t *) ((counter_x + counter_y * nb_columns) * sizeof(uint16_t) + 0xb8001);
+  uint16_t *pos = (uint16_t *) ((counter_x + counter_y * nb_columns) * sizeof(uint16_t) + 0xb8000);
   uint16_t number = 0;
   while (1) {
     /*
