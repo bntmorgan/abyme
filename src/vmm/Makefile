@@ -23,6 +23,9 @@ kernel/vmm.t: kernel/vmm.c
 vmm.bin: $(OBJFILES) trampoline/trampoline.bin
 	cat trampoline/trampoline.bin | hexdump -v -e '"BYTE(0x" 1/1 "%02X" ")\n"' > trampoline_bytes.ld
 	$(LD) -T linker.ld -o $@ $(OBJFILES)
- 
+
+trampoline/trampoline.bin: trampoline/trampoline.s
+	make -C trampoline
+
 clean:
 	$(RM) $(OBJFILES) vmm.bin
