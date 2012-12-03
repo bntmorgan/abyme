@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+extern uint64_t vmm_stack;
+
 /* VMCS Encodings */
 enum vmcs_field {
   VIRTUAL_PROCESSOR_ID            = 0x00000000,

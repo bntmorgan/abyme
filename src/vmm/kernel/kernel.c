@@ -15,6 +15,8 @@
 extern uint8_t kernel_end;
 extern uint8_t start;
 
+uint64_t vmm_stack;
+
 void kernel_check(vmm_info_t *vmm_info) {
   /*
    * We make sur the kernel is completly loaded.  It could be incompletly
@@ -48,6 +50,10 @@ void kernel_main(vmm_info_t *vmm_info) {
   vmem_setup(&vmm_info->vmem_info, vmm_info->kernel_info.kernel_physical_start, (uint64_t) &start);
   vmem_print_info();
   pmem_print_info(&vmm_info->pmem_mmap);
+
+  // XXX: Laid.
+  vmm_stack = (uint64_t) vmm_info + sizeof(vmm_info_t);
+
   /*
    * Enables core/cpu.
    */
