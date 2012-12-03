@@ -68,6 +68,10 @@ void cpu_vmxon(uint8_t *region) {
   }
 }
 
+void cpu_vmwrite(uint32_t field, uint32_t value) {
+  __asm__ __volatile__("vmwrite %%rdx, %%rax" : : "d" (field), "a" (value));
+}
+
 void cpu_stop(void) {
   __asm__ __volatile__("cli");
   while (1);

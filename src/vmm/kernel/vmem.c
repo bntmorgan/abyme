@@ -23,7 +23,8 @@ uint64_t vmem_virtual_address_to_physical_address(uint8_t *addr) {
   return ((uint64_t) addr) - vmm_virtual_start + vmm_physical_start;
 }
 
-void vmem_setup(vmem_info_t *vmem_info, uint64_t physical_start, uint64_t virtual_start) {
+void vmem_setup(vmem_info_t *vmem_info __attribute__((unused)),
+    uint64_t physical_start, uint64_t virtual_start) {
   vmm_physical_start = physical_start;
   vmm_virtual_start = virtual_start;
 }
