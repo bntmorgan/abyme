@@ -171,4 +171,6 @@ void vmm_vmxon(void);
 
 void vmm_vmcs_write(uint32_t field, uint32_t value);
 
+void vmm_vm_exit_handler(void);
+
 #endif

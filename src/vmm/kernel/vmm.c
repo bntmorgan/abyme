@@ -133,32 +133,45 @@ void vmm_fill_vmcs_host_state(void) {
   uint32_t eax;
   uint32_t edx;
   uint64_t reg;
+  gdt_lm_ptr_t gdt_ptr, idt_ptr; // TODO: create idt_ptr_t?
 
   /**
    * 24.5: Host-state area.
    */
   cpu_read_cr0(&reg);
-  vmm_vmcs_write(HOST_CR0, (uint32_t) reg);
+  vmm_vmcs_write(HOST_CR0, reg);
   cpu_read_cr3(&reg);
-  vmm_vmcs_write(HOST_CR3, (uint32_t) reg);
+  vmm_vmcs_write(HOST_CR3, reg);
   cpu_read_cr4(&reg);
-  vmm_vmcs_write(HOST_CR4, (uint32_t) reg);
-  vmm_vmcs_write(HOST_RSP, FIXME);
-  vmm_vmcs_write(HOST_RIP, FIXME);
+  vmm_vmcs_write(HOST_CR4, reg);
+  vmm_vmcs_write(HOST_RSP, vmm_stack);
+  vmm_vmcs_write(HOST_RIP, (uint64_t) vmm_vm_exit_handler);
 
-  vmm_vmcs_write(HOST_CS_SELECTOR, FIXME);
-  vmm_vmcs_write(HOST_SS_SELECTOR, FIXME);
-  vmm_vmcs_write(HOST_DS_SELECTOR, FIXME);
-  vmm_vmcs_write(HOST_ES_SELECTOR, FIXME);
-  vmm_vmcs_write(HOST_FS_SELECTOR, FIXME);
-  vmm_vmcs_write(HOST_GS_SELECTOR, FIXME);
-  vmm_vmcs_write(HOST_TR_SELECTOR, FIXME);
+  cpu_read_cs(&reg);
+  vmm_vmcs_write(HOST_CS_SELECTOR, reg & 0xf8);
+  cpu_read_ss(&reg);
+  vmm_vmcs_write(HOST_SS_SELECTOR, reg & 0xf8);
+  cpu_read_ds(&reg);
+  vmm_vmcs_write(HOST_DS_SELECTOR, reg & 0xf8);
+  cpu_read_es(&reg);
+  vmm_vmcs_write(HOST_ES_SELECTOR, reg & 0xf8);
+  cpu_read_fs(&reg);
+  vmm_vmcs_write(HOST_FS_SELECTOR, reg & 0xf8);
+  cpu_read_gs(&reg);
+  vmm_vmcs_write(HOST_GS_SELECTOR, reg & 0xf8);
+  cpu_read_tr(&reg);
+  vmm_vmcs_write(HOST_TR_SELECTOR, reg & 0xf8);
 
-  vmm_vmcs_write(HOST_FS_BASE, FIXME);
-  vmm_vmcs_write(HOST_GS_BASE, FIXME);
-  vmm_vmcs_write(HOST_TR_BASE, FIXME);
-  vmm_vmcs_write(HOST_GDTR_BASE, FIXME);
-  vmm_vmcs_write(HOST_IDTR_BASE, FIXME);
+  cpu_read_gdt((uint8_t*) &gdt_ptr);
+  cpu_read_idt((uint8_t*) &idt_ptr);
+  cpu_read_fs(&reg);
+  vmm_vmcs_write(HOST_FS_BASE, cpu_get_seg_desc_base(gdt_ptr.base, reg));
+  cpu_read_gs(&reg);
+  vmm_vmcs_write(HOST_GS_BASE, cpu_get_seg_desc_base(gdt_ptr.base, reg));
+  cpu_read_tr(&reg);
+  vmm_vmcs_write(HOST_TR_BASE, cpu_get_seg_desc_base(gdt_ptr.base, reg));
+  vmm_vmcs_write(HOST_GDTR_BASE, gdt_ptr.base);
+  vmm_vmcs_write(HOST_IDTR_BASE, idt_ptr.base);
 
   msr_read(MSR_ADDRESS_IA32_SYSENTER_CS, &eax, &edx);
   vmm_vmcs_write(HOST_IA32_SYSENTER_CS, eax);
