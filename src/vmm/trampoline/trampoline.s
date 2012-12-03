@@ -15,8 +15,8 @@ FCN: .long 0
 
 start16_cont:
   /*
-   * Set the stack. The vmm will change the $0x50 in the code with a different
-   * valu$0x0 in order to be thread safe for multi-core (the stacks must not
+   * Set the stack. The vmm will change the $0x50 in this code with a different
+   * value in order to be thread safe for multi-core (the stacks must not
    * overlap).
    */
   mov $0x50, %ax
@@ -24,6 +24,10 @@ start16_cont:
   mov $0xfe, %sp
   /*
    * Change cs:ip in order to have ip = 0 for the first byte of this code.
+   * If this code is loaded at the physical address 0x1000, the address of
+   * the first byte can be 0x100:0x0000 or 0x000:0x10000. We change into
+   * 0x100:0x0000 because the compiler set the addresses relative to the first
+   * byte of this binary (org directive).
    */
   xor %edx, %edx
   xor %ebx, %ebx
@@ -41,7 +45,9 @@ get_address:
   /* ecx == new_cs */
   mov %edx, %ecx
   shr $0x4, %ecx
-  /* Simulate a long jump using long ret. */
+  /*
+   * Simulate a long jump using long ret.
+   */
   push %cx
   pushw $cs_adjusted
   lret

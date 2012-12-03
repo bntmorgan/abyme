@@ -302,8 +302,27 @@ void smp_ap_fcn(void) {
   for (uint16_t k = 0; k < 0x40; k++)
     for (uint16_t i = 0; i < 0xffff; i++)
       p += i;
-
   printk("I am an AP! %08x%08x\n", (uint32_t) (p >> 32), (uint32_t) p);
+  uint32_t counter_x = 74;
+  uint32_t counter_y = 0;
+  uint32_t nb_columns = 80;
+  uint16_t *pos = (uint16_t *) ((counter_x + counter_y * nb_columns) * sizeof(uint16_t) + 0xb8000);
+  uint16_t number = 0;
+  while (1) {
+    /*
+     * A 16 bits number contains 5 digits in decimal.
+     */
+    for (uint8_t j = 0; j < 5; j++) {
+      uint16_t tmp = number;
+      for (uint8_t k = 0; k < j; k++) {
+        tmp = tmp / 10;
+      }
+      pos[5 - j] = (uint16_t) (((uint16_t) '0' + (tmp % 10))) | 0x3d00;
+    }
+    for (uint16_t k = 0; k < 0xf; k++)
+      for (uint16_t i = 0; i < 0xffff; i++);
+    number = number + 1;
+  }
   while (1);
 }
 
