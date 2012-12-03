@@ -23,6 +23,8 @@ void cpu_enable_ne(void);
 
 void cpu_vmxon(uint8_t *region);
 
+void cpu_vmwrite(uint32_t field, uint32_t value);
+
 void cpu_stop(void);
 
 #endif

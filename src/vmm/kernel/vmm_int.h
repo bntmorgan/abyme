@@ -1,6 +1,8 @@
 #ifndef __VMM_INT_H__
 #define __VMM_INT_H__
 
+#include <stdint.h>
+
 /* VMCS Encodings */
 enum vmcs_field {
   VIRTUAL_PROCESSOR_ID            = 0x00000000,
@@ -164,5 +166,7 @@ void vmm_vmx_cr0_fixed(void);
 void vmm_vmx_cr4_fixed(void);
 
 void vmm_vmxon(void);
+
+void vmm_vmcs_write(uint32_t field, uint32_t value);
 
 #endif
