@@ -91,7 +91,9 @@ void vmem_setup_gdt(vmem_info_t *vmem_info) {
  *   See "Intel 64 and IA-32 Architectures Software Developer's Manual", figure 4.9.
  * - 2 MB pages of the vmm memory are mapped to vmm physical memory.
  */
-void vmem_setup_paging2(vmem_info_t *vmem_info, uint32_t physical_mod_dest, uint32_t virtual_mod_dest, uint32_t mod_dest_nb_pages_2MB) {
+void vmem_setup_paging2(vmem_info_t *vmem_info, uint32_t physical_mod_dest,
+    uint32_t virtual_mod_dest __attribute__((unused)),
+    uint32_t mod_dest_nb_pages_2MB __attribute__((unused))) {
   /*
    * We use identity mapping for the vmm in order to use the physical addresses for gdt and others.
    * So, the vmm is mapped twice (except if the physical address is 0x2000000).

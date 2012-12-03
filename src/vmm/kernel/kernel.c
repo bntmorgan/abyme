@@ -6,8 +6,9 @@
 #include "arch/msr_int.h"
 
 #include "vmem_int.h"
-#include "pmem_int.h"
 #include "vmm_int.h"
+#include "pmem_int.h"
+#include "smp_int.h"
 
 #include "include/vmm.h"
 
