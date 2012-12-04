@@ -14,6 +14,12 @@ uint32_t number_bytes_regions;
  * of a size specified by IA32_VMX_BASIC MSR and aligned to a 4-KByte boundary.
  * See Volume 3, Section 31.5 of intel documentation.
  * See Volume 3, Section 31.6 of intel documentation.
+ * See Volume 3, Section A.1 of intel documentation.
+ * See Volume 3, Section 11.11 of intel documentation.
+ */
+/*
+ * TODO: adapt memory type using MTRR.
+ * See Volume 3, Section 11.11 of intel documentation.
  */
 uint8_t vmxon[4096] __attribute((aligned(0x1000)));
 uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
@@ -35,6 +41,10 @@ void vmm_setup() {
    *    IA32_VMX_BASIC MSR and aligned to a 4-KByte boundary.
    * 4) Initialize the version identifier in the VMXON region (the first 32
    *    bits) with the VMCS revision identifier reported by capability MSRs.
+   */
+  /*
+   * TODO: adapt memory type using MTRR.
+   * See Volume 3, Section 11.11 of intel documentation.
    */
   vmm_create_vmxon_and_vmcs_regions();
 
@@ -83,6 +93,10 @@ void vmm_vm_setup_and_launch() {
    *    with the VMCS revision identifier reported by the VMX capability
    *    MSR IA32_VMX_BASIC.
    * These steps have been already done by vmm_create_vmxon_and_vmcs_regions().
+   */
+  /*
+   * TODO: adapt memory type using MTRR.
+   * See Volume 3, Section 11.11 of intel documentation.
    */
 
   /*

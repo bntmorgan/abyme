@@ -98,11 +98,22 @@ void cpu_vmxon(uint8_t *region) {
   INFO("vmxon region at %08x\n", (uint32_t) (uint64_t) region);
   uint8_t status = 1;
   __asm__ __volatile__(
+      /*
+       * vmxon sets the carry flag on error.
+       * See Volume 3, Section 30.2 of intel documentation.
+       * See Volume 3, Section 30.3 of intel documentation.
+       */
       "vmxon (%%rdi) ;"
-      "jnc _vmxon_ok ;"
-      "mov $0, %%al  ;"
-      "_vmxon_ok:    ;"
-    : : "D" (&region), "a" (status));
+      /*
+       * TODO: test if it is correct to replace following sequence by setae.
+       *
+       * "jnc _vmxon_ok ;"
+       * "mov $0, %%al  ;"
+       * "_vmxon_ok:    ;"
+       * : : "D" (&region), "a" (status));
+       */
+      "setae %cl     ;"
+    : : "D" (&region), "c" (status));
   // Note: BOCHS doesn't seem to raise flags when an error occurs...
   if (status != 1) {
     ERROR("vmxon failed\n");
@@ -113,16 +124,27 @@ void cpu_vmxon(uint8_t *region) {
 
 void cpu_vmclear(uint8_t *region) {
   INFO("vmcs region at %08x\n", (uint32_t) (uint64_t) region);
-  uint8_t status = 1;
+  uint8_t status = 0;
   __asm__ __volatile__(
+      /*
+       * vmclear sets the carry flag or the zero flag on error.
+       * See Volume 3, Section 30.2 of intel documentation.
+       * See Volume 3, Section 30.3 of intel documentation.
+       */
       "vmclear (%%rdi)  ;"
-      "jc _vmclear_fail ;"
-      "jz _vmclear_fail ;"
-      "jmp _vmclear_ok  ;"
-      "_vmclear_fail:   ;"
-      "mov $0, %%al     ;"
-      "_vmclear_ok:     ;"
-    : : "D" (&region), "a" (status));
+      /*
+       * TODO: test if it is correct to replace following sequence by seta.
+       *
+       * "jc _vmclear_fail ;"
+       * "jz _vmclear_fail ;"
+       * "jmp _vmclear_ok  ;"
+       * "_vmclear_fail:   ;"
+       * "mov $0, %%al     ;"
+       * "_vmclear_ok:     ;"
+       * : : "D" (&region), "c" (status));
+       */
+      "seta %cl         ;"
+    : : "D" (&region), "c" (status));
   // Note: BOCHS doesn't seem to raise flags when an error occurs...
   if (status != 1) {
     ERROR("vmclear failed\n");
@@ -138,14 +160,25 @@ void cpu_vmptrld(uint8_t *region) {
 void cpu_vmlaunch(void) {
   uint8_t status = 1;
   __asm__ __volatile__(
+      /*
+       * vmlaunch sets the carry flag or the zero flag on error.
+       * See Volume 3, Section 30.2 of intel documentation.
+       * See Volume 3, Section 30.3 of intel documentation.
+       */
       "vmlaunch          ;"
-      "jc _vmlaunch_fail ;"
-      "jz _vmlaunch_fail ;"
-      "jmp _vmlaunch_ok  ;"
-      "_vmlaunch_fail:   ;"
-      "mov $0, %%al      ;"
-      "_vmlaunch_ok:     ;"
-    : : "a" (status));
+      /*
+       * TODO: test if it is correct to replace following sequence by seta.
+       *
+       * "jc _vmlaunch_fail ;"
+       * "jz _vmlaunch_fail ;"
+       * "jmp _vmlaunch_ok  ;"
+       * "_vmlaunch_fail:   ;"
+       * "mov $0, %%al      ;"
+       * "_vmlaunch_ok:     ;"
+       * : : "a" (status));
+       */
+      "seta %cl         ;"
+    : : "c" (status));
   // Note: BOCHS doesn't seem to raise flags when an error occurs...
   if (status != 1) {
     ERROR("vmlaunch failed\n");
