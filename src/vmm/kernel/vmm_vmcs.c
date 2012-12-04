@@ -162,11 +162,15 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
 
   // 24.6.2: Processor-Based VM-Execution Controls
   msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS, &eax, &ebx);
-  ecx = eax & ebx;
+  ecx = (1 << 31); // Activate secondary controls
+  ecx |= eax;
+  ecx &= ebx;
   vmm_vmcs_write(CPU_BASED_VM_EXEC_CONTROL, ecx); // From MSRs IA32_VMX_PROCBASED_CTLS and IA32_VMX_TRUE_PROCBASED_CTLS
  
   msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &ebx);
-  ecx = eax & ebx;
+  ecx = (1 << 7); // Unrestricted guest
+  ecx |= eax;
+  ecx &= ebx;
   vmm_vmcs_write(SECONDARY_VM_EXEC_CONTROL, ecx); // From MSR IA32_VMX_PROCBASED_CTLS2
 
   // 24.6.3: Exception Bitmap
@@ -209,8 +213,8 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   // EXEC_VMCS_PTR{,_HIGH} unused
 
   // 24.6.11: Extended-Page-Table Pointer (EPTP)
-  //vmm_vmcs_write(EPT_POINTER, FIXME);
-  //vmm_vmcs_write(EPT_POINTER_HIGH, FIXME);
+  vmm_vmcs_write(EPT_POINTER, FIXME);
+  vmm_vmcs_write(EPT_POINTER_HIGH, FIXME);
 
   // 24.6.12: Virtual-Processor Identifier (VPID) (optional, unused)
   // VIRTUAL_PROCESSOR_ID unused
@@ -238,7 +242,9 @@ void vmm_vmcs_fill_vm_exit_control_fields(void) {
    */
   // 24.7.1: VM-Exit Controls
   msr_read(MSR_ADDRESS_IA32_VMX_EXIT_CTLS, &eax, &ebx);
-  ecx = eax & ebx;
+  ecx = (1 << 9); // x86_64 host
+  ecx |= eax;
+  ecx &= ebx;
   vmm_vmcs_write(VM_EXIT_CONTROLS, ecx); // From MSRs IA32_VMX_EXIT_CTLS and IA32_VMX_TRUE_EXIT_CTLS
 
   // 24.7.2: VM-Exit Controls for MSRs
