@@ -146,7 +146,7 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   int cdefault;
 
   // We need to read the bit 55 of the VMX_BASIC MSR
-  // to know if we are in default0 or default1 mode
+  // to use TRUE msrs
   msr_read(MSR_ADDRESS_IA32_VMX_BASIC, &eax, &ebx);
   cdefault = (0x1 << 23) & ebx;
 
@@ -178,8 +178,11 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
     ecx &= ebx;
   }
   vmm_vmcs_write(CPU_BASED_VM_EXEC_CONTROL, ecx); // From MSRs IA32_VMX_PROCBASED_CTLS and IA32_VMX_TRUE_PROCBASED_CTLS
-
-  vmm_vmcs_write(SECONDARY_VM_EXEC_CONTROL, FIXME); // From MSR IA32_VMX_PROCBASED_CTLS2
+ 
+  msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &ebx);
+  ecx = eax;
+  ecx &= ebx;
+  vmm_vmcs_write(SECONDARY_VM_EXEC_CONTROL, ecx); // From MSR IA32_VMX_PROCBASED_CTLS2
 
   // 24.6.3: Exception Bitmap
   vmm_vmcs_write(EXCEPTION_BITMAP, 0);
@@ -235,11 +238,28 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
 }
 
 void vmm_vmcs_fill_vm_exit_control_fields(void) {
+  uint32_t eax, ebx, ecx;
+  int cdefault;
+
+  // We need to read the bit 55 of the VMX_BASIC MSR
+  // to use TRUE msrs
+  msr_read(MSR_ADDRESS_IA32_VMX_BASIC, &eax, &ebx);
+  cdefault = (0x1 << 23) & ebx;
+
   /**
    * 24.7: VM-Exit Control Fields.
    */
   // 24.7.1: VM-Exit Controls
-  vmm_vmcs_write(VM_EXIT_CONTROLS, FIXME); // From MSRs IA32_VMX_EXIT_CTLS and IA32_VMX_TRUE_EXIT_CTLS
+  if (cdefault) {
+    msr_read(MSR_ADDRESS_IA32_VMX_TRUE_EXIT_CTLS, &eax, &ebx);
+    ecx = eax;
+    ecx &= ebx;
+  } else {
+    msr_read(MSR_ADDRESS_IA32_VMX_EXIT_CTLS, &eax, &ebx);
+    ecx = eax;
+    ecx &= ebx;
+  }
+  vmm_vmcs_write(VM_EXIT_CONTROLS, ecx); // From MSRs IA32_VMX_EXIT_CTLS and IA32_VMX_TRUE_EXIT_CTLS
 
   // 24.7.2: VM-Exit Controls for MSRs
   vmm_vmcs_write(VM_EXIT_MSR_STORE_COUNT, 0);
