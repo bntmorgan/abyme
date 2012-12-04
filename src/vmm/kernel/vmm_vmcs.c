@@ -143,45 +143,30 @@ void vmm_vmcs_fill_host_state_fields(void) {
 
 void vmm_vmcs_fill_vm_exec_control_fields(void) {
   uint32_t eax, ebx, ecx;
-  int cdefault;
 
-  // We need to read the bit 55 of the VMX_BASIC MSR
-  // to use TRUE msrs
-  msr_read(MSR_ADDRESS_IA32_VMX_BASIC, &eax, &ebx);
-  cdefault = (0x1 << 23) & ebx;
+  /*
+   * TODO: Use new CPU capability MSRs (IA32_VMX_TRUE_PINBASED_CTLS,
+   * IA32_VMX_TRUE_PROCBASED_CTLS, IA32_VMX_TRUE_EXIT_CTLS and
+   * IA32_VMX_TRUE_ENTRY_CTLS for capability detection of the default1
+   * controls.
+   * It doesn't matter for now since we simply want to use default values.
+   */
 
   /**
    * 24.6: VM-Execution Control Fields.
    */
   // 24.6.1: Pin-Based VM-Execution Controls
-  if (cdefault) {
-    msr_read(MSR_ADDRESS_IA32_VMX_TRUE_PINBASED_CTLS, &eax, &ebx);
-    // Set to 1 the non 0-allowed bits
-    ecx = eax;
-    // Set to 0 the non 1-allowed bits
-    ecx &= ebx;
-  } else {
-    msr_read(MSR_ADDRESS_IA32_VMX_PINBASED_CTLS, &eax, &ebx);
-    ecx = eax;
-    ecx &= ebx;
-  }
+  msr_read(MSR_ADDRESS_IA32_VMX_PINBASED_CTLS, &eax, &ebx);
+  ecx = eax & ebx;
   vmm_vmcs_write(PIN_BASED_VM_EXEC_CONTROL, ecx); // From MSRs IA32_VMX_PINBASED_CTLS and IA32_VMX_TRUE_PINBASED_CTLS
 
   // 24.6.2: Processor-Based VM-Execution Controls
-  if (cdefault) {
-    msr_read(MSR_ADDRESS_IA32_VMX_TRUE_PROCBASED_CTLS, &eax, &ebx);
-    ecx = eax;
-    ecx &= ebx;
-  } else {
-    msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS, &eax, &ebx);
-    ecx = eax;
-    ecx &= ebx;
-  }
+  msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS, &eax, &ebx);
+  ecx = eax & ebx;
   vmm_vmcs_write(CPU_BASED_VM_EXEC_CONTROL, ecx); // From MSRs IA32_VMX_PROCBASED_CTLS and IA32_VMX_TRUE_PROCBASED_CTLS
  
   msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &ebx);
-  ecx = eax;
-  ecx &= ebx;
+  ecx = eax & ebx;
   vmm_vmcs_write(SECONDARY_VM_EXEC_CONTROL, ecx); // From MSR IA32_VMX_PROCBASED_CTLS2
 
   // 24.6.3: Exception Bitmap
@@ -239,26 +224,21 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
 
 void vmm_vmcs_fill_vm_exit_control_fields(void) {
   uint32_t eax, ebx, ecx;
-  int cdefault;
 
-  // We need to read the bit 55 of the VMX_BASIC MSR
-  // to use TRUE msrs
-  msr_read(MSR_ADDRESS_IA32_VMX_BASIC, &eax, &ebx);
-  cdefault = (0x1 << 23) & ebx;
+  /*
+   * TODO: Use new CPU capability MSRs (IA32_VMX_TRUE_PINBASED_CTLS,
+   * IA32_VMX_TRUE_PROCBASED_CTLS, IA32_VMX_TRUE_EXIT_CTLS and
+   * IA32_VMX_TRUE_ENTRY_CTLS for capability detection of the default1
+   * controls.
+   * It doesn't matter for now since we simply want to use default values.
+   */
 
   /**
    * 24.7: VM-Exit Control Fields.
    */
   // 24.7.1: VM-Exit Controls
-  if (cdefault) {
-    msr_read(MSR_ADDRESS_IA32_VMX_TRUE_EXIT_CTLS, &eax, &ebx);
-    ecx = eax;
-    ecx &= ebx;
-  } else {
-    msr_read(MSR_ADDRESS_IA32_VMX_EXIT_CTLS, &eax, &ebx);
-    ecx = eax;
-    ecx &= ebx;
-  }
+  msr_read(MSR_ADDRESS_IA32_VMX_EXIT_CTLS, &eax, &ebx);
+  ecx = eax & ebx;
   vmm_vmcs_write(VM_EXIT_CONTROLS, ecx); // From MSRs IA32_VMX_EXIT_CTLS and IA32_VMX_TRUE_EXIT_CTLS
 
   // 24.7.2: VM-Exit Controls for MSRs
@@ -269,14 +249,26 @@ void vmm_vmcs_fill_vm_exit_control_fields(void) {
 }
 
 void vmm_vmcs_fill_vm_entry_control_fields(void) {
+  uint32_t eax, ebx, ecx;
+
+  /*
+   * TODO: Use new CPU capability MSRs (IA32_VMX_TRUE_PINBASED_CTLS,
+   * IA32_VMX_TRUE_PROCBASED_CTLS, IA32_VMX_TRUE_EXIT_CTLS and
+   * IA32_VMX_TRUE_ENTRY_CTLS for capability detection of the default1
+   * controls.
+   * It doesn't matter for now since we simply want to use default values.
+   */
+
   /**
    * 24.8: VM-Entry Control fields.
    */
   // 24.8.1: VM-Entry Controls
-  vmm_vmcs_write(VM_EXIT_CONTROLS, FIXME); // From MSRs IA32_VMX_ENTRY_CTLS and IA32_VMX_TRUE_ENTRY_CTLS
+  msr_read(MSR_ADDRESS_IA32_VMX_ENTRY_CTLS, &eax, &ebx);
+  ecx = eax & ebx;
+  vmm_vmcs_write(VM_ENTRY_CONTROLS, ecx); // From MSRs IA32_VMX_ENTRY_CTLS and IA32_VMX_TRUE_ENTRY_CTLS
 
   // 24.8.2: VM-Entry Controls for MSRs.
-  vmm_vmcs_write(VM_EXIT_MSR_LOAD_COUNT, 0);
+  vmm_vmcs_write(VM_ENTRY_MSR_LOAD_COUNT, 0);
   // VM_ENTRY_MSR_LOAD_ADDR{,_HIGH} unused
 
   // 24.8.3: VM-Entry Controls for Event Injection
