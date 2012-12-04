@@ -16,7 +16,7 @@ void scr_update_cursor(void) {
 }
 
 void scr_clear(void) {
-  uint16_t *video_memory = (uint16_t *) 0xB8000;
+  uint16_t *video_memory = (uint16_t *) 0xb8000;
   for (uint32_t i = 0; i < screen_w * screen_h; i++) {
     video_memory[i] = 0x0F00;
   }
@@ -26,7 +26,7 @@ void scr_clear(void) {
 }
 
 void scr_scroll(void) {
-  uint16_t *video_memory = (uint16_t *) 0xB8000;
+  uint16_t *video_memory = (uint16_t *) 0xb8000;
   for (uint32_t i = screen_w; i < screen_w * screen_h; i++) {
     video_memory[i - screen_w] = video_memory[i];
   }
@@ -37,7 +37,7 @@ void scr_scroll(void) {
 }
 
 void scr_print(uint8_t value) {
-  uint8_t *video_memory = (uint8_t *) 0xB8000;
+  uint8_t *video_memory = (uint8_t *) 0xb8000;
   if (value == '\n') {
     cursor_y++;
     cursor_x = 0;

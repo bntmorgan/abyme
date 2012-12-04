@@ -1,5 +1,5 @@
-#ifndef __SCREEN_H__
-#define __SCREEN_H__
+#ifndef __SCREEN_INT_H__
+#define __SCREEN_INT_H__
 
 #include <stdint.h>
 
