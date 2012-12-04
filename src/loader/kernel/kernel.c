@@ -26,6 +26,8 @@ uint32_t reallocation_size;
 
 vmm_info_t *vmm_info;
 
+uint32_t vmm_stack;
+
 uint32_t vmm_info_offset;
 uint64_t kernel_physical_start;
 
@@ -39,7 +41,8 @@ void kernel_memory_allocation(void) {
    */
   uint32_t padding = 4096 - (mod_get_size() % 4096);
   vmm_info_offset = mod_get_size() + padding;
-  reallocation_size = vmm_info_offset + sizeof(vmm_info_t);
+  // XXX: VMM stack allocation is ugly.
+  reallocation_size = vmm_info_offset + sizeof(vmm_info_t) + VMM_STACK_SIZE;
   kernel_physical_start = pmem_get_stealth_area(reallocation_size, 22);
   if (kernel_physical_start == 0) {
     ERROR("Null address for reallocation\n");
@@ -47,8 +50,10 @@ void kernel_memory_allocation(void) {
 
   vmm_info = (vmm_info_t *) (uint32_t) vmem_addr_linear_to_logical_ds(kernel_physical_start + padding + mod_get_size());
   mod_dest = (uint32_t) vmem_addr_linear_to_logical_ds(kernel_physical_start);
+  vmm_stack = (uint32_t) vmem_addr_linear_to_logical_ds(kernel_physical_start + vmm_info_offset + sizeof(vmm_info_t));
   INFO("kernel at %08x\n", (uint32_t) mod_dest);
   INFO("vmm_info at %08x\n", (uint32_t) vmm_info);
+  INFO("vmm_stack at %08x\n", (uint32_t) vmm_stack);
 }
 
 void kernel_check(void) {

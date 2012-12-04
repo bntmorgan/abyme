@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+extern uint64_t vmm_stack;
+
 /* VMCS Encodings */
 enum vmcs_field {
   VIRTUAL_PROCESSOR_ID            = 0x00000000,
@@ -159,13 +161,25 @@ enum vmcs_field {
   HOST_RIP                        = 0x00006c16,
 };
 
-void vmm_create_vmcs(void);
+void vmm_setup();
+
+void vmm_vm_setup_and_launch();
+
+void vmm_vm_exit_handler(void);
+
+void vmm_create_vmxon_and_vmcs_regions(void);
 
 void vmm_vmx_cr0_fixed(void);
 
 void vmm_vmx_cr4_fixed(void);
 
 void vmm_vmxon(void);
+
+void vmm_vmclear(void);
+
+void vmm_vmptrld(void);
+
+void vmm_vmlaunch(void);
 
 void vmm_vmcs_write(uint32_t field, uint32_t value);
 

@@ -6,6 +6,8 @@
 #include "pmem.h"
 #include "kernel.h"
 
+#define VMM_STACK_SIZE 0x4000
+
 typedef struct {
   mod_info_t mod_info;
   pmem_mmap_t pmem_mmap;

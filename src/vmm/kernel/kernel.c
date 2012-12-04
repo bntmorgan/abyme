@@ -15,6 +15,8 @@
 extern uint8_t kernel_end;
 extern uint8_t start;
 
+uint64_t vmm_stack;
+
 void kernel_check(vmm_info_t *vmm_info) {
   /*
    * We make sur the kernel is completly loaded.  It could be incompletly
@@ -46,30 +48,17 @@ void kernel_main(vmm_info_t *vmm_info) {
   kernel_print_info(vmm_info);
   kernel_check(vmm_info);
   vmem_setup(&vmm_info->vmem_info, vmm_info->kernel_info.kernel_physical_start, (uint64_t) &start);
-  vmem_print_info();
-  pmem_print_info(&vmm_info->pmem_mmap);
+  //vmem_print_info();
+  //pmem_print_info(&vmm_info->pmem_mmap);
+
+  // XXX: Laid.
+  vmm_stack = (uint64_t) vmm_info + sizeof(vmm_info_t);
+
   /*
    * Enables core/cpu.
    */
   smp_setup();
-  /*
-   * Enable virtualisation.
-   * See Volume 3, Section 23.7 of intel documentation.
-   * See Volume 3, Section 31.5 of intel documentation.
-   */
-  /*
-   * TODO: "Determine the VMX capabilities supported by the processor through the VMX capability MSRs."
-   */
-  vmm_create_vmcs();
-  vmm_vmx_cr0_fixed();
-  vmm_vmx_cr4_fixed();
-  cpu_enable_vmxe();
-  cpu_enable_ne();
-  /*
-   * Because we assume that we are in long mode, pe and pg are already set.
-   *  cpu_enable_pe();
-   *  cpu_enable_pg();
-   */
-  msr_check_feature_control_msr_lock();
-  vmm_vmxon();
+
+  vmm_setup();
+  vmm_vm_setup_and_launch();
 }
