@@ -170,14 +170,43 @@ void vmm_fill_vmcs_host_state(void) {
 }
 
 void vmm_fill_vmcs_vm_exec_control(void) {
+  uint32_t eax, ebx, ecx;
+  int cdefault;
+
+  // We need to read the bit 55 of the VMX_BASIC MSR
+  // to know if we are in default0 or default1 mode
+  msr_read(MSR_ADDRESS_IA32_VMX_BASIC, &eax, &ebx);
+  cdefault = (0x1 << 23) & ebx;
+
   /**
    * 24.6: VM-Execution Control Fields.
    */
   // 24.6.1: Pin-Based VM-Execution Controls
-  vmm_vmcs_write(PIN_BASED_VM_EXEC_CONTROL, FIXME); // From MSRs IA32_VMX_PINBASED_CTLS and IA32_VMX_TRUE_PINBASED_CTLS
+  if (cdefault) {
+    msr_read(MSR_ADDRESS_IA32_VMX_TRUE_PINBASED_CTLS, &eax, &ebx);
+    // Set to 1 the non 0-allowed bits
+    ecx = eax;
+    // Set to 0 the non 1-allowed bits
+    ecx &= ebx;
+  } else {
+    msr_read(MSR_ADDRESS_IA32_VMX_PINBASED_CTLS, &eax, &ebx);
+    ecx = eax;
+    ecx &= ebx;
+  }
+  vmm_vmcs_write(PIN_BASED_VM_EXEC_CONTROL, ecx); // From MSRs IA32_VMX_PINBASED_CTLS and IA32_VMX_TRUE_PINBASED_CTLS
 
   // 24.6.2: Processor-Based VM-Execution Controls
-  vmm_vmcs_write(CPU_BASED_VM_EXEC_CONTROL, FIXME); // From MSRs IA32_VMX_PROCBASED_CTLS and IA32_VMX_TRUE_PROCBASED_CTLS
+  if (cdefault) {
+    msr_read(MSR_ADDRESS_IA32_VMX_TRUE_PROCBASED_CTLS, &eax, &ebx);
+    ecx = eax;
+    ecx &= ebx;
+  } else {
+    msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS, &eax, &ebx);
+    ecx = eax;
+    ecx &= ebx;
+  }
+  vmm_vmcs_write(CPU_BASED_VM_EXEC_CONTROL, ecx); // From MSRs IA32_VMX_PROCBASED_CTLS and IA32_VMX_TRUE_PROCBASED_CTLS
+
   vmm_vmcs_write(SECONDARY_VM_EXEC_CONTROL, FIXME); // From MSR IA32_VMX_PROCBASED_CTLS2
 
   // 24.6.3: Exception Bitmap
