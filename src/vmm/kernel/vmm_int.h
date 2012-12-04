@@ -161,6 +161,10 @@ enum vmcs_field {
   HOST_RIP                        = 0x00006c16,
 };
 
+void vmm_setup();
+
+void vmm_vm_setup_and_launch();
+
 void vmm_create_vmcs(void);
 
 void vmm_vmx_cr0_fixed(void);

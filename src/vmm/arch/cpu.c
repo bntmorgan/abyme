@@ -99,10 +99,11 @@ void cpu_vmxon(uint8_t *region) {
   uint8_t status = 1;
   __asm__ __volatile__(
       "vmxon (%%rdi) ;"
-      "jnc _ok       ;"
+      "jnc _vmxon_ok ;"
       "mov $0, %%al  ;"
-      "_ok:          ;"
+      "_vmxon_ok:    ;"
     : : "D" (&region), "a" (status));
+  // Note: BOCHS doesn't seem to raise flags when an error occurs...
   if (status != 1) {
     ERROR("vmxon failed\n");
   } else {
@@ -110,8 +111,51 @@ void cpu_vmxon(uint8_t *region) {
   }
 }
 
+void cpu_vmclear(uint8_t *region) {
+  INFO("vmcs region at %08x\n", (uint32_t) (uint64_t) region);
+  uint8_t status = 1;
+  __asm__ __volatile__(
+      "vmclear (%%rdi)  ;"
+      "jc _vmclear_fail ;"
+      "jz _vmclear_fail ;"
+      "jmp _vmclear_ok  ;"
+      "_vmclear_fail:   ;"
+      "mov $0, %%al     ;"
+      "_vmclear_ok:     ;"
+    : : "D" (&region), "a" (status));
+  // Note: BOCHS doesn't seem to raise flags when an error occurs...
+  if (status != 1) {
+    ERROR("vmclear failed\n");
+  } else {
+    INFO("vmclear successful\n");
+  }
+}
+
+void cpu_vmptrld(uint8_t *region) {
+  __asm__ __volatile__("vmptrld (%%rdi)" : : "D" (&region));
+}
+
+void cpu_vmlaunch(void) {
+  uint8_t status = 1;
+  __asm__ __volatile__(
+      "vmlaunch          ;"
+      "jc _vmlaunch_fail ;"
+      "jz _vmlaunch_fail ;"
+      "jmp _vmlaunch_ok  ;"
+      "_vmlaunch_fail:   ;"
+      "mov $0, %%al      ;"
+      "_vmlaunch_ok:     ;"
+    : : "a" (status));
+  // Note: BOCHS doesn't seem to raise flags when an error occurs...
+  if (status != 1) {
+    ERROR("vmlaunch failed\n");
+  } else {
+    INFO("vmlaunch successful\n");
+  }
+}
+
 void cpu_vmwrite(uint32_t field, uint32_t value) {
-  __asm__ __volatile__("vmwrite %%rdx, %%rax" : : "d" (field), "a" (value));
+  __asm__ __volatile__("vmwrite %%rax, %%rdx" : : "a" (value), "d" (field));
 }
 
 void cpu_stop(void) {
