@@ -112,7 +112,7 @@ void cpu_vmxon(uint8_t *region) {
        * "_vmxon_ok:    ;"
        * : : "D" (&region), "a" (status));
        */
-      "setae %cl     ;"
+      "setae %%cl    ;"
     : : "D" (&region), "c" (status));
   // Note: BOCHS doesn't seem to raise flags when an error occurs...
   if (status != 1) {
@@ -143,7 +143,7 @@ void cpu_vmclear(uint8_t *region) {
        * "_vmclear_ok:     ;"
        * : : "D" (&region), "c" (status));
        */
-      "seta %cl         ;"
+      "seta %%cl        ;"
     : : "D" (&region), "c" (status));
   // Note: BOCHS doesn't seem to raise flags when an error occurs...
   if (status != 1) {
@@ -177,7 +177,7 @@ void cpu_vmlaunch(void) {
        * "_vmlaunch_ok:     ;"
        * : : "a" (status));
        */
-      "seta %cl         ;"
+      "seta %%cl        ;"
     : : "c" (status));
   // Note: BOCHS doesn't seem to raise flags when an error occurs...
   if (status != 1) {
