@@ -4,7 +4,7 @@
 #include "include/vmem.h"
 
 void cpu_outportb(uint32_t port, uint8_t value) {
-  __asm__ __volatile__("outb %%al,%%dx"::"d" (port), "a" (value));
+  __asm__ __volatile__("outb %%al, %%dx" : : "d" (port), "a" (value));
 }
 
 void cpu_read_gdt(uint8_t *gdt_ptr) {
@@ -57,11 +57,11 @@ void cpu_read_tr(uint64_t *reg) {
 }
 
 void cpu_write_cr0(uint64_t value) {
-  __asm__ __volatile__("mov %%rax, %%cr0" : : "a"(value));
+  __asm__ __volatile__("mov %%rax, %%cr0" : : "a" (value));
 }
 
 void cpu_write_cr4(uint64_t value) {
-  __asm__ __volatile__("mov %%rax, %%cr4" : : "a"(value));
+  __asm__ __volatile__("mov %%rax, %%cr4" : : "a" (value));
 }
 
 uint32_t cpu_get_seg_desc_base(uint64_t gdt_base, uint16_t seg_sel) {
@@ -78,9 +78,9 @@ void cpu_enable_ne(void) {
    */
   uint64_t tmp;
   __asm__ __volatile__(
-      "mov %%cr0, %%rax       ;"
+      "mov %%cr0, %%rax      ;"
       "or $0x00000020, %%rax ;"
-      "mov %%rax, %%cr0       ;" : "=a" (tmp));
+      "mov %%rax, %%cr0      ;" : "=a" (tmp));
 }
 
 void cpu_enable_vmxe(void) {
@@ -89,14 +89,14 @@ void cpu_enable_vmxe(void) {
    */
   uint64_t tmp;
   __asm__ __volatile__(
-      "mov %%cr4, %%rax       ;"
+      "mov %%cr4, %%rax      ;"
       "or $0x00002000, %%rax ;"
-      "mov %%rax, %%cr4       ;" : "=a" (tmp));
+      "mov %%rax, %%cr4      ;" : "=a" (tmp));
 }
 
 void cpu_vmxon(uint8_t *region) {
   INFO("vmxon region at %08x\n", (uint32_t) (uint64_t) region);
-  uint8_t status = 1;
+  uint8_t ok = 0;
   __asm__ __volatile__(
       /*
        * vmxon sets the carry flag on error.
@@ -104,52 +104,31 @@ void cpu_vmxon(uint8_t *region) {
        * See Volume 3, Section 30.3 of intel documentation.
        */
       "vmxon (%%rdi) ;"
-      /*
-       * TODO: test if it is correct to replace following sequence by setae.
-       *
-       * "jnc _vmxon_ok ;"
-       * "mov $0, %%al  ;"
-       * "_vmxon_ok:    ;"
-       * : : "D" (&region), "a" (status));
-       */
-      "setae %%cl    ;"
-    : : "D" (&region), "c" (status));
-  // Note: BOCHS doesn't seem to raise flags when an error occurs...
-  if (status != 1) {
-    ERROR("vmxon failed\n");
-  } else {
+      "setae %%cl    ;" // ok <- 1 if CF = 0
+      : "=c" (ok) : "D" (&region));
+  if (ok) {
     INFO("vmxon successful\n");
+  } else {
+    ERROR("vmxon failed\n");
   }
 }
 
 void cpu_vmclear(uint8_t *region) {
   INFO("vmcs region at %08x\n", (uint32_t) (uint64_t) region);
-  uint8_t status = 0;
+  uint8_t ok = 0;
   __asm__ __volatile__(
       /*
        * vmclear sets the carry flag or the zero flag on error.
        * See Volume 3, Section 30.2 of intel documentation.
        * See Volume 3, Section 30.3 of intel documentation.
        */
-      "vmclear (%%rdi)  ;"
-      /*
-       * TODO: test if it is correct to replace following sequence by seta.
-       *
-       * "jc _vmclear_fail ;"
-       * "jz _vmclear_fail ;"
-       * "jmp _vmclear_ok  ;"
-       * "_vmclear_fail:   ;"
-       * "mov $0, %%al     ;"
-       * "_vmclear_ok:     ;"
-       * : : "D" (&region), "c" (status));
-       */
-      "seta %%cl        ;"
-    : : "D" (&region), "c" (status));
-  // Note: BOCHS doesn't seem to raise flags when an error occurs...
-  if (status != 1) {
-    ERROR("vmclear failed\n");
-  } else {
+      "vmclear (%%rdi) ;"
+      "seta %%cl       ;" // ok <- 1 if CF = 0 and ZF = 0
+      : "=c" (ok) : "D" (&region));
+  if (ok) {
     INFO("vmclear successful\n");
+  } else {
+    ERROR("vmclear failed\n");
   }
 }
 
@@ -158,32 +137,20 @@ void cpu_vmptrld(uint8_t *region) {
 }
 
 void cpu_vmlaunch(void) {
-  uint8_t status = 1;
+  uint8_t ok = 0;
   __asm__ __volatile__(
       /*
        * vmlaunch sets the carry flag or the zero flag on error.
        * See Volume 3, Section 30.2 of intel documentation.
        * See Volume 3, Section 30.3 of intel documentation.
        */
-      "vmlaunch          ;"
-      /*
-       * TODO: test if it is correct to replace following sequence by seta.
-       *
-       * "jc _vmlaunch_fail ;"
-       * "jz _vmlaunch_fail ;"
-       * "jmp _vmlaunch_ok  ;"
-       * "_vmlaunch_fail:   ;"
-       * "mov $0, %%al      ;"
-       * "_vmlaunch_ok:     ;"
-       * : : "a" (status));
-       */
-      "seta %%cl        ;"
-    : : "c" (status));
-  // Note: BOCHS doesn't seem to raise flags when an error occurs...
-  if (status != 1) {
-    ERROR("vmlaunch failed\n");
-  } else {
+      "vmlaunch  ;"
+      "seta %%cl ;" // ok <- 1 if CF = 0 and ZF = 0
+      : "=c" (ok));
+  if (ok) {
     INFO("vmlaunch successful\n");
+  } else {
+    ERROR("vmlaunch failed\n");
   }
 }
 
