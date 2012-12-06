@@ -25,6 +25,11 @@ void pmem_setup(mb_info_t *mb_info) {
   }
 }
 
+/*
+ * Return the address of the end of an usable memory area,
+ * large enough for "size" byte.
+ * Return 0 on error.
+ */
 uint64_t pmem_get_stealth_area(uint32_t size, uint32_t alignment) {
   /*
    * Start from the end of the memory map and look for

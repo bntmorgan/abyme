@@ -91,58 +91,6 @@ void vmem_setup_gdt(vmem_info_t *vmem_info) {
  *   See "Intel 64 and IA-32 Architectures Software Developer's Manual", figure 4.9.
  * - 2 MB pages of the vmm memory are mapped to vmm physical memory.
  */
-void vmem_setup_paging2(vmem_info_t *vmem_info, uint32_t physical_mod_dest,
-    uint32_t virtual_mod_dest __attribute__((unused)),
-    uint32_t mod_dest_nb_pages_2MB __attribute__((unused))) {
-  /*
-   * We use identity mapping for the vmm in order to use the physical addresses for gdt and others.
-   * So, the vmm is mapped twice (except if the physical address is 0x2000000).
-   */
-  /*
-   * Everything stand into the first 4GB, so we only need the first entry of PML4.
-   * In other words, it is useless to shift an uint32_t number 39 times to the right.
-   */
-  for (uint32_t i = 0; i < sizeof(vmem_info->PML4) / sizeof(vmem_info->PML4[0]); i++) {
-    vmem_info->PML4[i] = 0;
-  }
-  /*
-   * Automatically map all memory accessed with PDPT_PML40 in 1GB pages.
-   */
-  for (uint32_t i = 0; i < sizeof(vmem_info->PDPT_PML40) / sizeof(vmem_info->PDPT_PML40[0]); i++) {
-    vmem_info->PDPT_PML40[i] = (((uint64_t) i) << 30) | VMEM_PDPT_PS_1G | 0x7;
-  }
-  /*
-   * Automatically map all memory accessed with PD_PDPT0_PML40 in 2MB pages.
-   */
-  for (uint32_t i = 0; i < sizeof(vmem_info->PD_PDPT0_PML40) / sizeof(vmem_info->PD_PDPT0_PML40[0]); i++) {
-    vmem_info->PD_PDPT0_PML40[i] = (((uint64_t) i) << 21) | 0x83;
-  }
-  /*
-   * vmem_info->PML4[0] = ((uint64_t) (&vmem_info->PDPT_PML40[0])) | 0x07;
-   */
-  vmem_info->PML4[0] = (uint64_t) ((uint32_t) &vmem_info->PDPT_PML40[0]) | 0x03;
-  /*
-   * vmem_info->PDPT_PML40[0] = ((uint64_t) (&vmem_info->PD_PDPT0_PML40[0])) | 0x07;
-   */
-  vmem_info->PDPT_PML40[0] = (uint64_t) ((uint32_t) &vmem_info->PD_PDPT0_PML40[0]) | 0x03;
-  /*
-   * vmem_info->PD_PDPT0_PML40[0] = ((uint64_t) 0) | 0x83;
-   */
-  vmem_info->PD_PDPT0_PML40[0] = ((uint32_t) 0) | 0x83;
-  /*
-   * vmem_info->PD_PDPT0_PML40[1] = ((uint64_t) physical_mod_dest) | 0x83;
-   */
-  vmem_info->PD_PDPT0_PML40[1] = ((uint32_t) physical_mod_dest) | 0x83;
-  /*
-   * We use identity mapping for the vmm in order to use the physical addresses for gdt and others.
-   * So, the vmm is mapped twice (except if the physical address is 0x2000000).
-   * vmem_info->PD_PDPT0_PML40[physical_mod_dest >> 21] = ((uint64_t) physical_mod_dest) | 0x83;
-   */
-  vmem_info->PD_PDPT0_PML40[physical_mod_dest >> 21] = ((uint32_t) physical_mod_dest) | 0x83;
-
-  INFO("eip before modifying cr3: %x\n", CPU_READ_EIP());
-  cpu_write_cr3((uint32_t) &vmem_info->PML4);
-}
 void vmem_setup_paging(vmem_info_t *vmem_info, uint32_t physical_mod_dest, uint32_t virtual_mod_dest, uint32_t mod_dest_nb_pages_2MB) {
   /*
    * We use identity mapping for the vmm in order to use the physical addresses for gdt and others.
@@ -180,7 +128,6 @@ void vmem_setup_paging(vmem_info_t *vmem_info, uint32_t physical_mod_dest, uint3
   INFO("eip before modifying cr3: %x\n", CPU_READ_EIP());
   cpu_write_cr3((uint32_t) &vmem_info->PML4);
 }
-
 
 void vmem_setup(vmem_info_t *vmem_info, uint32_t physical_mod_dest, uint32_t virtual_mod_dest, uint32_t mod_dest_nb_pages_2MB) {
   vmem_setup_gdt(vmem_info);

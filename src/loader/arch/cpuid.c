@@ -10,10 +10,10 @@
 
 #define cpuid_a(idx, eax) \
   __asm__ __volatile__("cpuid" : "=a"(eax) : "a"(idx))
-#define cpuid_abcd(idx, eax, ebx, ecx, edx) \
-  __asm__ __volatile__("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(idx))
 #define cpuid_cd(idx, ecx, edx) \
   __asm__ __volatile__("cpuid" : "=c"(ecx), "=d"(edx) : "a"(idx))
+#define cpuid_abcd(idx, eax, ebx, ecx, edx) \
+  __asm__ __volatile__("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(idx))
 
 #define CPUID_0XX1_ECX         \
   HANDLE(sse3,          0,  0) \
@@ -168,6 +168,10 @@ uint8_t cpuid_is_long_mode_supported(void) {
   return cpuid_8xx1_edx.intel.intel_64;
 }
 
+uint8_t cpuid_is_page1g_supported(void) {
+  return cpuid_8xx1_edx.intel.page1g;
+}
+
 uint8_t cpuid_is_pae_supported(void) {
   return cpuid_0xx1_edx.intel.pae;
 }
@@ -206,7 +210,6 @@ void cpuid_setup(void) {
   cpuid_abcd(0x00000001, tmp_a, tmp_b, tmp_c, tmp_d);
   cpuid_read_0xx1_edx(tmp_d);
   cpuid_read_0xx1_ecx(tmp_c);
-
   cpuid_print_0xx1_edx();
   cpuid_print_0xx1_ecx();
 }

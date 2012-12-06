@@ -72,6 +72,9 @@ void kernel_check(void) {
   if (cpuid_is_vmx_supported() == 0) {
     ERROR("vmx not supported\n");
   }
+  if (cpuid_is_page1g_supported() == 0) {
+    ERROR("1 GB pages not supported\n");
+  }
   /*
    * Needed to configure smp.
    */

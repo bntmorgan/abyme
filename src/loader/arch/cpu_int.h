@@ -9,7 +9,7 @@
   reg; \
  })
 
-void cpu_write_gdt(uint32_t gdt_ptr, uint32_t krn_seg, uint32_t data_seg);
+void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg);
 
 void cpu_read_gdt(uint32_t *gdt_ptr);
 

@@ -2,53 +2,37 @@
 
 #include "cpu_int.h"
 
-/*
- * Question : Par exemple, nous utilisons une gdt de 5 entrees et le code est
- * dans la 5eme. Nous allons installer une gdt de 4 entrees dont le code est
- * situe dans la 2eme entree.  Le cs utilise pour l'instruction lgdt est donc
- * "5", de meme pour les instructions qui suivent, tant que le retf n'est pas
- * execute.  Pourquoi, juste apres lgdt, les instruction "mov" sont
- * correctement executees ?
- *
- * Reponse : Le processeur maintient un cache des descripteurs de segment pour
- * eviter d'avoir a les recharger depuis la memoire. Il faut donc forcer leur
- * rechargement via des affectations pour les segments {ds, es, etc} ou via des
- * instructions de branchement pour {cs}. Donc, entre l'instruction lgdt et
- * retf, le processeur peut encore executer correctement les instructions avec
- * l'ancienne entree de l'ancienne gdt.
- */
-void cpu_write_gdt(uint32_t gdt_ptr, uint32_t krn_seg, uint32_t data_seg) {
+void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg) {
   __asm__ __volatile__(
       /*
        * Prepare the far jump using a retf throuh the stack.
        */
-      "pushl %1         ;"
-      "pushl $1f        ;"
+      "pushl %1        ;"
+      "pushl $1f       ;"
       /*
-       * Before changing the gdt, store the new data segment in a register.
-       * Otherwise, any access to data_seg (in memory) after changing
-       * the gdt will use a bad ds segment.
+       * Change the gdt. This change will take place only after a far jump
+       * (which force a modification of the code segment selector cs).
+       * Fortunatly, because we want to control the next instruction executed
+       * by the CPU  (otherwise it would not have been the one that comes just
+       * after lgdt!).
        */
-      "mov %2, %%ebx    ;"
-      /*
-       * Change the gdt.
-       */
-      "mov %0, %%eax    ;"
-      "lgdt (%%eax)     ;"
+      "mov %0, %%eax   ;"
+      "lgdt (%%eax)    ;"
       /*
        * Change the data segment.
        */
-      "mov %%ebx, %%ds  ;"
-      "mov %%ebx, %%es  ;"
-      "mov %%ebx, %%fs  ;"
-      "mov %%ebx, %%gs  ;"
-      "mov %%ebx, %%ss  ;"
+      "mov %2, %%ebx   ;"
+      "mov %%ebx, %%ds ;"
+      "mov %%ebx, %%es ;"
+      "mov %%ebx, %%fs ;"
+      "mov %%ebx, %%gs ;"
+      "mov %%ebx, %%ss ;"
       /*
        * Far return used to simulate a long jump to the new code segment.
        */
-      "retf             ;"
+      "retf            ;"
       "1:\n"
-    : : "m" (gdt_ptr), "m" (krn_seg), "m" (data_seg) : "memory");
+    : : "m" (gdt_ptr), "m" (code_seg), "m" (data_seg) : "memory");
 }
 
 void cpu_read_gdt(uint32_t *gdt_ptr) {
@@ -81,17 +65,17 @@ void cpu_write_cr3(uint32_t value) {
 
 void cpu_enable_paging(void) {
   __asm__ __volatile__(
-      "movl %cr0, %eax       ;"
-      "orl $0x80000000, %eax ;"
-      "movl %eax, %cr0       ;"
+      "movl %cr0, %eax ;"
+      "bts $31, %eax   ;"
+      "movl %eax, %cr0 ;"
   );
 }
 
 void cpu_enable_long_mode(void) {
   __asm__ __volatile__(
-      "mov $0xC0000080, %ecx ;"
+      "mov $0xc0000080, %ecx ;"
       "rdmsr                 ;"
-      "or $0x100, %eax       ;"
+      "bts $0x8, %eax        ;"
       "wrmsr                 ;"
   );
 }
@@ -121,7 +105,7 @@ void cpu_stop(void) {
 uint8_t cpu_is_paging_enabled(void) {
   uint32_t cr0;
   cpu_read_cr0(&cr0);
-  if (cr0 & 0x80000000) {
+  if ((cr0 & 0x80000000) == 0x80000000) {
     return 1;
   }
   return 0;
@@ -130,7 +114,7 @@ uint8_t cpu_is_paging_enabled(void) {
 uint8_t cpu_is_protected_mode_enabled(void) {
   uint32_t cr0;
   cpu_read_cr0(&cr0);
-  if (cr0 & 0x00000001) {
+  if ((cr0 & 0x1) == 0x1) {
     return 1;
   }
   return 0;
