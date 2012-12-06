@@ -133,7 +133,21 @@ void cpu_vmclear(uint8_t *region) {
 }
 
 void cpu_vmptrld(uint8_t *region) {
-  __asm__ __volatile__("vmptrld (%%rdi)" : : "D" (&region));
+  uint8_t ok = 0;
+  __asm__ __volatile__(
+      /*
+       * vmlptrld sets the carry flag or the zero flag on error.
+       * See Volume 3, Section 30.2 of intel documentation.
+       * See Volume 3, Section 30.3 of intel documentation.
+       */
+      "vmptrld (%%rdi) ;"
+      "seta %%cl       ;" // ok <- 1 if CF = 0 and ZF = 0
+      : "=c" (ok) : "D" (&region));
+  if (ok) {
+    INFO("vmptrld successful\n");
+  } else {
+    ERROR("vmptrld failed\n");
+  }
 }
 
 void cpu_vmlaunch(void) {
