@@ -135,8 +135,55 @@ void vmm_vm_setup_and_launch() {
   vmm_vmlaunch();
 }
 
+/*
+ * - All the physical memory is mapped using identity mapping.
+ * - All the physical memory but the vmm memory is mapped using 1GB pages.
+ * - The Page-Directory associated to the physical memory of the vmm is
+ *   configured using 2MB pages.
+ * - 2MB pages of the vmm memory are marked as non-readable, non-writable
+     and non-executable in order to protect the vmm memory.
+ *
+ * See Volume 3, Section 28.2 of intel documentation.
+ */
+void vmm_ept_setup(ept_info_t *ept_info, uint32_t physical_mod_dest, uint32_t mod_dest_nb_pages_2MB) {
+  /*
+   * Everything stands into the first 4GB, so we only need the first entry of PML4.
+   */
+  ept_info->PML4[0] = vmem_virtual_address_to_physical_address(ept_info->PDPT_PML40) | 0x07 /* R, W, X */;
+  for (uint32_t i = 1; i < sizeof(ept_info->PML4) / sizeof(ept_info->PML4[0]); i++) {
+    ept_info->PML4[i] = 0;
+  }
+
+  /*
+   * Automatically map all memory accessed with PDPT_PML40 in 1GB pages,
+   * except for the vmm memory for which we need 2MB granularity.
+   */
+  for (uint32_t i = 0; i < sizeof(ept_info->PDPT_PML40) / sizeof(ept_info->PDPT_PML40[0]); i++) {
+    ept_info->PDPT_PML40[i] = (((uint64_t) i) << 30) | (1 << 7) /* 1GB page */ | 0x7 /* R, W, X */;
+  }
+  ept_info->PDPT_PML40[physical_mod_dest >> 30] = vmem_virtual_address_to_physical_address(ept_info->PD_PDPT0_PML40) | 0x07 /* R, W, X */;
+
+  /*
+   * Automatically map all memory accessed with PD_PDPT0_PML40 in 2MB pages.
+   */
+  for (uint32_t i = 0; i < sizeof(ept_info->PD_PDPT0_PML40) / sizeof(ept_info->PD_PDPT0_PML40[0]); i++) {
+    ept_info->PD_PDPT0_PML40[i] = (((uint64_t) i) << 21) | (1 << 7) /* 2MB page */ | 0x7 /* R, W, X */;
+  }
+
+  /*
+   * Mark vmm memory as non-readable, non-writable and non-executable
+   */
+  for (uint32_t i = 0; i < mod_dest_nb_pages_2MB; i++) {
+    if ((physical_mod_dest >> 30) != (((physical_mod_dest >> 21) + i) >> 9)) {
+      ERROR("vmm pages don't belong to the same PDPT entry");
+    }
+    ept_info->PD_PDPT0_PML40[((physical_mod_dest >> 21) + i) & 0x1ff] = ((uint64_t) (physical_mod_dest + (i << 21))) | (1 << 7) /* 2MB page */;
+  }
+}
+
 void vmm_vm_exit_handler(void) {
   INFO("VM-EXIT\n");
+  while (1);
 }
 
 void vmm_create_vmxon_and_vmcs_regions(void) {

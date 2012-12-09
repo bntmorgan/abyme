@@ -16,6 +16,7 @@ extern uint8_t kernel_end;
 extern uint8_t start;
 
 uint64_t vmm_stack;
+uint64_t ept_pml4_addr;
 
 void kernel_check(vmm_info_t *vmm_info) {
   /*
@@ -53,6 +54,7 @@ void kernel_main(vmm_info_t *vmm_info) {
 
   // XXX: Laid.
   vmm_stack = (uint64_t) vmm_info + sizeof(vmm_info_t);
+  ept_pml4_addr = (uint64_t) vmem_virtual_address_to_physical_address(vmm_info->ept_info.PML4);
 
   /*
    * Enables core/cpu.
@@ -60,5 +62,9 @@ void kernel_main(vmm_info_t *vmm_info) {
   smp_setup();
 
   vmm_setup();
+  /*
+   * TODO: replace the hardcoded size.
+   */
+  vmm_ept_setup(&vmm_info->ept_info, vmm_info->kernel_info.kernel_physical_start, 2);
   vmm_vm_setup_and_launch();
 }

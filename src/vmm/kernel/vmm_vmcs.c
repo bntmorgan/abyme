@@ -4,11 +4,10 @@
 #include "arch/cpu_int.h"
 #include "arch/msr_int.h"
 
-#define FIXME 0
-
 void vmm_vmcs_fill_guest_state_fields(void) {
   uint32_t eax;
   uint32_t edx;
+  uint64_t msr;
 
   /**
    * 24.4: Guest-state area.
@@ -17,9 +16,40 @@ void vmm_vmcs_fill_guest_state_fields(void) {
   // Reflects the state of a physical processor at power-on reset, as described
   // in Vol 3A, 9-2, p294 (Table 9-1. IA-32 Processor States Following
   // Power-up, Reset, or INIT)
-  vmm_vmcs_write(GUEST_CR0, 0x60000010);
+
+  /*
+   * Guest CR0 - we have to set CR0 bits according to IA32_VMX_CR0_FIXED0
+   * and IA32_VMX_CR0_FIXED1 MSRs (will only enable NE in our case).
+   * See Volume 3, Section 26.3.1.1 of intel documentation.
+   * See Volume 3, Section 26.8 of intel documentation.
+   */
+  uint64_t cr0 = 0x60000010;
+  msr_read(MSR_ADDRESS_VMX_CR0_FIXED1, &eax, &edx);
+  msr = (((uint64_t) edx) << 32) | ((uint64_t) eax);
+  cr0 &= msr;
+  msr_read(MSR_ADDRESS_VMX_CR0_FIXED0, &eax, &edx);
+  msr = (((uint64_t) edx) << 32) | ((uint64_t) eax);
+  cr0 |= msr;
+  cr0 &= ~((1 << 0) | (1 << 31)); // Disable PE and PG (unrestricted guest)
+  vmm_vmcs_write(GUEST_CR0, cr0);
+
   vmm_vmcs_write(GUEST_CR3, 0);
-  vmm_vmcs_write(GUEST_CR4, 0);
+
+  /*
+   * Guest CR4 - we have to set CR4 bits according to IA32_VMX_CR4_FIXED0
+   * and IA32_VMX_CR4_FIXED1 MSRs (will only enable VMXE in our case).
+   * See Volume 3, Section 26.3.1.1 of intel documentation.
+   * See Volume 3, Section 26.8 of intel documentation.
+   */
+  uint64_t cr4 = 0;
+  msr_read(MSR_ADDRESS_VMX_CR4_FIXED1, &eax, &edx);
+  msr = (((uint64_t) edx) << 32) | ((uint64_t) eax);
+  cr4 &= msr;
+  msr_read(MSR_ADDRESS_VMX_CR4_FIXED0, &eax, &edx);
+  msr = (((uint64_t) edx) << 32) | ((uint64_t) eax);
+  cr4 |= msr;
+  vmm_vmcs_write(GUEST_CR4, cr4);
+
   vmm_vmcs_write(GUEST_DR7, 0x00000400);
   vmm_vmcs_write(GUEST_RSP, 0);
   vmm_vmcs_write(GUEST_RIP, 0x0000FFF0);
@@ -56,7 +86,7 @@ void vmm_vmcs_fill_guest_state_fields(void) {
   vmm_vmcs_write(GUEST_TR_SELECTOR, 0);
   vmm_vmcs_write(GUEST_TR_BASE, 0);
   vmm_vmcs_write(GUEST_TR_LIMIT, 0xFFFF);
-  vmm_vmcs_write(GUEST_TR_AR_BYTES, 0x82 /* Present, R/W */);
+  vmm_vmcs_write(GUEST_TR_AR_BYTES, 0x83 /* Present, 16-bit busy TSS */);
 
   vmm_vmcs_write(GUEST_GDTR_BASE, 0);
   vmm_vmcs_write(GUEST_GDTR_LIMIT, 0xFFFF);
@@ -168,7 +198,7 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   vmm_vmcs_write(CPU_BASED_VM_EXEC_CONTROL, ecx); // From MSRs IA32_VMX_PROCBASED_CTLS and IA32_VMX_TRUE_PROCBASED_CTLS
  
   msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &ebx);
-  ecx = (1 << 7); // Unrestricted guest
+  ecx = (1 << 1) | (1 << 7); // EPT, Unrestricted guest
   ecx |= eax;
   ecx &= ebx;
   vmm_vmcs_write(SECONDARY_VM_EXEC_CONTROL, ecx); // From MSR IA32_VMX_PROCBASED_CTLS2
@@ -213,8 +243,9 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   // EXEC_VMCS_PTR{,_HIGH} unused
 
   // 24.6.11: Extended-Page-Table Pointer (EPTP)
-  vmm_vmcs_write(EPT_POINTER, FIXME);
-  vmm_vmcs_write(EPT_POINTER_HIGH, FIXME);
+  uint64_t eptp = ept_pml4_addr | (3 << 3) /* Page walk length - 1 */;
+  vmm_vmcs_write(EPT_POINTER, eptp & 0xFFFFFFFF);
+  vmm_vmcs_write(EPT_POINTER_HIGH, (eptp & 0xFFFFFFFF) >> 32);
 
   // 24.6.12: Virtual-Processor Identifier (VPID) (optional, unused)
   // VIRTUAL_PROCESSOR_ID unused

@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 extern uint64_t vmm_stack;
+extern uint64_t ept_pml4_addr;
 
 /* VMCS Encodings */
 enum vmcs_field {
@@ -162,6 +163,8 @@ enum vmcs_field {
 };
 
 void vmm_setup();
+
+void vmm_ept_setup();
 
 void vmm_vm_setup_and_launch();
 
