@@ -233,16 +233,16 @@ void vmm_handle_vm_exit(gpr64_t *guest_gpr) {
   vmm_vmcs_write(GUEST_RIP, guest_rip + exit_instruction_length);
 
   INFO("exit_reason = %d\n", exit_reason);
-  INFO("----------");
+  INFO("----------\n");
   INFO("rip = 0x%x\n", guest_rip);
-  INFO("rsp = 0x%x \t rbp = 0x%x\n", guest_gpr->rsp, guest_gpr->rbp);
-  INFO("rax = 0x%x \t rbx = 0x%x\n", guest_gpr->rax, guest_gpr->rbp);
-  INFO("rcx = 0x%x \t rdx = 0x%x\n", guest_gpr->rcx, guest_gpr->rdx);
-  INFO("rsi = 0x%x \t rdi = 0x%x\n", guest_gpr->rsi, guest_gpr->rdi);
-  INFO("r8  = 0x%x \t r9  = 0x%x\n", guest_gpr->r8,  guest_gpr->r9);
-  INFO("r10 = 0x%x \t r11 = 0x%x\n", guest_gpr->r10, guest_gpr->r11);
-  INFO("r12 = 0x%x \t r13 = 0x%x\n", guest_gpr->r12, guest_gpr->r13);
-  INFO("r14 = 0x%x \t r15 = 0x%x\n", guest_gpr->r14, guest_gpr->r15);
+  INFO("rsp = 0x%x    rbp = 0x%x\n", guest_gpr->rsp, guest_gpr->rbp);
+  INFO("rax = 0x%x    rbx = 0x%x\n", guest_gpr->rax, guest_gpr->rbx);
+  INFO("rcx = 0x%x    rdx = 0x%x\n", guest_gpr->rcx, guest_gpr->rdx);
+  INFO("rsi = 0x%x    rdi = 0x%x\n", guest_gpr->rsi, guest_gpr->rdi);
+  INFO("r8  = 0x%x    r9  = 0x%x\n", guest_gpr->r8,  guest_gpr->r9);
+  INFO("r10 = 0x%x    r11 = 0x%x\n", guest_gpr->r10, guest_gpr->r11);
+  INFO("r12 = 0x%x    r13 = 0x%x\n", guest_gpr->r12, guest_gpr->r13);
+  INFO("r14 = 0x%x    r15 = 0x%x\n", guest_gpr->r14, guest_gpr->r15);
 
   switch (exit_reason) {
     case EXIT_REASON_CPUID:
