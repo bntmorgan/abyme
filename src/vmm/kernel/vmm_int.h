@@ -184,6 +184,8 @@ void vmm_vmptrld(void);
 
 void vmm_vmlaunch(void);
 
+void vmm_vmresume(void);
+
 void vmm_vmcs_write(uint32_t field, uint32_t value);
 
 #endif
