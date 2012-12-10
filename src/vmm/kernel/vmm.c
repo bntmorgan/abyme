@@ -149,7 +149,7 @@ void vmm_ept_setup(ept_info_t *ept_info, uint32_t physical_mod_dest, uint32_t mo
   /*
    * Everything stands into the first 4GB, so we only need the first entry of PML4.
    */
-  ept_info->PML4[0] = vmem_virtual_address_to_physical_address(ept_info->PDPT_PML40) | 0x07 /* R, W, X */;
+  ept_info->PML4[0] = vmem_virtual_address_to_physical_address((uint8_t*) ept_info->PDPT_PML40) | 0x07 /* R, W, X */;
   for (uint32_t i = 1; i < sizeof(ept_info->PML4) / sizeof(ept_info->PML4[0]); i++) {
     ept_info->PML4[i] = 0;
   }
@@ -161,7 +161,7 @@ void vmm_ept_setup(ept_info_t *ept_info, uint32_t physical_mod_dest, uint32_t mo
   for (uint32_t i = 0; i < sizeof(ept_info->PDPT_PML40) / sizeof(ept_info->PDPT_PML40[0]); i++) {
     ept_info->PDPT_PML40[i] = (((uint64_t) i) << 30) | (1 << 7) /* 1GB page */ | 0x7 /* R, W, X */;
   }
-  ept_info->PDPT_PML40[physical_mod_dest >> 30] = vmem_virtual_address_to_physical_address(ept_info->PD_PDPT0_PML40) | 0x07 /* R, W, X */;
+  ept_info->PDPT_PML40[physical_mod_dest >> 30] = vmem_virtual_address_to_physical_address((uint8_t*) ept_info->PD_PDPT0_PML40) | 0x07 /* R, W, X */;
 
   /*
    * Automatically map all memory accessed with PD_PDPT0_PML40 in 2MB pages.
@@ -182,6 +182,47 @@ void vmm_ept_setup(ept_info_t *ept_info, uint32_t physical_mod_dest, uint32_t mo
 }
 
 void vmm_vm_exit_handler(void) {
+  __asm__ __volatile__(
+    "push %rax    ;"
+    "push %rcx    ;"
+    "push %rdx    ;"
+    "push %rbx    ;"
+    "sub $8, %rsp ;" // push %rsp
+    "push %rbp    ;"
+    "push %rsi    ;"
+    "push %rdi    ;"
+    "push %r8     ;"
+    "push %r9     ;"
+    "push %r10    ;"
+    "push %r11    ;"
+    "push %r12    ;"
+    "push %r13    ;"
+    "push %r14    ;"
+    "push %r15    ;"
+
+    "call vmm_handle_vm_exit ;"
+
+    "pop %r15     ;"
+    "pop %r14     ;"
+    "pop %r13     ;"
+    "pop %r12     ;"
+    "pop %r11     ;"
+    "pop %r10     ;"
+    "pop %r9      ;"
+    "pop %r8      ;"
+    "pop %rdi     ;"
+    "pop %rsi     ;"
+    "pop %rbp     ;"
+    "add $8, %rsp ;" // pop %rsp
+    "pop %rbx     ;"
+    "pop %rdx     ;"
+    "pop %rcx     ;"
+    "pop %rax     ;");
+
+  vmm_vmresume();
+}
+
+void vmm_handle_vm_exit(gpr64_t *guest_gpr) {
   INFO("VM-EXIT\n");
 
   // Checks here a gneral protection VM_EXIT
@@ -192,6 +233,23 @@ void vmm_vm_exit_handler(void) {
   uint32_t rax = vmm_vmcs_read(VM_EXIT_REASON);
 
   INFO("gierzojero %x\n", rax);
+
+  INFO("rax = %x\n", guest_gpr->rax);
+  INFO("rcx = %x\n", guest_gpr->rcx);
+  INFO("rdx = %x\n", guest_gpr->rdx);
+  INFO("rbx = %x\n", guest_gpr->rbx);
+  INFO("rsp = %x\n", guest_gpr->rsp);
+  INFO("rbp = %x\n", guest_gpr->rbp);
+  INFO("rsi = %x\n", guest_gpr->rsi);
+  INFO("rdi = %x\n", guest_gpr->rdi);
+  INFO("r8  = %x\n", guest_gpr->r8);
+  INFO("r9  = %x\n", guest_gpr->r9);
+  INFO("r10 = %x\n", guest_gpr->r10);
+  INFO("r11 = %x\n", guest_gpr->r11);
+  INFO("r12 = %x\n", guest_gpr->r12);
+  INFO("r13 = %x\n", guest_gpr->r13);
+  INFO("r14 = %x\n", guest_gpr->r14);
+  INFO("r15 = %x\n", guest_gpr->r15);
 
   while (1);
 }
@@ -277,6 +335,10 @@ void vmm_vmptrld(void) {
 
 void vmm_vmlaunch(void) {
   cpu_vmlaunch();
+}
+
+void vmm_vmresume(void) {
+  cpu_vmresume();
 }
 
 void vmm_vmcs_write(uint32_t field, uint32_t value) {

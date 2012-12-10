@@ -16,6 +16,9 @@
 
 /*
  * The header for the multiboot must be close to the beginning.
+ * The bit field __mb_flags lists the information needed by this
+ * kernel.
+ * See Multiboot Specification version 0.6.96, section 3.1.
  */
 uint32_t __mb_magic = MB_MAGIC;
 uint32_t __mb_flags = MB_FLAGS;

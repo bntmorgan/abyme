@@ -4,8 +4,7 @@
 .global loader
 
 /*
- * Declare the stack: 16384 bytes with an alignment of 32 (i.e. the least
- * significant 5 bits of the address should be zero).
+ * Declare the stack: 0x4000 bytes with an alignment of 32.
  */
 .set STACKSIZE, 0x4000
 .comm stack, STACKSIZE, 32
