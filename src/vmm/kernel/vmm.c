@@ -225,11 +225,6 @@ void vmm_vm_exit_handler(void) {
 void vmm_handle_vm_exit(gpr64_t *guest_gpr) {
   INFO("VM-EXIT\n");
 
-  // Checks here a gneral protection VM_EXIT
-  // 25.4.2 Treatment of Task Switches
-  // If CALL, INT n, or JMP accesses a task gate in IA-32e mode, a general-protection exception occurs
-  // BIOS Call INT 15 (rax a e820)
-
   guest_gpr->rsp = vmm_vmcs_read(GUEST_RSP);
   uint32_t guest_rip = vmm_vmcs_read(GUEST_RIP);
   uint32_t exit_reason = vmm_vmcs_read(VM_EXIT_REASON);
@@ -256,9 +251,26 @@ void vmm_handle_vm_exit(gpr64_t *guest_gpr) {
           "=b" (guest_gpr->rbx), "=c"(guest_gpr->rcx),
           "=d"(guest_gpr->rdx) : "a"(guest_gpr->rax));
       break;
+    case EXIT_REASON_TASK_SWITCH: {
+      // Checks here a gneral protection VM_EXIT
+      // 25.4.2 Treatment of Task Switches
+      // If CALL, INT n, or JMP accesses a task gate in IA-32e mode, a general-protection exception occurs
+      // BIOS Call INT 15 (rax a e820)
+      // Get the vm exit interrupt information
+      uint32_t int_info = vmm_vmcs_read(VM_EXIT_INTR_INFO);
+      // interruption 0x15 Miscellaneous system services
+      if ((int_info & 0xff) == 0x15 && (int_info & 0x700) == 0x6) {
+        // Query System Address Map gate e820
+        if ((guest_gpr->rax & 0xff) == 0xe820) {
+          INFO("BIOS interrupt call 0xe820\n");
+          while(1);
+        }
+      }
+    }
     default:
       INFO("unhandled reason: %d\n");
   }
+
 }
 
 void vmm_create_vmxon_and_vmcs_regions(void) {
