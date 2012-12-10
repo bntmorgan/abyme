@@ -255,11 +255,11 @@ void vmm_handle_vm_exit(gpr64_t *guest_gpr) {
       // Checks here a gneral protection VM_EXIT
       // 25.4.2 Treatment of Task Switches
       // If CALL, INT n, or JMP accesses a task gate in IA-32e mode, a general-protection exception occurs
-      // BIOS Call INT 15 (rax a e820)
+      // BIOS Call INT 15h (rax a e820)
       // Get the vm exit interrupt information
       uint32_t int_info = vmm_vmcs_read(VM_EXIT_INTR_INFO);
       // interruption 0x15 Miscellaneous system services
-      if ((int_info & 0xff) == 0x15 && (int_info & 0x700) == 0x6) {
+      if ((int_info & 0xff) == 0x15 && ((int_info & 0x700) >> 8) == 0x6) {
         // Query System Address Map gate e820
         if ((guest_gpr->rax & 0xff) == 0xe820) {
           INFO("BIOS interrupt call 0xe820\n");
