@@ -65,6 +65,6 @@ void kernel_main(vmm_info_t *vmm_info) {
   /*
    * TODO: replace the hardcoded size.
    */
-  vmm_ept_setup(&vmm_info->ept_info, vmm_info->kernel_info.kernel_physical_start, 2);
+  vmm_ept_setup(&vmm_info->ept_info, vmm_info->kernel_info.kernel_physical_start, 1);
   vmm_vm_setup_and_launch();
 }
