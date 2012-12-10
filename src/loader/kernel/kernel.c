@@ -122,10 +122,10 @@ void kernel_main(uint32_t magic, uint32_t *address) {
   mod_copy_info(&vmm_info->mod_info);
   pmem_copy_info(&vmm_info->pmem_mmap);
 
-  cpu_print_info();
+  /*cpu_print_info();
   pmem_print_info(mb_get_info());
   vmem_print_info();
-  mod_print_info();
+  mod_print_info();*/
 
   ACTION("switching to long mode (vmm_info at %08x)\n", (uint32_t) vmm_info);
 
