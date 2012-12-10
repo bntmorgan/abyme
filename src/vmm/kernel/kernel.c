@@ -59,7 +59,7 @@ void kernel_main(vmm_info_t *vmm_info) {
   /*
    * Enables core/cpu.
    */
-  smp_setup();
+  //smp_setup();
 
   vmm_setup();
   /*
