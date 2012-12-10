@@ -172,6 +172,12 @@ void cpu_vmwrite(uint32_t field, uint32_t value) {
   __asm__ __volatile__("vmwrite %%rax, %%rdx" : : "a" (value), "d" (field));
 }
 
+uint32_t cpu_vmread(uint32_t field) {
+  uint32_t value;
+  __asm__ __volatile__("vmread %%rdx, %%rax" : "=a" (value): "d" (field));
+  return value;
+}
+
 void cpu_stop(void) {
   __asm__ __volatile__("cli");
   while (1);

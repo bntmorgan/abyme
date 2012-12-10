@@ -183,6 +183,16 @@ void vmm_ept_setup(ept_info_t *ept_info, uint32_t physical_mod_dest, uint32_t mo
 
 void vmm_vm_exit_handler(void) {
   INFO("VM-EXIT\n");
+
+  // Checks here a gneral protection VM_EXIT
+  // 25.4.2 Treatment of Task Switches
+  // If CALL, INT n, or JMP accesses a task gate in IA-32e mode, a general-protection exception occurs
+  // BIOS Call INT 15 (rax a e820)
+
+  uint32_t rax = vmm_vmcs_read(VM_EXIT_REASON);
+
+  INFO("gierzojero %x\n", rax);
+
   while (1);
 }
 
@@ -271,4 +281,8 @@ void vmm_vmlaunch(void) {
 
 void vmm_vmcs_write(uint32_t field, uint32_t value) {
   cpu_vmwrite(field, value);
+}
+
+uint32_t vmm_vmcs_read(uint32_t field) {
+  return cpu_vmread(field);
 }

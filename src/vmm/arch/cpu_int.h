@@ -49,6 +49,8 @@ void cpu_vmlaunch(void);
 
 void cpu_vmwrite(uint32_t field, uint32_t value);
 
+uint32_t cpu_vmread(uint32_t field);
+
 void cpu_stop(void);
 
 #endif
