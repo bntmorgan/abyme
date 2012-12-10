@@ -149,7 +149,7 @@ void vmm_ept_setup(ept_info_t *ept_info, uint32_t physical_mod_dest, uint32_t mo
   /*
    * Everything stands into the first 4GB, so we only need the first entry of PML4.
    */
-  ept_info->PML4[0] = vmem_virtual_address_to_physical_address(ept_info->PDPT_PML40) | 0x07 /* R, W, X */;
+  ept_info->PML4[0] = vmem_virtual_address_to_physical_address((uint8_t*) ept_info->PDPT_PML40) | 0x07 /* R, W, X */;
   for (uint32_t i = 1; i < sizeof(ept_info->PML4) / sizeof(ept_info->PML4[0]); i++) {
     ept_info->PML4[i] = 0;
   }
@@ -161,7 +161,7 @@ void vmm_ept_setup(ept_info_t *ept_info, uint32_t physical_mod_dest, uint32_t mo
   for (uint32_t i = 0; i < sizeof(ept_info->PDPT_PML40) / sizeof(ept_info->PDPT_PML40[0]); i++) {
     ept_info->PDPT_PML40[i] = (((uint64_t) i) << 30) | (1 << 7) /* 1GB page */ | 0x7 /* R, W, X */;
   }
-  ept_info->PDPT_PML40[physical_mod_dest >> 30] = vmem_virtual_address_to_physical_address(ept_info->PD_PDPT0_PML40) | 0x07 /* R, W, X */;
+  ept_info->PDPT_PML40[physical_mod_dest >> 30] = vmem_virtual_address_to_physical_address((uint8_t*) ept_info->PD_PDPT0_PML40) | 0x07 /* R, W, X */;
 
   /*
    * Automatically map all memory accessed with PD_PDPT0_PML40 in 2MB pages.
