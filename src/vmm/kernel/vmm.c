@@ -230,28 +230,35 @@ void vmm_handle_vm_exit(gpr64_t *guest_gpr) {
   // If CALL, INT n, or JMP accesses a task gate in IA-32e mode, a general-protection exception occurs
   // BIOS Call INT 15 (rax a e820)
 
-  uint32_t rax = vmm_vmcs_read(VM_EXIT_REASON);
+  guest_gpr->rsp = vmm_vmcs_read(GUEST_RSP);
+  uint32_t guest_rip = vmm_vmcs_read(GUEST_RIP);
+  uint32_t exit_reason = vmm_vmcs_read(VM_EXIT_REASON);
+  uint32_t exit_instruction_length = vmm_vmcs_read(VM_EXIT_INSTRUCTION_LEN);
 
-  INFO("gierzojero %x\n", rax);
+  vmm_vmcs_write(GUEST_RIP, guest_rip + exit_instruction_length);
 
-  INFO("rax = %x\n", guest_gpr->rax);
-  INFO("rcx = %x\n", guest_gpr->rcx);
-  INFO("rdx = %x\n", guest_gpr->rdx);
-  INFO("rbx = %x\n", guest_gpr->rbx);
-  INFO("rsp = %x\n", guest_gpr->rsp);
-  INFO("rbp = %x\n", guest_gpr->rbp);
-  INFO("rsi = %x\n", guest_gpr->rsi);
-  INFO("rdi = %x\n", guest_gpr->rdi);
-  INFO("r8  = %x\n", guest_gpr->r8);
-  INFO("r9  = %x\n", guest_gpr->r9);
-  INFO("r10 = %x\n", guest_gpr->r10);
-  INFO("r11 = %x\n", guest_gpr->r11);
-  INFO("r12 = %x\n", guest_gpr->r12);
-  INFO("r13 = %x\n", guest_gpr->r13);
-  INFO("r14 = %x\n", guest_gpr->r14);
-  INFO("r15 = %x\n", guest_gpr->r15);
+  INFO("exit_reason = %d\n", exit_reason);
+  INFO("----------");
+  INFO("rip = 0x%x\n", guest_rip);
+  INFO("rsp = 0x%x \t rbp = 0x%x\n", guest_gpr->rsp, guest_gpr->rbp);
+  INFO("rax = 0x%x \t rbx = 0x%x\n", guest_gpr->rax, guest_gpr->rbp);
+  INFO("rcx = 0x%x \t rdx = 0x%x\n", guest_gpr->rcx, guest_gpr->rdx);
+  INFO("rsi = 0x%x \t rdi = 0x%x\n", guest_gpr->rsi, guest_gpr->rdi);
+  INFO("r8  = 0x%x \t r9  = 0x%x\n", guest_gpr->r8,  guest_gpr->r9);
+  INFO("r10 = 0x%x \t r11 = 0x%x\n", guest_gpr->r10, guest_gpr->r11);
+  INFO("r12 = 0x%x \t r13 = 0x%x\n", guest_gpr->r12, guest_gpr->r13);
+  INFO("r14 = 0x%x \t r15 = 0x%x\n", guest_gpr->r14, guest_gpr->r15);
 
-  while (1);
+  switch (exit_reason) {
+    case EXIT_REASON_CPUID:
+      INFO("handling CPUID (rax = %d)\n", guest_gpr->rax);
+      __asm__ __volatile__("cpuid" : "=a" (guest_gpr->rax),
+          "=b" (guest_gpr->rbx), "=c"(guest_gpr->rcx),
+          "=d"(guest_gpr->rdx) : "a"(guest_gpr->rax));
+      break;
+    default:
+      INFO("unhandled reason: %d\n");
+  }
 }
 
 void vmm_create_vmxon_and_vmcs_regions(void) {
