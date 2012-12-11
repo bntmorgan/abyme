@@ -35,7 +35,8 @@ void kernel_vmm_allocation(void) {
   uint32_t padding = 4096 - (vmm_size % 4096);
   /* TODO: VMM stack allocation is ugly. */
   uint32_t size = vmm_size + padding + VMM_STACK_SIZE + sizeof(vmm_info_t);
-  vmm_physical_start = pmem_get_aligned_memory_at_end_of_free_area(size, vmm_algn);
+  /* TODO: 22 */
+  vmm_physical_start = pmem_get_aligned_memory_at_end_of_free_area(size, 22);
   vmm_physical_end = vmm_physical_start + size;
   vmm_entry = vmm_physical_start + elf64_get_entry(vmm_header);
   vmm_info = (vmm_info_t *) (vmm_physical_start + padding + vmm_size);
