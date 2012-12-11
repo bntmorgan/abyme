@@ -23,10 +23,11 @@ void kernel_print_info(void) {
   INFO("kernel_end:   %08x\n", (uint32_t) (((uint64_t) &kernel_end) & 0xffffffff));
 }
 
+extern char kernel_start;
+
 void kernel_main(vmm_info_t *vmm_info) {
   screen_clear();
   kernel_print_info();
-  vmem_setup(&vmm_info->vmem_info, vmm_info->kernel_info.kernel_physical_start, (uint64_t) &start);
   //vmem_print_info();
   //pmem_print_info(&vmm_info->pmem_mmap);
 
@@ -43,6 +44,7 @@ void kernel_main(vmm_info_t *vmm_info) {
   /*
    * TODO: replace the hardcoded size.
    */
-  vmm_ept_setup(&vmm_info->ept_info, vmm_info->kernel_info.kernel_physical_start, 1);
+//  vmm_ept_setup(&vmm_info->ept_info, vmm_info->kernel_info.kernel_physical_start, 1);
+  vmm_ept_setup(&vmm_info->ept_info, &kernel_start, 1);
   vmm_vm_setup_and_launch();
 }

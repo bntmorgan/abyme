@@ -4,10 +4,6 @@
 #include "types.h"
 
 typedef struct {
-  uint64_t kernel_physical_start;
-} kernel_info_t;
-
-typedef struct {
   uint32_t size;
   uint64_t addr;
   uint64_t len;
@@ -66,7 +62,6 @@ typedef struct {
 typedef struct {
   pmem_mmap_t pmem_mmap;
   vmem_info_t vmem_info;
-  kernel_info_t kernel_info;
   ept_info_t ept_info;
 } vmm_info_t;
 

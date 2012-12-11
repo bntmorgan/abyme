@@ -5,17 +5,8 @@
 #include "hardware/cpu.h"
 #include "stdio.h"
 
-uint64_t vmm_physical_start;
-uint64_t vmm_virtual_start;
-
 uint64_t vmem_virtual_address_to_physical_address(void *addr) {
   return (uint64_t) (uintptr_t) addr;
-}
-
-void vmem_setup(vmem_info_t *vmem_info __attribute__((unused)),
-    uint64_t physical_start, uint64_t virtual_start) {
-  vmm_physical_start = physical_start;
-  vmm_virtual_start = virtual_start;
 }
 
 void vmem_get_gdt_desc(uint8_t *gdt_desc, gdt_entry_t *entry) {

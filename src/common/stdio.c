@@ -60,21 +60,24 @@ void printk(char *format, ...) {
         itoa(buffer, 16, value);
         printk_string(buffer, minimum_length, padding);
       } else if (c == 'X') {
+        int64_t value = __builtin_va_arg(values, int64_t);
         uint8_t hi_minimum_length = 0;
-        uint8_t lo_minimum_length = minimum_length;
-        uint8_t hi_padding = (uint8_t) ' ';
-        uint8_t lo_padding = padding;
         if (minimum_length > 8) {
           hi_minimum_length = minimum_length - 8;
-          lo_minimum_length = 8;
-          hi_padding = padding;
-          lo_padding = (uint8_t) '0';
         }
-        int64_t value = __builtin_va_arg(values, int64_t);
-        itoa(buffer, 16, (uint32_t) (value >> 32));
-        printk_string(buffer, hi_minimum_length, hi_padding);
+        if ((uint32_t) (value >> 32) > 0) {
+          itoa(buffer, 16, (uint32_t) (value >> 32));
+          printk_string(buffer, hi_minimum_length, padding);
+        } else if (hi_minimum_length > 0) {
+          itoa(buffer, 16, 0);
+          printk_string(buffer, hi_minimum_length, padding);
+        }
+        uint8_t lo_minimum_length = minimum_length;
+        if (minimum_length > 8) {
+          lo_minimum_length = 8;
+        }
         itoa(buffer, 16, (uint32_t) value);
-        printk_string(buffer, lo_minimum_length, lo_padding);
+        printk_string(buffer, lo_minimum_length, padding);
       } else if (c == 's') {
         int8_t *string = __builtin_va_arg(values, int8_t *);
         printk_string(string, minimum_length, padding);
