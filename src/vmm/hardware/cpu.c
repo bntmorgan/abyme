@@ -1,7 +1,7 @@
-#include "cpu_int.h"
+#include "cpu.h"
 
-#include "common/string_int.h"
-#include "include/vmem.h"
+#include "stdio.h"
+#include "vmm_info.h"
 
 void cpu_outportb(uint32_t port, uint8_t value) {
   __asm__ __volatile__("outb %%al, %%dx" : : "d" (port), "a" (value));
@@ -95,7 +95,7 @@ void cpu_enable_vmxe(void) {
 }
 
 void cpu_vmxon(uint8_t *region) {
-  INFO("vmxon region at %08x\n", (uint32_t) (uint64_t) region);
+  INFO("vmxon region at %08X\n", (uint64_t) (uintptr_t) region);
   uint8_t ok = 0;
   __asm__ __volatile__(
       /*

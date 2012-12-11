@@ -1,8 +1,8 @@
-#include "vmm_int.h"
-#include "vmem_int.h"
+#include "vmm.h"
+#include "vmem.h"
 
-#include "arch/cpu_int.h"
-#include "arch/msr_int.h"
+#include "hardware/cpu.h"
+#include "hardware/msr.h"
 
 void vmm_vmcs_fill_guest_state_fields(void) {
   uint32_t eax;

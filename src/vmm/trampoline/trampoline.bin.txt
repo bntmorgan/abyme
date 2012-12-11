@@ -1,0 +1,114 @@
+
+trampoline.bin:     file format binary
+
+
+Disassembly of section .data:
+
+00000000 <.data>:
+   0:	eb 1a                	jmp    0x1c
+	...
+  1a:	00 00                	add    %al,(%bx,%si)
+  1c:	b8 50 00             	mov    $0x50,%ax
+  1f:	8e d0                	mov    %ax,%ss
+  21:	bc fe 00             	mov    $0xfe,%sp
+  24:	66 31 d2             	xor    %edx,%edx
+  27:	66 31 db             	xor    %ebx,%ebx
+  2a:	e8 00 00             	call   0x2d
+  2d:	5b                   	pop    %bx
+  2e:	8c ca                	mov    %cs,%dx
+  30:	66 c1 e2 04          	shl    $0x4,%edx
+  34:	66 01 da             	add    %ebx,%edx
+  37:	66 81 ea 2d 00 00 00 	sub    $0x2d,%edx
+  3e:	66 89 d1             	mov    %edx,%ecx
+  41:	66 c1 e9 04          	shr    $0x4,%ecx
+  45:	51                   	push   %cx
+  46:	68 4a 00             	push   $0x4a
+  49:	cb                   	lret   
+  4a:	8e d9                	mov    %cx,%ds
+  4c:	e4 64                	in     $0x64,%al
+  4e:	a8 02                	test   $0x2,%al
+  50:	75 fa                	jne    0x4c
+  52:	b0 d1                	mov    $0xd1,%al
+  54:	e6 64                	out    %al,$0x64
+  56:	e4 64                	in     $0x64,%al
+  58:	a8 02                	test   $0x2,%al
+  5a:	75 fa                	jne    0x56
+  5c:	b0 df                	mov    $0xdf,%al
+  5e:	e6 60                	out    %al,$0x60
+  60:	67 66 8d 82 8d 00 00 	lea    0x8d(%edx),%eax
+  67:	00 
+  68:	66 a3 89 00          	mov    %eax,0x89
+  6c:	0f 01 16 87 00       	lgdtw  0x87
+  71:	0f 20 c0             	mov    %cr0,%eax
+  74:	66 83 c8 01          	or     $0x1,%eax
+  78:	0f 22 c0             	mov    %eax,%cr0
+  7b:	67 66 8d 9a b5 00 00 	lea    0xb5(%edx),%ebx
+  82:	00 
+  83:	6a 08                	push   $0x8
+  85:	53                   	push   %bx
+  86:	cb                   	lret   
+  87:	27                   	daa    
+  88:	00 8d 00 00          	add    %cl,0x0(%di)
+	...
+  94:	00 ff                	add    %bh,%bh
+  96:	ff 00                	incw   (%bx,%si)
+  98:	00 00                	add    %al,(%bx,%si)
+  9a:	9a cf 00 ff ff       	lcall  $0xffff,$0xcf
+  9f:	00 00                	add    %al,(%bx,%si)
+  a1:	00 9a af 00          	add    %bl,0xaf(%bp,%si)
+  a5:	ff                   	(bad)  
+  a6:	ff 00                	incw   (%bx,%si)
+  a8:	00 00                	add    %al,(%bx,%si)
+  aa:	92                   	xchg   %ax,%dx
+  ab:	cf                   	iret   
+  ac:	00 ff                	add    %bh,%bh
+  ae:	ff 00                	incw   (%bx,%si)
+  b0:	00 00                	add    %al,(%bx,%si)
+  b2:	92                   	xchg   %ax,%dx
+  b3:	af                   	scas   %es:(%di),%ax
+  b4:	00 89 d7 66          	add    %cl,0x66d7(%bx,%di)
+  b8:	b8 18 00             	mov    $0x18,%ax
+  bb:	8e d8                	mov    %ax,%ds
+  bd:	8e d0                	mov    %ax,%ss
+  bf:	bc fe 05             	mov    $0x5fe,%sp
+  c2:	00 00                	add    %al,(%bx,%si)
+  c4:	0f 01 97 04 00       	lgdtw  0x4(%bx)
+  c9:	00 00                	add    %al,(%bx,%si)
+  cb:	8b 87 0c 00          	mov    0xc(%bx),%ax
+  cf:	00 00                	add    %al,(%bx,%si)
+  d1:	0f 22 d8             	mov    %eax,%cr3
+  d4:	b8 20 00             	mov    $0x20,%ax
+  d7:	00 00                	add    %al,(%bx,%si)
+  d9:	0f 22 e0             	mov    %eax,%cr4
+  dc:	b9 80 00             	mov    $0x80,%cx
+  df:	00 c0                	add    %al,%al
+  e1:	0f 32                	rdmsr  
+  e3:	0d 00 01             	or     $0x100,%ax
+  e6:	00 00                	add    %al,(%bx,%si)
+  e8:	0f 30                	wrmsr  
+  ea:	0f 20 c3             	mov    %cr0,%ebx
+  ed:	81 cb 00 00          	or     $0x0,%bx
+  f1:	00 80 0f 22          	add    %al,0x220f(%bx,%si)
+  f5:	c3                   	ret    
+  f6:	8d 9f 00 01          	lea    0x100(%bx),%bx
+  fa:	00 00                	add    %al,(%bx,%si)
+  fc:	6a 10                	push   $0x10
+  fe:	53                   	push   %bx
+  ff:	cb                   	lret   
+ 100:	66 b8 20 00 8e d8    	mov    $0xd88e0020,%eax
+ 106:	8e c0                	mov    %ax,%es
+ 108:	8e e8                	mov    %ax,%gs
+ 10a:	8e e0                	mov    %ax,%fs
+ 10c:	8e d0                	mov    %ax,%ss
+ 10e:	8e d0                	mov    %ax,%ss
+ 110:	48                   	dec    %ax
+ 111:	c7 c4 fe 05          	mov    $0x5fe,%sp
+ 115:	00 00                	add    %al,(%bx,%si)
+ 117:	67 48                	addr32 dec %ax
+ 119:	8b 87 14 00          	mov    0x14(%bx),%ax
+ 11d:	00 00                	add    %al,(%bx,%si)
+ 11f:	ff d0                	call   *%ax
+ 121:	eb fe                	jmp    0x121
+	...
+ 1fb:	00 00                	add    %al,(%bx,%si)
+ 1fd:	00 55 aa             	add    %dl,-0x56(%di)

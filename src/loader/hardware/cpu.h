@@ -1,7 +1,7 @@
-#ifndef __CPU_INT_H__
-#define __CPU_INT_H__
+#ifndef __CPU_H__
+#define __CPU_H__
 
-#include <stdint.h>
+#include "types.h"
 
 #define CPU_READ_EIP() ({ \
   uint32_t reg; \

@@ -1,7 +1,7 @@
-#ifndef __VMM_INT_H__
-#define __VMM_INT_H__
+#ifndef __VMM_H__
+#define __VMM_H__
 
-#include <stdint.h>
+#include "types.h"
 
 extern uint64_t vmm_stack;
 extern uint64_t ept_pml4_addr;

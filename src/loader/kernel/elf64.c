@@ -1,8 +1,7 @@
 #include "elf64.h"
 
 #include "string.h"
-#include "include/types.h"
-#include "common/string_int.h"
+#include "stdio.h"
 
 Elf64_Shdr *elf64_get_section(Elf64_Ehdr *elf64_header, Elf64_Word section_type) {
   Elf64_Shdr *section_header;
@@ -59,12 +58,12 @@ void elf64_load_relocatable_segment(void *header, void *destination) {
   if (relocation_header == (Elf64_Shdr *) 0) {
     ERROR("empty relocation section");
   }
-  relocation_address = ((uintptr_t) destination) + relocation_header->sh_offset;
+  relocation_address = ((uintptr_t) header) + relocation_header->sh_offset;
   relocation_address_end = relocation_address + relocation_header->sh_size;
   for (i = 0; relocation_address < relocation_address_end; i++) {
     relocation = (Elf64_Rela *) relocation_address;
     if ((ELF64_R_TYPE(relocation->r_info) != R_X86_64_RELATIVE) || (relocation->r_addend < 0)) {
-      ERROR("bad relocation entry");
+      ERROR("bad relocation entry %x", ELF64_R_TYPE(relocation->r_info));
     }
     *((uint64_t *) (destination + relocation->r_offset)) = base_address + relocation->r_addend;
     relocation_address = relocation_address + relocation_header->sh_entsize;
@@ -77,7 +76,7 @@ uint64_t elf64_get_entry(void *header) {
   return (uint64_t) elf64_header->e_entry;
 }
 
-uint64_t elf_module_load_algn(void *header) {
+uint64_t elf64_get_alignment(void *header) {
   Elf64_Ehdr *elf64_header;
   Elf64_Phdr *program_header;
   elf64_header = (Elf64_Ehdr *) header;

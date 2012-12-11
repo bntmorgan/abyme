@@ -1,7 +1,9 @@
-#ifndef __MULTIBOOT_INT_H__
-#define __MULTIBOOT_INT_H__
+#ifndef __MULTIBOOT_H__
+#define __MULTIBOOT_H__
 
-#include <stdint.h>
+#include "types.h"
+
+#include "vmm_info.h"
 
 /*
  * Multiboot header, macros.
@@ -27,28 +29,28 @@ typedef struct {
   uint64_t addr;
   uint64_t len;
   uint32_t type;
-} __attribute__((packed)) mb_memory_map_t;
+} __attribute__((packed)) multiboot_memory_map_t;
 
 typedef struct {
   uint32_t mod_start;
   uint32_t mod_end;
   uint32_t cmdline;
   uint32_t pad;
-} mb_module_t;
+} multiboot_module_t;
 
 typedef struct {
   uint32_t tabsize;
   uint32_t strsize;
   uint32_t addr;
   uint32_t reserved;
-} mb_aout_symbol_table_t;
+} multiboot_aout_symbol_table_t;
 
 typedef struct {
   uint32_t num;
   uint32_t size;
   uint32_t addr;
   uint32_t shndx;
-} mb_elf_section_header_table_t;
+} multiboot_elf_section_header_table_t;
 
 typedef struct {
   uint32_t flags;
@@ -59,8 +61,8 @@ typedef struct {
   uint32_t mods_count;
   uint32_t mods_addr;
   union {
-    mb_aout_symbol_table_t aout_sym;
-    mb_elf_section_header_table_t elf_sec;
+    multiboot_aout_symbol_table_t aout_sym;
+    multiboot_elf_section_header_table_t elf_sec;
   } u;
   uint32_t mmap_length;
   uint32_t mmap_addr;
@@ -75,10 +77,14 @@ typedef struct {
   uint16_t vbe_interface_seg;
   uint16_t vbe_interface_off;
   uint16_t vbe_interface_len;
-} mb_info_t;
+} multiboot_info_t;
 
-void mb_check(uint32_t magic, uint32_t *address);
+void multiboot_setup(uint32_t magic, uint32_t *address);
 
-mb_info_t *mb_get_info(void);
+void multiboot_print_info(void);
+
+uint32_t multiboot_get_module_start(void);
+
+multiboot_info_t *multiboot_get_info(void);
 
 #endif

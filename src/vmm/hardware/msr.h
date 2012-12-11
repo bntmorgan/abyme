@@ -1,7 +1,7 @@
-#ifndef __MSR_INT_H__
-#define __MSR_INT_H__
+#ifndef __MSR_H__
+#define __MSR_H__
 
-#include <stdint.h>
+#include "types.h"
 
 #define MSR_ADDRESS_IA32_APIC_BASE                  0x01b
 #define MSR_ADDRESS_IA32_DEBUGCTL                   0x1d9

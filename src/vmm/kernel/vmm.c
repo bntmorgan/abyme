@@ -1,10 +1,10 @@
-#include "vmm_int.h"
-#include "vmm_vmcs_int.h"
-#include "vmem_int.h"
+#include "vmm.h"
+#include "vmm_vmcs.h"
+#include "vmem.h"
 
-#include "arch/msr_int.h"
-#include "common/string_int.h"
-#include "include/vmm.h"
+#include "hardware/msr.h"
+#include "stdio.h"
+#include "vmm_info.h"
 
 uint32_t vmcs_revision_identifier;
 uint32_t number_bytes_regions;

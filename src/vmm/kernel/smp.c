@@ -19,11 +19,11 @@
 
 #define SMP_AP_VECTOR 0x1
 
-#include <stdint.h>
+#include "types.h"
 
-#include "common/string_int.h"
-#include "arch/msr_int.h"
-#include "vmem_int.h"
+#include "stdio.h"
+#include "hardware/msr.h"
+#include "vmem.h"
 
 #define SMP_MP_PROCESSOR_ENTRY_TYPE		0
 #define SMP_MP_BUS_ENTRY_TYPE			1
@@ -166,7 +166,7 @@ void smp_search_mp_configuration_table_header(void) {
   }
   smp_mp_floating_pointer_structure = (smp_mp_floating_pointer_structure_t *) ret;
   if (ret != 0 && smp_mp_floating_pointer_structure->physical_address_pointer != 0) {
-    INFO("found mp floating pointer structure at %08x%08x\n", (uint32_t) (ret >> 32), (uint32_t) ret);
+    INFO("found mp floating pointer structure at %08X\n", (uint64_t) ret);
     smp_mp_configuration_table_header = (smp_mp_configuration_table_header_t *)
         ((uint64_t) smp_mp_floating_pointer_structure->physical_address_pointer);
   }
@@ -302,7 +302,7 @@ void smp_ap_fcn(void) {
   for (uint16_t k = 0; k < 0x40; k++)
     for (uint16_t i = 0; i < 0xffff; i++)
       p += i;
-  printk("I am an AP! %08x%08x\n", (uint32_t) (p >> 32), (uint32_t) p);
+  printk("I am an AP! %08X\n", (uint64_t) p);
   uint32_t counter_x = 74;
   uint32_t counter_y = 0;
   uint32_t nb_columns = 80;
@@ -344,7 +344,7 @@ void smp_prepare_trampoline(void) {
   cpu_read_gdt(trampoline_gdt);
   cpu_read_cr3(trampoline_cr3);
   *trampoline_fcn = (uint64_t) smp_ap_fcn;
-  INFO("trampoline cr3: %08x%08x\n", (uint32_t) (*trampoline_cr3 >> 32), (uint32_t) *trampoline_cr3);
+  INFO("trampoline cr3: %08X\n", (uint64_t) *trampoline_cr3);
 }
 
 void smp_print_trampoline(uint8_t *area) {

@@ -1,13 +1,13 @@
-#include "arch/cpu_int.h"
+#include "screen.h"
 
-#include "screen_int.h"
+#include "hardware/cpu.h"
 
 uint32_t screen_w = 80;
 uint32_t screen_h = 25;
 uint32_t cursor_x = 0;
 uint32_t cursor_y = 0;
 
-void scr_update_cursor(void) {
+void screen_update_cursor(void) {
   uint16_t location = cursor_y * screen_w + cursor_x;
   cpu_outportb(0x3D4, 14);
   cpu_outportb(0x3D5, location >> 8);
@@ -15,17 +15,17 @@ void scr_update_cursor(void) {
   cpu_outportb(0x3D5, location);
 }
 
-void scr_clear(void) {
+void screen_clear(void) {
   uint16_t *video_memory = (uint16_t *) 0xb8000;
   for (uint32_t i = 0; i < screen_w * screen_h; i++) {
     video_memory[i] = 0x0F00;
   }
   cursor_x = 0;
   cursor_y = 0;
-  scr_update_cursor();
+  screen_update_cursor();
 }
 
-void scr_scroll(void) {
+void screen_scroll(void) {
   uint16_t *video_memory = (uint16_t *) 0xb8000;
   for (uint32_t i = screen_w; i < screen_w * screen_h; i++) {
     video_memory[i - screen_w] = video_memory[i];
@@ -36,7 +36,7 @@ void scr_scroll(void) {
   cursor_y--;
 }
 
-void scr_print(uint8_t value) {
+void screen_print(uint8_t value) {
   uint8_t *video_memory = (uint8_t *) 0xb8000;
   if (value == '\n') {
     cursor_y++;
@@ -50,7 +50,7 @@ void scr_print(uint8_t value) {
     cursor_y++;
   }
   if (cursor_y == screen_h) {
-    scr_scroll();
+    screen_scroll();
   }
-  scr_update_cursor();
+  screen_update_cursor();
 }

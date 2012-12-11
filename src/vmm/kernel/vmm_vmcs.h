@@ -1,5 +1,5 @@
-#ifndef __VMM_VMCS_INT_H__
-#define __VMM_VMCS_INT_H__
+#ifndef __VMM_VMCS_H__
+#define __VMM_VMCS_H__
 
 void vmm_vmcs_fill_guest_state_fields(void);
 

@@ -1,7 +1,7 @@
 #ifndef __ELF64_H__
 #define	__ELF64_H__
 
-#include "include/types.h"
+#include "types.h"
 
 typedef uint16_t Elf64_Half;
 typedef uint32_t Elf64_Word;
@@ -70,7 +70,7 @@ typedef struct {
 
 uint64_t elf64_get_size(void *header);
 
-uint64_t elf_module_load_algn(void *header);
+uint64_t elf64_get_alignment(void *header);
 
 uint64_t elf64_get_entry(void *header);
 

@@ -1,7 +1,7 @@
 #ifndef __CPU_H__
 #define __CPU_H__
 
-#include <stdint.h>
+#include "types.h"
 
 void cpu_outportb(uint32_t port, uint8_t value);
 

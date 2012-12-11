@@ -2,11 +2,11 @@
  * See: Intel Processor Identification and the CPUID Instruction
  */
 
-#include "common/string_int.h"
+#include "stdio.h"
 
-#include "cpu_int.h"
+#include "cpu.h"
 
-#include "cpuid_int.h"
+#include "cpuid.h"
 
 #define cpuid_a(idx, eax) \
   __asm__ __volatile__("cpuid" : "=a"(eax) : "a"(idx))

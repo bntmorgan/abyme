@@ -1,7 +1,8 @@
-#include "vmem_int.h"
+#include "vmem.h"
 
-#include "arch/cpu_int.h"
-#include "common/string_int.h"
+#include "stdio.h"
+
+#include "hardware/cpu.h"
 
 gdt_entry_t gdt_entries[] = {
     /* NULL */
@@ -84,18 +85,10 @@ void vmem_setup_gdt(vmem_info_t *vmem_info) {
 }
 
 /*
- * - All the memory but the vmm memory is mapped with 1 GB pages using identity mapping.
- *   See "Intel 64 and IA-32 Architectures Software Developer's Manual", figure 4.10.
- * - The Page-Directory associated to the virtual memory of the vmm is configured using
- *   identity mapping with 2 MB pages for all memory but the vmm memory.
- *   See "Intel 64 and IA-32 Architectures Software Developer's Manual", figure 4.9.
- * - 2 MB pages of the vmm memory are mapped to vmm physical memory.
+ * All the memory but the vmm memory is mapped with 1 GB pages using identity mapping.
+ * See "Intel 64 and IA-32 Architectures Software Developer's Manual", figure 4.10.
  */
-void vmem_setup_paging(vmem_info_t *vmem_info, uint32_t physical_mod_dest, uint32_t virtual_mod_dest, uint32_t mod_dest_nb_pages_2MB) {
-  /*
-   * We use identity mapping for the vmm in order to use the physical addresses for gdt and others.
-   * So, the vmm is mapped twice (except if the physical address is 0x2000000).
-   */
+void vmem_setup_paging(vmem_info_t *vmem_info) {
   /*
    * Everything stand into the first 4GB, so we only need the first entry of PML4.
    * In other words, it is useless to shift an uint32_t number 39 times to the right.
@@ -110,28 +103,13 @@ void vmem_setup_paging(vmem_info_t *vmem_info, uint32_t physical_mod_dest, uint3
   for (uint32_t i = 0; i < sizeof(vmem_info->PDPT_PML40) / sizeof(vmem_info->PDPT_PML40[0]); i++) {
     vmem_info->PDPT_PML40[i] = (((uint64_t) i) << 30) | VMEM_PDPT_PS_1G | 0x7;
   }
-  vmem_info->PDPT_PML40[virtual_mod_dest >> 30] = \
-      ((uint64_t) ((uint32_t) &vmem_info->PD_PDPT0_PML40[0])) | 0x07;
-  /*
-   * Automatically map all memory accessed with PD_PDPT0_PML40 in 2MB pages.
-   */
-  for (uint32_t i = 0; i < sizeof(vmem_info->PD_PDPT0_PML40) / sizeof(vmem_info->PD_PDPT0_PML40[0]); i++) {
-    vmem_info->PD_PDPT0_PML40[i] = (((uint64_t) i) << 21) | 0x83;
-  }
-  for (uint32_t i = 0; i < mod_dest_nb_pages_2MB; i++) {
-    if ((virtual_mod_dest >> 30) != (((virtual_mod_dest >> 21) + i) >> 9)) {
-      ERROR("kernel pages don't belong to the same PDPT entry");
-    }
-    vmem_info->PD_PDPT0_PML40[((virtual_mod_dest >> 21) + i) & 0x1ff] = \
-        ((uint64_t) (physical_mod_dest + (i << 21))) | 0x83;
-  }
   INFO("eip before modifying cr3: %x\n", CPU_READ_EIP());
   cpu_write_cr3((uint32_t) &vmem_info->PML4);
 }
 
-void vmem_setup(vmem_info_t *vmem_info, uint32_t physical_mod_dest, uint32_t virtual_mod_dest, uint32_t mod_dest_nb_pages_2MB) {
+void vmem_setup(vmem_info_t *vmem_info) {
   vmem_setup_gdt(vmem_info);
-  vmem_setup_paging(vmem_info, physical_mod_dest, virtual_mod_dest, mod_dest_nb_pages_2MB);
+  vmem_setup_paging(vmem_info);
 }
 
 void vmem_print_info(void) {
@@ -160,7 +138,7 @@ void vmem_print_info(void) {
   uint64_t *PML4 = (uint64_t *) cr3;
   for (uint32_t i = 0; i < 512; i++) {
     if (PML4[i] != 0) {
-      INFO("  %03d: %08x%08x\n", i, (uint32_t) (PML4[i] >> 32), (uint32_t) PML4[i]);
+      INFO("  %03d: %08X\n", i, (uint64_t) PML4[i]);
       INFO("    PDPT at %08x\n", PML4[i] & 0xffffff00);
       uint64_t *PDPT = (uint64_t *) ((uint32_t) (PML4[i] & 0xffffff00));
       for (uint32_t j = 0; j < 512; j++) {
@@ -168,15 +146,15 @@ void vmem_print_info(void) {
           if ((PDPT[j] & VMEM_PDPT_PS_1G) != 0) {
             /*
              * Will print too many informations:
-             * INFO("    %03d: %08x%08x (1G page)\n", j, (uint32_t) (PDPT[j] >> 32), (uint32_t) PDPT[j]);
+             * INFO("    %03d: %08X (1G page)\n", j, (uint64_t) PDPT[j]);
              */
           } else {
-            INFO("    %03d: %08x%08x\n", j, (uint32_t) (PDPT[j] >> 32), (uint32_t) PDPT[j]);
+            INFO("    %03d: %08X\n", j, (uint64_t) PDPT[j]);
             INFO("      PD at %08x\n", PDPT[j] & 0xffffff00);
             uint64_t *PD = (uint64_t *) ((uint32_t) (PDPT[j] & 0xffffff00));
             for (uint32_t k = 0; k < 512; k++) {
               if (PD[k] != 0) {
-                INFO("      %03d: %08x%08x\n", k, (uint32_t) (PD[k] >> 32), (uint32_t) PD[k]);
+                INFO("      %03d: %08X\n", k, (uint64_t) PD[k]);
               }
             }
           }

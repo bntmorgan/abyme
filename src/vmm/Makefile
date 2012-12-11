@@ -1,8 +1,11 @@
 CC	= gcc
-CFLAGS	= -m64 -Wall -Wextra -nostdlib -fno-builtin -nostartfiles -nodefaultlibs -std=c99 -Wpointer-sign -O0 -I.
+CFLAGS	= -m64 -Wall -Wextra -nostdlib -fno-builtin -nostartfiles -nodefaultlibs -std=c99 -Wpointer-sign -O0 -I. -Iinclude -fpie -mno-red-zone -D__X86_64__
+
+
+CFLAGS =  -I. -Iinclude -Wall -W -pipe -nostdlib -nostdinc -ffreestanding -fms-extensions -m64 -mno-red-zone -mcmodel=small -fpie -std=c99 -D__X86_64__
 LD	= ld
  
-OBJFILES = build/kernel/start.o build/kernel/kernel.o build/common/screen.o build/common/string.o build/arch/cpu.o build/kernel/vmem.o build/kernel/pmem.o build/arch/msr.o build/kernel/vmm.o build/kernel/vmm_vmcs.o build/kernel/smp.o
+OBJFILES = build/kernel/kernel.o build/common/screen.o build/common/string.o build/hardware/cpu.o build/kernel/vmem.o build/kernel/pmem.o build/hardware/msr.o build/kernel/vmm.o build/kernel/vmm_vmcs.o build/kernel/smp.o build/common/stdio.o build/common/stdlib.o build/kernel/start.o
  
 all: vmm.bin
  
@@ -13,8 +16,9 @@ build/%.o: %.s
 build/%.o: %.c
 	mkdir -p `dirname $@`
 	$(CC) $(CFLAGS) -o $@ -c $<
+	$(CC) $(CFLAGS) -S -o $(@).asm -c $<
 
-arch/msr.t: arch/msr.c
+hardware/msr.t: hardware/msr.c
 	$(CC) -g -S $(CFLAGS) -o $@ -c $<
  
 kernel/vmm.t: kernel/vmm.c
@@ -22,7 +26,7 @@ kernel/vmm.t: kernel/vmm.c
  
 vmm.bin: $(OBJFILES) trampoline/trampoline.bin
 	cat trampoline/trampoline.bin | hexdump -v -e '"BYTE(0x" 1/1 "%02X" ")\n"' > trampoline_bytes.ld
-	$(LD) -T linker.ld -o $@ $(OBJFILES)
+	$(LD)  --warn-common --no-check-sections -n -melf_x86_64 -pie -T linker.ld -o $@ $(OBJFILES)
 
 trampoline/trampoline.bin: trampoline/trampoline.s
 	make -C trampoline

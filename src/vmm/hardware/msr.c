@@ -1,6 +1,6 @@
-#include "msr_int.h"
+#include "msr.h"
 
-#include "common/string_int.h"
+#include "stdio.h"
 
 /*
  * eax is the low value and edx the high value.

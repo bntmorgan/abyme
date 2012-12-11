@@ -1,9 +1,9 @@
-#ifndef __STRING_INT_H__
-#define __STRING_INT_H__
+#ifndef __STDIO_H__
+#define __STDIO_H__
 
-#include <stdint.h>
+#include "types.h"
 
-#include "arch/cpu_int.h"
+#include "hardware/cpu.h"
 
 #define PRINTK(stop, msg, ...)                                       \
   do {                                                               \
@@ -21,8 +21,6 @@
 #define INFO(...)   PRINTK(0, "<INFO> ",   __VA_ARGS__)
 
 void printk_string(int8_t *string, int8_t minimum_length, int8_t padding);
-
-void itoa(int8_t *dst, uint8_t base, int32_t value);
 
 void printk(char *format, ...);
 

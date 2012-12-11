@@ -1,7 +1,7 @@
-#ifndef __CPUID_INT_H__
-#define __CPUID_INT_H__
+#ifndef __CPUID_H__
+#define __CPUID_H__
 
-#include <stdint.h>
+#include "types.h"
 
 void cpuid_setup(void);
 

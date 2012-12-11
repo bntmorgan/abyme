@@ -1,6 +1,6 @@
-#include "common/string_int.h"
+#include "cpu.h"
 
-#include "cpu_int.h"
+#include "stdio.h"
 
 void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg) {
   __asm__ __volatile__(
