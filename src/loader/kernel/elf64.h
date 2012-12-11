@@ -1,3 +1,7 @@
+/*
+ * See [Elf64_Version1.5_Draft2].
+ */
+
 #ifndef __ELF64_H__
 #define	__ELF64_H__
 

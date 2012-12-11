@@ -14,9 +14,8 @@
 
 /*
  * The header for the multiboot must be close to the beginning.
- * The bit field __mb_flags lists the information needed by this
- * kernel.
- * See Multiboot Specification version 0.6.96, section 3.1.
+ * The bit field __mb_flags lists the information needed by this kernel.
+ * See [Multiboot_0.6.96], section 3.1.
  */
 uint32_t __mb_magic = MB_MAGIC;
 uint32_t __mb_flags = MB_FLAGS;
@@ -24,21 +23,26 @@ uint32_t __mb_checksum = MB_CHECKSUM;
 
 vmm_info_t *vmm_info;
 uint32_t vmm_stack;
-uint32_t vmm_physical_start;
 uint32_t vmm_entry;
+
+uint32_t vmm_physical_start;
+uint32_t vmm_physical_end;
 
 void kernel_vmm_allocation(void) {
   void *vmm_header = (void *) multiboot_get_module_start();
   uint32_t vmm_size = (uint32_t) elf64_get_size(vmm_header);
   uint32_t vmm_algn = (uint32_t) elf64_get_alignment(vmm_header);
   uint32_t padding = 4096 - (vmm_size % 4096);
-  // TODO: VMM stack allocation is ugly.
-  uint32_t reallocation_size = vmm_size + padding + sizeof(vmm_info_t) + VMM_STACK_SIZE;
-  vmm_physical_start = pmem_get_stealth_area(reallocation_size, vmm_algn);
+  /* TODO: VMM stack allocation is ugly. */
+  uint32_t size = vmm_size + padding + VMM_STACK_SIZE + sizeof(vmm_info_t);
+  vmm_physical_start = pmem_get_aligned_memory_at_end_of_free_area(size, vmm_algn);
+  vmm_physical_end = vmm_physical_start + size;
   vmm_entry = vmm_physical_start + elf64_get_entry(vmm_header);
   vmm_info = (vmm_info_t *) (vmm_physical_start + padding + vmm_size);
   vmm_stack = vmm_physical_start + vmm_size + padding + sizeof(vmm_info_t);
   elf64_load_relocatable_segment(vmm_header, (void *) vmm_physical_start);
+  vmm_info->vmm_physical_start = vmm_physical_start;
+  vmm_info->vmm_physical_end = vmm_physical_end;
   INFO("vmm_info at %08x\n", (uint32_t) vmm_info);
   INFO("vmm_stack at %08x\n", (uint32_t) vmm_stack);
 }
@@ -80,12 +84,12 @@ void kernel_main(uint32_t magic, uint32_t *address) {
   pmem_print_info(multiboot_get_info());
   vmem_print_info();
   ACTION("switching to long mode (vmm_info at %08x)\n", (uint32_t) vmm_info);
-  ACTION("(vmm_entry at %08x)\n", (uint32_t) vmm_entry);
-  ACTION("(vmm_physical_start at %08x)\n", (uint32_t) vmm_physical_start);
   cpu_enable_pae();
   cpu_enable_long_mode();
   cpu_enable_paging();
-
+  /*
+   * edi contains the address of vmm_info structure.
+   */
   __asm__ __volatile__(
       "mov %0, %%edi ;"
       "pushl $0x10   ;"

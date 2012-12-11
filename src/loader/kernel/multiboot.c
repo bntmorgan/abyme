@@ -1,3 +1,7 @@
+/*
+ * See [Multiboot_0.6.96].
+ */
+
 #include "multiboot.h"
 
 #include "stdio.h"

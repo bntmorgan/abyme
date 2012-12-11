@@ -20,11 +20,15 @@ void msr_check_feature_control_msr_lock(void) {
   /*
    * Test if vmxon is allowed outside smx mode. Set it if needed, if the msr
    * is not locked by the bios.
+   * See [Intel_August_2012], volume 3, section 23.7.
    */
-  /*if ((eax & 0x1) == 0 || (eax & 0x4) == 0) {
-    eax = eax | 0x5;
-    msr_write(MSR_ADDRESS_IA32_FEATURE_CONTROL_MSR, eax, edx);
-  }*/
+  /*
+   * TODO:
+   * if ((eax & 0x1) == 0 || (eax & 0x4) == 0) {
+   *   eax = eax | 0x5;
+   *   msr_write(MSR_ADDRESS_IA32_FEATURE_CONTROL_MSR, eax, edx);
+   * }
+   */
   if ((eax & 0x4) == 0) {
     INFO("need to change FEATURE_CONTROL_MSR to allow vmxon outside smx mode\n");
     if ((eax & 0x1) == 1) {

@@ -1,12 +1,10 @@
 /*
- * See: Intel Processor Identification and the CPUID Instruction
+ * See [Cpuid_May_2012].
  */
 
-#include "stdio.h"
-
-#include "cpu.h"
-
 #include "cpuid.h"
+
+#include "stdio.h"
 
 #define cpuid_a(idx, eax) \
   __asm__ __volatile__("cpuid" : "=a"(eax) : "a"(idx))
@@ -185,9 +183,6 @@ void cpuid_setup(void) {
   uint32_t tmp_b;
   uint32_t tmp_c;
   uint32_t tmp_d;
-  /*
-   * Get informations on available features.
-   */
   cpuid_abcd(0x00000000, cpuid_largest_function,
       *((uint32_t *) (cpuid_vendor + 0)),
       *((uint32_t *) (cpuid_vendor + 8)),

@@ -15,7 +15,7 @@ void cpu_read_idt(uint8_t *idt_ptr) {
   __asm__ __volatile__("sidt %0" : : "m" (*idt_ptr) : "memory");
 }
 
-// TODO: return instead of writing an output parameter?
+/* TODO: return instead of writing an output parameter? */
 void cpu_read_cr0(uint64_t *reg) {
   __asm__ __volatile__("mov %%cr0, %0" : "=a" (*reg));
 }
@@ -65,47 +65,49 @@ void cpu_write_cr4(uint64_t value) {
 }
 
 uint32_t cpu_get_seg_desc_base(uint64_t gdt_base, uint16_t seg_sel) {
+  /*
+   * See [Intel_August_2012], volume 3, section 3.4.2.
+   * See [Intel_August_2012], volume 3, section 5.2.1.
+   */
   seg_desc_t seg_desc;
-
   *((uint64_t*) &seg_desc) = *(((uint64_t*) gdt_base) + (seg_sel >> 3));
-
   return ((seg_desc.base2 << 24) | (seg_desc.base1 << 16) | seg_desc.base0);
 }
 
 void cpu_enable_ne(void) {
   /*
-   * See Volume 3, Section 2.5 of intel documentation.
+   * See [Intel_August_2012], volume 3, section 2.5.
    */
-  uint64_t tmp;
   __asm__ __volatile__(
       "mov %%cr0, %%rax      ;"
       "or $0x00000020, %%rax ;"
-      "mov %%rax, %%cr0      ;" : "=a" (tmp));
+      "mov %%rax, %%cr0      ;"
+    : : : "rax");
 }
 
 void cpu_enable_vmxe(void) {
   /*
-   * See Volume 3, Section 2.5 of intel documentation.
+   * See [Intel_August_2012], volume 3, section 2.5.
    */
-  uint64_t tmp;
   __asm__ __volatile__(
       "mov %%cr4, %%rax      ;"
       "or $0x00002000, %%rax ;"
-      "mov %%rax, %%cr4      ;" : "=a" (tmp));
+      "mov %%rax, %%cr4      ;"
+    : : : "rax");
 }
 
 void cpu_vmxon(uint8_t *region) {
-  INFO("vmxon region at %08X\n", (uint64_t) (uintptr_t) region);
+  INFO("vmxon region at %08X\n", (uintptr_t) region);
   uint8_t ok = 0;
+  /*
+   * vmxon sets the carry flag on error.
+   * See [Intel_August_2012], volume 3, section 30.2.
+   * See [Intel_August_2012], volume 3, section 30.3.
+   */
   __asm__ __volatile__(
-      /*
-       * vmxon sets the carry flag on error.
-       * See Volume 3, Section 30.2 of intel documentation.
-       * See Volume 3, Section 30.3 of intel documentation.
-       */
       "vmxon (%%rdi) ;"
-      "setae %%cl    ;" // ok <- 1 if CF = 0
-      : "=c" (ok) : "D" (&region));
+      "setae %%cl    ;"
+    : "=c" (ok) : "D" (&region));
   if (ok) {
     INFO("vmxon successful\n");
   } else {
@@ -114,17 +116,17 @@ void cpu_vmxon(uint8_t *region) {
 }
 
 void cpu_vmclear(uint8_t *region) {
-  INFO("vmcs region at %08x\n", (uint32_t) (uint64_t) region);
+  INFO("vmcs region at %08X\n", (uintptr_t) region);
   uint8_t ok = 0;
+  /*
+   * vmclear sets the carry flag or the zero flag on error.
+   * See [Intel_August_2012], volume 3, section 30.2.
+   * See [Intel_August_2012], volume 3, section 30.3.
+   */
   __asm__ __volatile__(
-      /*
-       * vmclear sets the carry flag or the zero flag on error.
-       * See Volume 3, Section 30.2 of intel documentation.
-       * See Volume 3, Section 30.3 of intel documentation.
-       */
       "vmclear (%%rdi) ;"
-      "seta %%cl       ;" // ok <- 1 if CF = 0 and ZF = 0
-      : "=c" (ok) : "D" (&region));
+      "seta %%cl       ;"
+    : "=c" (ok) : "D" (&region));
   if (ok) {
     INFO("vmclear successful\n");
   } else {
@@ -133,16 +135,17 @@ void cpu_vmclear(uint8_t *region) {
 }
 
 void cpu_vmptrld(uint8_t *region) {
+  INFO("vmcs region at %08X\n", (uintptr_t) region);
   uint8_t ok = 0;
+  /*
+   * vmlptrld sets the carry flag or the zero flag on error.
+   * See [Intel_August_2012], volume 3, section 30.2.
+   * See [Intel_August_2012], volume 3, section 30.3.
+   */
   __asm__ __volatile__(
-      /*
-       * vmlptrld sets the carry flag or the zero flag on error.
-       * See Volume 3, Section 30.2 of intel documentation.
-       * See Volume 3, Section 30.3 of intel documentation.
-       */
       "vmptrld (%%rdi) ;"
-      "seta %%cl       ;" // ok <- 1 if CF = 0 and ZF = 0
-      : "=c" (ok) : "D" (&region));
+      "seta %%cl       ;"
+    : "=c" (ok) : "D" (&region));
   if (ok) {
     INFO("vmptrld successful\n");
   } else {
@@ -152,15 +155,15 @@ void cpu_vmptrld(uint8_t *region) {
 
 void cpu_vmlaunch(void) {
   uint8_t ok = 0;
+  /*
+   * vmlaunch sets the carry flag or the zero flag on error.
+   * See [Intel_August_2012], volume 3, section 30.2.
+   * See [Intel_August_2012], volume 3, section 30.3.
+   */
   __asm__ __volatile__(
-      /*
-       * vmlaunch sets the carry flag or the zero flag on error.
-       * See Volume 3, Section 30.2 of intel documentation.
-       * See Volume 3, Section 30.3 of intel documentation.
-       */
       "vmlaunch  ;"
-      "seta %%cl ;" // ok <- 1 if CF = 0 and ZF = 0
-      : "=c" (ok));
+      "seta %%cl ;"
+    : "=c" (ok));
   if (ok) {
     INFO("vmlaunch successful\n");
   } else {
@@ -170,15 +173,15 @@ void cpu_vmlaunch(void) {
 
 void cpu_vmresume(void) {
   uint8_t ok = 0;
+  /*
+   * vmresume sets the carry flag or the zero flag on error.
+   * See [Intel_August_2012], volume 3, section 30.2.
+   * See [Intel_August_2012], volume 3, section 30.3.
+   */
   __asm__ __volatile__(
-      /*
-       * vmresume sets the carry flag or the zero flag on error.
-       * See Volume 3, Section 30.2 of intel documentation.
-       * See Volume 3, Section 30.3 of intel documentation.
-       */
       "vmresume  ;"
-      "seta %%cl ;" // ok <- 1 if CF = 0 and ZF = 0
-      : "=c" (ok));
+      "seta %%cl ;"
+    : "=c" (ok));
   if (ok) {
     INFO("vmresume successful\n");
   } else {

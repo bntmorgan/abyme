@@ -1,9 +1,0 @@
-- Le vmm est charge en fin d'une zone libre de la memoire physique.
-  Actuellement, cela fonctionne uniquement si cette fin de zone se situe dans
-  le premier giga octet de la mémoire. Si cette fin de zone est au dela, il faut
-  adapter la pagination pour le mapping directe (identity mapping). Autrement
-  dit, il faut créer une autre PDPT et une autre PD, qui seront différentes de
-  celles utilisées pour l'adresse virtuelle de vmm.
-- L'adresse virtuelle de vmm est codée en dure !!!
-  Il faut corriger le script de linkage de vmm et le code de vmem.c pour le loader
-  pour en faire un paramètre !

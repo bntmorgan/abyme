@@ -12,18 +12,19 @@
 
 #include "vmm_info.h"
 
+/*
+ * Used to identify the size used of vmm (see the linker script).
+ */
 extern uint8_t kernel_end;
-extern uint8_t start;
+extern uint8_t kernel_start;
 
 uint64_t vmm_stack;
 uint64_t ept_pml4_addr;
 
 void kernel_print_info(void) {
-  INFO("kernel_start: %08x\n", (uint32_t) ((uint64_t) &start));
-  INFO("kernel_end:   %08x\n", (uint32_t) (((uint64_t) &kernel_end) & 0xffffffff));
+  INFO("kernel_start: %08X\n", (uint64_t) &kernel_start);
+  INFO("kernel_end:   %08X\n", ((uint64_t) &kernel_end) & 0xffffffff);
 }
-
-extern char kernel_start;
 
 void kernel_main(vmm_info_t *vmm_info) {
   screen_clear();
@@ -33,7 +34,7 @@ void kernel_main(vmm_info_t *vmm_info) {
 
   // XXX: Laid.
   vmm_stack = (uint64_t) vmm_info + sizeof(vmm_info_t);
-  ept_pml4_addr = (uint64_t) vmem_virtual_address_to_physical_address(&vmm_info->ept_info.PML4[0]);
+  ept_pml4_addr = (uint64_t) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&vmm_info->ept_info.PML4[0]);
 
   /*
    * Enables core/cpu.
@@ -41,10 +42,6 @@ void kernel_main(vmm_info_t *vmm_info) {
   //smp_setup();
 
   vmm_setup();
-  /*
-   * TODO: replace the hardcoded size.
-   */
-//  vmm_ept_setup(&vmm_info->ept_info, vmm_info->kernel_info.kernel_physical_start, 1);
-  vmm_ept_setup(&vmm_info->ept_info, &kernel_start, 1);
+  vmm_ept_setup(&vmm_info->ept_info, (uintptr_t) &kernel_start, vmm_info->vmm_physical_end - vmm_info->vmm_physical_start + 1);
   vmm_vm_setup_and_launch();
 }

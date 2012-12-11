@@ -16,7 +16,7 @@ loader:
    * of the 32 bits operating system, eax is initialized with the magic value
    * and ebx is initialized with the physical address of the multiboot
    * information structure.
-   * See Multiboot Specification version 0.6.96, section 3.2.
+   * See [Multiboot_0.6.96], section 3.2.
    */
   pushl %ebx
   pushl %eax

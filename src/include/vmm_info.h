@@ -48,7 +48,6 @@ typedef struct {
   uint8_t gdt_desc[5 * 8]      __attribute((aligned(8)));
   uint64_t PML4[512]           __attribute__((aligned(0x1000)));
   uint64_t PDPT_PML40[512]     __attribute__((aligned(0x1000)));
-  uint64_t PD_PDPT0_PML40[512] __attribute__((aligned(0x1000)));
 } __attribute__((aligned(8))) vmem_info_t;
 
 #define VMM_STACK_SIZE 0x4000
@@ -63,6 +62,8 @@ typedef struct {
   pmem_mmap_t pmem_mmap;
   vmem_info_t vmem_info;
   ept_info_t ept_info;
+  uint32_t vmm_physical_start;
+  uint32_t vmm_physical_end;
 } vmm_info_t;
 
 #endif

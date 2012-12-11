@@ -4,24 +4,35 @@
 
 #include "hardware/cpu.h"
 
+/*
+ * We initialize the GDT for both protected mode and long mode.
+ * See [Intel_August_2012], volume 3, section 3.5.1.
+ * See [Intel_August_2012], volume 3, section 5.2.1.
+ */
 gdt_entry_t gdt_entries[] = {
     /* NULL */
   {0x00000000, 0x00000000, 0x00, 0x00},
     /* Code 32 */
   {0x00000000, 0xffffffff, 0x9a, 0xcf},
-    /* Code 64 - """To enter long mode, the D/B bit (bit 22, 2nd dword) of the
-     * GDT code segment must be clear (as it would be for a 16-bit code
-     * segment), and the L bit (bit 21, 2nd dword) of the GDT code segment must
-     * be set. """ (OSDEV)
+    /*
+     * Code 64
+     * See [Intel_August_2012], volume 3, section 5.2.1.
      */
   {0x00000000, 0xffffffff, 0x9a, 0xaf},
     /* Data 32 */
   {0x00000000, 0xffffffff, 0x92, 0xcf},
-    /* Data 64 */
+    /*
+     * Data 64
+     * See [Intel_August_2012], volume 3, section 5.2.1.
+     */
   {0x00000000, 0xffffffff, 0x92, 0xaf},
 };
 
 void vmem_set_gdt_desc(uint8_t *gdt_desc, gdt_entry_t *entry) {
+  /*
+   * See [Intel_August_2012], volume 3, section 5.2.
+   * See [Intel_August_2012], volume 3, section 5.2.1.
+   */
   *((uint16_t *) (gdt_desc + 2)) = ((entry->base  >>  0) & 0xffff);
   *((uint8_t  *) (gdt_desc + 4)) = ((entry->base  >> 16) & 0x00ff);
   *((uint8_t  *) (gdt_desc + 7)) = ((entry->base  >> 24) & 0x00ff);
@@ -32,6 +43,10 @@ void vmem_set_gdt_desc(uint8_t *gdt_desc, gdt_entry_t *entry) {
 }
 
 void vmem_get_gdt_desc(uint8_t *gdt_desc, gdt_entry_t *entry) {
+  /*
+   * See [Intel_August_2012], volume 3, section 5.2.
+   * See [Intel_August_2012], volume 3, section 5.2.1.
+   */
   entry->base = 0;
   entry->base |= (*((uint16_t *) (gdt_desc + 2)) <<  0) & 0xffff;
   entry->base |= (*((uint8_t *)  (gdt_desc + 4)) << 16) & 0x00ff;
@@ -43,57 +58,53 @@ void vmem_get_gdt_desc(uint8_t *gdt_desc, gdt_entry_t *entry) {
   entry->access = (*((uint8_t *)  (gdt_desc + 5)) <<  0) & 0x00ff;
 }
 
-uint64_t vmem_addr_logical_to_linear(uint64_t addr, uint8_t desc) {
+void vmem_check_current_gdt_base(void) {
+  uint32_t segment_selector;
+  gdt_entry_t entry_cs;
+  gdt_entry_t entry_ds;
   gdt_pm_ptr_t gdt_ptr;
-  gdt_entry_t entry;
+  uint8_t *gdt_desc;
+  /*
+   * In order to access the GDT entry corresponding to a segment selector,
+   * we don't care about the TI and RPL.
+   * See [Intel_August_2012], volume 3, section 3.4.2.
+   */
+  gdt_desc = (uint8_t *) gdt_ptr.base;
   cpu_read_gdt((uint32_t *) &gdt_ptr);
-  uint8_t *gdt_desc = (uint8_t *) (gdt_ptr.base + desc);
-  vmem_get_gdt_desc(gdt_desc, &entry);
-  return addr + entry.base;
-}
-
-uint64_t vmem_addr_logical_to_linear_ds(uint64_t addr) {
-  uint32_t ds;
-  cpu_read_ds(&ds);
-  return vmem_addr_logical_to_linear(addr, ds);
-}
-
-uint64_t vmem_addr_linear_to_logical(uint64_t addr, uint8_t desc) {
-  gdt_pm_ptr_t gdt_ptr;
-  gdt_entry_t entry;
-  cpu_read_gdt((uint32_t *) &gdt_ptr);
-  uint8_t *gdt_desc = (uint8_t *) (gdt_ptr.base + desc);
-  vmem_get_gdt_desc(gdt_desc, &entry);
-  return addr - entry.base;
-}
-
-uint64_t vmem_addr_linear_to_logical_ds(uint64_t addr) {
-  uint32_t ds;
-  cpu_read_ds(&ds);
-  return vmem_addr_linear_to_logical(addr, ds);
+  cpu_read_cs(&segment_selector);
+  vmem_get_gdt_desc(gdt_desc + (8 * (segment_selector & ~0x7)), &entry_cs);
+  cpu_read_ds(&segment_selector);
+  vmem_get_gdt_desc(gdt_desc + (8 * (segment_selector & ~0x7)), &entry_ds);
+  if (entry_cs.base != 0x0 || entry_ds.base != 0x0) {
+    /*
+     * Otherwise, we must take the base into account while switching
+     * to the new GDT with cpu_write_gdt.
+     */
+    ERROR("the loader has not started its execution in flat model.\n");
+  }
 }
 
 void vmem_setup_gdt(vmem_info_t *vmem_info) {
+  gdt_pm_ptr_t gdt_ptr;
   ACTION("setup gdt\n");
   for (uint8_t i = 0; i < sizeof(gdt_entries) / sizeof(gdt_entries[0]); i++) {
     vmem_set_gdt_desc(&vmem_info->gdt_desc[8 * i], &gdt_entries[i]);
   }
-  gdt_pm_ptr_t gdt_ptr;
   gdt_ptr.limit = sizeof(vmem_info->gdt_desc) - 1;
   gdt_ptr.base = (uint32_t) &vmem_info->gdt_desc;
   cpu_write_gdt((uint32_t) &gdt_ptr, 0x8, 0x18);
 }
 
 /*
- * All the memory but the vmm memory is mapped with 1 GB pages using identity mapping.
- * See "Intel 64 and IA-32 Architectures Software Developer's Manual", figure 4.10.
+ * All the memory is mapped with 1 GB pages using identity mapping.
+ * See [Intel_August_2012], volume 3, section 4.5.1, figure 4.10.
  */
 void vmem_setup_paging(vmem_info_t *vmem_info) {
   /*
-   * Everything stand into the first 4GB, so we only need the first entry of PML4.
-   * In other words, it is useless to shift an uint32_t number 39 times to the right.
+   * Everything stand into the first 512 GB (more precisely, into the first 4 BG, due to
+   * protected mode limitation), so we only need the first entry of PML4.
    */
-  for (uint32_t i = 0; i < sizeof(vmem_info->PML4) / sizeof(vmem_info->PML4[0]); i++) {
+  for (uint32_t i = 1; i < sizeof(vmem_info->PML4) / sizeof(vmem_info->PML4[0]); i++) {
     vmem_info->PML4[i] = 0;
   }
   vmem_info->PML4[0] = ((uint64_t) ((uint32_t) &vmem_info->PDPT_PML40[0])) | 0x03;
@@ -108,6 +119,7 @@ void vmem_setup_paging(vmem_info_t *vmem_info) {
 }
 
 void vmem_setup(vmem_info_t *vmem_info) {
+  vmem_check_current_gdt_base();
   vmem_setup_gdt(vmem_info);
   vmem_setup_paging(vmem_info);
 }
@@ -132,34 +144,5 @@ void vmem_print_info(void) {
    */
   uint32_t cr3;
   cpu_read_cr3(&cr3);
-
   INFO("paging from cr3=%08x\n", cr3);
-  INFO("  PML4 at %08x (from cr3)\n", cr3);
-  uint64_t *PML4 = (uint64_t *) cr3;
-  for (uint32_t i = 0; i < 512; i++) {
-    if (PML4[i] != 0) {
-      INFO("  %03d: %08X\n", i, (uint64_t) PML4[i]);
-      INFO("    PDPT at %08x\n", PML4[i] & 0xffffff00);
-      uint64_t *PDPT = (uint64_t *) ((uint32_t) (PML4[i] & 0xffffff00));
-      for (uint32_t j = 0; j < 512; j++) {
-        if (PDPT[j] != 0) {
-          if ((PDPT[j] & VMEM_PDPT_PS_1G) != 0) {
-            /*
-             * Will print too many informations:
-             * INFO("    %03d: %08X (1G page)\n", j, (uint64_t) PDPT[j]);
-             */
-          } else {
-            INFO("    %03d: %08X\n", j, (uint64_t) PDPT[j]);
-            INFO("      PD at %08x\n", PDPT[j] & 0xffffff00);
-            uint64_t *PD = (uint64_t *) ((uint32_t) (PDPT[j] & 0xffffff00));
-            for (uint32_t k = 0; k < 512; k++) {
-              if (PD[k] != 0) {
-                INFO("      %03d: %08X\n", k, (uint64_t) PD[k]);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
 }

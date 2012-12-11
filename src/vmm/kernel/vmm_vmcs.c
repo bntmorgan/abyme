@@ -20,8 +20,8 @@ void vmm_vmcs_fill_guest_state_fields(void) {
   /*
    * Guest CR0 - we have to set CR0 bits according to IA32_VMX_CR0_FIXED0
    * and IA32_VMX_CR0_FIXED1 MSRs (will only enable NE in our case).
-   * See Volume 3, Section 26.3.1.1 of intel documentation.
-   * See Volume 3, Section 26.8 of intel documentation.
+   * See [Intel_August_2012], volume 3, section 26.3.1.1.
+   * See [Intel_August_2012], volume 3, section 26.8.
    */
   uint64_t cr0 = 0x60000010;
   msr_read(MSR_ADDRESS_VMX_CR0_FIXED1, &eax, &edx);
@@ -38,8 +38,8 @@ void vmm_vmcs_fill_guest_state_fields(void) {
   /*
    * Guest CR4 - we have to set CR4 bits according to IA32_VMX_CR4_FIXED0
    * and IA32_VMX_CR4_FIXED1 MSRs (will only enable VMXE in our case).
-   * See Volume 3, Section 26.3.1.1 of intel documentation.
-   * See Volume 3, Section 26.8 of intel documentation.
+   * See [Intel_August_2012], volume 3, section 26.3.1.1.
+   * See [Intel_August_2012], volume 3, section 26.8.
    */
   uint64_t cr4 = 0;
   msr_read(MSR_ADDRESS_VMX_CR4_FIXED1, &eax, &edx);

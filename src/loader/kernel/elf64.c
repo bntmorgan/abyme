@@ -1,3 +1,7 @@
+/*
+ * See [Elf64_Version1.5_Draft2].
+ */
+
 #include "elf64.h"
 
 #include "string.h"
@@ -25,7 +29,6 @@ void elf64_load_segment(Elf64_Ehdr *elf64_header, uint8_t *destination) {
   uint8_t *source;
 
   program_header = (Elf64_Phdr *) (((uintptr_t) elf64_header) + ((uintptr_t) elf64_header->e_phoff));
-printk("%x %x\n", program_header->p_type, PT_LOAD);
   if ((elf64_header->e_machine != EM_X86_64) || (!elf64_header->e_phnum) || (program_header->p_type != PT_LOAD)) {
     ERROR("invalid module");
   }

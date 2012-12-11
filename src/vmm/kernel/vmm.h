@@ -2,6 +2,7 @@
 #define __VMM_H__
 
 #include "types.h"
+#include "vmm_info.h"
 
 extern uint64_t vmm_stack;
 extern uint64_t ept_pml4_addr;
@@ -225,7 +226,7 @@ enum vm_exit_reason {
 
 void vmm_setup();
 
-void vmm_ept_setup();
+void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t vmm_size);
 
 void vmm_vm_setup_and_launch();
 

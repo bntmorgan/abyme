@@ -1,7 +1,4 @@
 CC	= gcc
-CFLAGS	= -m64 -Wall -Wextra -nostdlib -fno-builtin -nostartfiles -nodefaultlibs -std=c99 -Wpointer-sign -O0 -I. -Iinclude -fpie -mno-red-zone -D__X86_64__
-
-
 CFLAGS =  -I. -Iinclude -Wall -W -pipe -nostdlib -nostdinc -ffreestanding -fms-extensions -m64 -mno-red-zone -mcmodel=small -fpie -std=c99 -D__X86_64__
 LD	= ld
  
@@ -32,4 +29,4 @@ trampoline/trampoline.bin: trampoline/trampoline.s
 	make -C trampoline
 
 clean:
-	$(RM) $(OBJFILES) vmm.bin
+	$(RM) $(OBJFILES) vmm.bin $(OBJFILES:=.asm)

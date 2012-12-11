@@ -1,3 +1,7 @@
+/*
+ * See [Multiboot_0.6.96].
+ */
+
 #ifndef __MULTIBOOT_H__
 #define __MULTIBOOT_H__
 
@@ -16,6 +20,7 @@
 
 /*
  * The following value must be in %eax.
+ * See [Multiboot_0.6.96], section 3.2.
  */
 #define MB_BOOTLOADER_MAGIC 0x2BADB002
 

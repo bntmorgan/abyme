@@ -3,19 +3,19 @@
 
 #include "types.h"
 
-#define CPU_READ_EIP() ({ \
-  uint32_t reg; \
-  __asm__ __volatile__("mov  $., %0" : "=a" (reg));\
-  reg; \
- })
+#define CPU_READ_EIP() ({                            \
+    uint32_t reg;                                    \
+    __asm__ __volatile__("mov $., %0" : "=a" (reg)); \
+    reg;                                             \
+  })
 
 void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg);
 
 void cpu_read_gdt(uint32_t *gdt_ptr);
 
-void cpu_read_ds(uint32_t *reg);
+void cpu_read_cs(uint32_t *reg);
 
-void cpu_read_cr0(uint32_t *cr0);
+void cpu_read_ds(uint32_t *reg);
 
 void cpu_read_cr3(uint32_t *reg);
 

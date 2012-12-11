@@ -5,10 +5,14 @@
 
 #include "vmm_info.h"
 
+/*
+ * The GDT is configured in flat mode by the loader and we use identity mapping
+ * for pagination (without offset). As a consequence,
+ * virtual address == physical address.
+ * See [Intel_August_2012], volume 3, section 3.2.1.
+ */
+#define VMEM_ADDR_VIRTUAL_TO_PHYSICAL(addr)	((uint64_t) addr)
+
 void vmem_print_info(void);
-
-uint64_t vmem_addr_linear_to_logical_ds(uint64_t addr);
-
-uint64_t vmem_virtual_address_to_physical_address(void *addr);
 
 #endif

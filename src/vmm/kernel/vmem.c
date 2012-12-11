@@ -5,10 +5,6 @@
 #include "hardware/cpu.h"
 #include "stdio.h"
 
-uint64_t vmem_virtual_address_to_physical_address(void *addr) {
-  return (uint64_t) (uintptr_t) addr;
-}
-
 void vmem_get_gdt_desc(uint8_t *gdt_desc, gdt_entry_t *entry) {
   entry->base = 0;
   entry->base |= (*((uint16_t *) (gdt_desc + 2)) <<  0) & 0xffff;
@@ -44,34 +40,5 @@ void vmem_print_info(void) {
    */
   uint64_t cr3;
   cpu_read_cr3(&cr3);
-
   INFO("paging from cr3=%08x\n", cr3);
-  INFO("  PML4 at %08x (from cr3)\n", cr3);
-  uint64_t *PML4 = (uint64_t *) cr3;
-  for (uint32_t i = 0; i < 512; i++) {
-    if (PML4[i] != 0) {
-      INFO("  %03d: %08X\n", i, (uint64_t) PML4[i]);
-      INFO("    PDPT at %08x\n", PML4[i] & 0xffffff00);
-      uint64_t *PDPT = (uint64_t *) (PML4[i] & 0xffffffffffffff00);
-      for (uint32_t j = 0; j < 512; j++) {
-        if (PDPT[j] != 0) {
-          if ((PDPT[j] & VMEM_PDPT_PS_1G) != 0) {
-            /*
-             * Will print too many informations:
-             * INFO("    %03d: %08X (1G page)\n", j, (uint64_t) PDPT[j]);
-             */
-          } else {
-            INFO("    %03d: %08X\n", j, (uint64_t) PDPT[j]);
-            INFO("      PD at %08x\n", PDPT[j] & 0xffffff00);
-            uint64_t *PD = (uint64_t *) (PDPT[j] & 0xffffffffffffff00);
-            for (uint32_t k = 0; k < 512; k++) {
-              if (PD[k] != 0) {
-                INFO("      %03d: %08X\n", k, (uint64_t) PD[k]);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
 }

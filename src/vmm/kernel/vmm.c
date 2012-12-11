@@ -12,22 +12,22 @@ uint32_t number_bytes_regions;
 /*
  * We need a VMXON region and at least one VMCS region in non-pageable memory,
  * of a size specified by IA32_VMX_BASIC MSR and aligned to a 4-KByte boundary.
- * See Volume 3, Section 31.5 of intel documentation.
- * See Volume 3, Section 31.6 of intel documentation.
- * See Volume 3, Section A.1 of intel documentation.
- * See Volume 3, Section 11.11 of intel documentation.
+ * See [Intel_August_2012], volume 3, section 31.5.
+ * See [Intel_August_2012], volume 3, section 31.6.
+ * See [Intel_August_2012], volume 3, section A.1.
+ * See [Intel_August_2012], volume 3, section 11.11.
  */
 /*
  * TODO: adapt memory type using MTRR.
- * See Volume 3, Section 11.11 of intel documentation.
+ * See [Intel_August_2012], volume 3, section 11.11.
  */
 uint8_t vmxon[4096] __attribute((aligned(0x1000)));
 uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
 
 /**
  * Sets up the VMM and enters VMX root operation.
- * See Volume 3, Section 23.7 of intel documentation.
- * See Volume 3, Section 31.5 of intel documentation.
+ * See [Intel_August_2012], volume 3, section 23.7.
+ * See [Intel_August_2012], volume 3, section 31.5.
  */
 void vmm_setup() {
   /*
@@ -44,7 +44,7 @@ void vmm_setup() {
    */
   /*
    * TODO: adapt memory type using MTRR.
-   * See Volume 3, Section 11.11 of intel documentation.
+   * See [Intel_August_2012], volume 3, section 11.11.
    */
   vmm_create_vmxon_and_vmcs_regions();
 
@@ -83,7 +83,7 @@ void vmm_setup() {
 
 /**
  * Sets up and launches a guest VM.
- * See Volume 3, Section 31.6 of intel documentation.
+ * See [Intel_August_2012], volume 3, section 31.6.
  */
 void vmm_vm_setup_and_launch() {
   /*
@@ -96,7 +96,7 @@ void vmm_vm_setup_and_launch() {
    */
   /*
    * TODO: adapt memory type using MTRR.
-   * See Volume 3, Section 11.11 of intel documentation.
+   * See [Intel_August_2012], volume 3, section 11.11.
    */
 
   /*
@@ -141,15 +141,15 @@ void vmm_vm_setup_and_launch() {
  * - The Page-Directory associated to the physical memory of the vmm is
  *   configured using 2MB pages.
  * - 2MB pages of the vmm memory are marked as non-readable, non-writable
-     and non-executable in order to protect the vmm memory.
+ *   and non-executable in order to protect the vmm memory.
  *
- * See Volume 3, Section 28.2 of intel documentation.
+ * See [Intel_August_2012], volume 3, section 28.2.
  */
-void vmm_ept_setup(ept_info_t *ept_info, uint32_t physical_mod_dest, uint32_t mod_dest_nb_pages_2MB) {
+void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t vmm_size) {
   /*
    * Everything stands into the first 4GB, so we only need the first entry of PML4.
    */
-  ept_info->PML4[0] = vmem_virtual_address_to_physical_address((uint8_t*) ept_info->PDPT_PML40) | 0x07 /* R, W, X */;
+  ept_info->PML4[0] = VMEM_ADDR_VIRTUAL_TO_PHYSICAL((uint8_t*) ept_info->PDPT_PML40) | 0x07 /* R, W, X */;
   for (uint32_t i = 1; i < sizeof(ept_info->PML4) / sizeof(ept_info->PML4[0]); i++) {
     ept_info->PML4[i] = 0;
   }
@@ -161,7 +161,7 @@ void vmm_ept_setup(ept_info_t *ept_info, uint32_t physical_mod_dest, uint32_t mo
   for (uint32_t i = 0; i < sizeof(ept_info->PDPT_PML40) / sizeof(ept_info->PDPT_PML40[0]); i++) {
     ept_info->PDPT_PML40[i] = (((uint64_t) i) << 30) | (1 << 7) /* 1GB page */ | 0x7 /* R, W, X */;
   }
-  ept_info->PDPT_PML40[physical_mod_dest >> 30] = vmem_virtual_address_to_physical_address((uint8_t*) ept_info->PD_PDPT0_PML40) | 0x07 /* R, W, X */;
+  ept_info->PDPT_PML40[vmm_physical_start >> 30] = VMEM_ADDR_VIRTUAL_TO_PHYSICAL((uint8_t*) ept_info->PD_PDPT0_PML40) | 0x07 /* R, W, X */;
 
   /*
    * Automatically map all memory accessed with PD_PDPT0_PML40 in 2MB pages.
@@ -173,11 +173,15 @@ void vmm_ept_setup(ept_info_t *ept_info, uint32_t physical_mod_dest, uint32_t mo
   /*
    * Mark vmm memory as non-readable, non-writable and non-executable
    */
-  for (uint32_t i = 0; i < mod_dest_nb_pages_2MB; i++) {
-    if ((physical_mod_dest >> 30) != (((physical_mod_dest >> 21) + i) >> 9)) {
+  uint64_t vmm_nb_pages_2MB = vmm_size / 0x200000;
+  if (vmm_size % 0x200000 > 0) {
+    vmm_nb_pages_2MB = vmm_nb_pages_2MB + 1;
+  }
+  for (uint64_t i = 0; i < vmm_nb_pages_2MB; i++) {
+    if ((vmm_physical_start >> 30) != (((vmm_physical_start >> 21) + i) >> 9)) {
       ERROR("vmm pages don't belong to the same PDPT entry");
     }
-    ept_info->PD_PDPT0_PML40[((physical_mod_dest >> 21) + i) & 0x1ff] = ((uint64_t) (physical_mod_dest + (i << 21))) | (1 << 7) /* 2MB page */;
+    ept_info->PD_PDPT0_PML40[((vmm_physical_start >> 21) + i) & 0x1ff] = ((uint64_t) (vmm_physical_start + (i << 21))) | (1 << 7) /* 2MB page */;
   }
 }
 
@@ -227,6 +231,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
     default:
       INFO("unhandled reason: %d\n", exit_reason);
       // Magic breakpoint!
+      /* TODO: what???????? */
       __asm__ __volatile__("xchg %bx, %bx");
   }
 }
@@ -239,7 +244,7 @@ void vmm_create_vmxon_and_vmcs_regions(void) {
   /*
    * We ignore bit 48 b because everything must stand into the first giga bytes
    * of memory.
-   * See Volume 3, Section A.1 of intel documentation.
+   * See [Intel_August_2012], volume 3, section A.1.
    */
   msr_read(MSR_ADDRESS_IA32_VMX_BASIC, &eax, &edx);
   vmcs_revision_identifier = eax;
@@ -293,21 +298,21 @@ void vmm_vmxon(void) {
   /*
    * vmxon needs physical address.
    */
-  cpu_vmxon((uint8_t *) vmem_virtual_address_to_physical_address(vmxon));
+  cpu_vmxon((uint8_t *) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(vmxon));
 }
 
 void vmm_vmclear(void) {
   /*
    * vmclear needs physical address.
    */
-  cpu_vmclear((uint8_t *) vmem_virtual_address_to_physical_address(vmcs0));
+  cpu_vmclear((uint8_t *) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(vmcs0));
 }
 
 void vmm_vmptrld(void) {
   /*
    * vmclear needs physical address.
    */
-  cpu_vmptrld((uint8_t *) vmem_virtual_address_to_physical_address(vmcs0));
+  cpu_vmptrld((uint8_t *) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(vmcs0));
 }
 
 void vmm_vmlaunch(void) {

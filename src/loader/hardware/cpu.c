@@ -2,19 +2,25 @@
 
 #include "stdio.h"
 
+#define MSR_ADDRESS_IA32_EFER		0xc0000080
+#define MSR_ADDRESS_IA32_EFER__BIT__LME	0x8
+
 void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg) {
   __asm__ __volatile__(
       /*
-       * Prepare the far jump using a retf throuh the stack.
+       * Prepare the far jump using a retf through the stack.
        */
       "pushl %1        ;"
       "pushl $1f       ;"
       /*
-       * Change the gdt. This change will take place only after a far jump
+       * Change the gdt. Segmentation will take place when the descriptor
+       * caches have changed. They change on reload of corresponding segment
+       * registers. For cs, this change will take place only after a far jump
        * (which force a modification of the code segment selector cs).
        * Fortunatly, because we want to control the next instruction executed
-       * by the CPU  (otherwise it would not have been the one that comes just
+       * by the CPU (otherwise it would not have been the one that comes just
        * after lgdt!).
+       * See [Intel_August_2012], volume 3, section 3.4.3.
        */
       "mov %0, %%eax   ;"
       "lgdt (%%eax)    ;"
@@ -64,6 +70,18 @@ void cpu_write_cr3(uint32_t value) {
 }
 
 void cpu_enable_paging(void) {
+  /*
+   * The paging is setup with identity mapping without offset.
+   * So, the linear and physical addresses are equal.
+   * It is important for switching to long mode.
+   * See [Intel_August_2012], volume 3, section 2.5.
+   * See [Intel_August_2012], volume 3, section 22.30.3.
+   * See [Intel_August_2012], volume 3, section 9.8.5.
+   */
+  /*
+   * TODO: we should jump after enabling paging.
+   * See [Intel_August_2012], volume 3, section 22.30.3.
+   */
   __asm__ __volatile__(
       "movl %cr0, %eax ;"
       "bts $31, %eax   ;"
@@ -72,6 +90,10 @@ void cpu_enable_paging(void) {
 }
 
 void cpu_enable_long_mode(void) {
+  /*
+   * See [Intel_August_2012], volume 3, section 9.8.5.
+   * See [Intel_August_2012], volume 3, section 35.2.
+   */
   __asm__ __volatile__(
       "mov $0xc0000080, %ecx ;"
       "rdmsr                 ;"
@@ -81,6 +103,9 @@ void cpu_enable_long_mode(void) {
 }
 
 void cpu_enable_pae(void) {
+  /*
+   * See [Intel_August_2012], volume 3, section 2.5.
+   */
   __asm__ __volatile__(
       "movl %cr4, %eax ;"
       "bts $5, %eax    ;"
@@ -88,12 +113,8 @@ void cpu_enable_pae(void) {
   );
 }
 
-void cpu_read_eip(uint32_t *reg) {
-  __asm__ __volatile__("mov  $., %0" : "=a" (*reg));
-}
-
 void cpu_outportb(uint32_t port, uint8_t value) {
-  __asm__ __volatile__("outb %%al,%%dx"::"d" (port), "a" (value));
+  __asm__ __volatile__("outb %%al,%%dx" : : "d" (port), "a" (value));
 }
 
 void cpu_stop(void) {
@@ -103,6 +124,9 @@ void cpu_stop(void) {
 }
 
 uint8_t cpu_is_paging_enabled(void) {
+  /*
+   * See [Intel_August_2012], volume 3, section 2.5.
+   */
   uint32_t cr0;
   cpu_read_cr0(&cr0);
   if ((cr0 & 0x80000000) == 0x80000000) {
@@ -112,6 +136,9 @@ uint8_t cpu_is_paging_enabled(void) {
 }
 
 uint8_t cpu_is_protected_mode_enabled(void) {
+  /*
+   * See [Intel_August_2012], volume 3, section 2.5.
+   */
   uint32_t cr0;
   cpu_read_cr0(&cr0);
   if ((cr0 & 0x1) == 0x1) {
@@ -124,12 +151,12 @@ void cpu_print_info(void) {
   uint32_t cs;
   uint32_t ds;
   uint32_t ss;
-  uint32_t eip;
   uint32_t cr0;
+  uint32_t eip;
   cpu_read_cs(&cs);
   cpu_read_ds(&ds);
   cpu_read_ss(&ss);
-  cpu_read_eip(&eip);
   cpu_read_cr0(&cr0);
+  eip = CPU_READ_EIP();
   INFO("cpu: cs=%04x ds=%04x ss=%04x eip=%08x cr0=%08x\n", cs, ds, ss, eip, cr0);
 }

@@ -1,5 +1,6 @@
 /*
- * TODO: intel 8.4.4
+ * See [Intel_August_2012], volume 3, section 8.4.4.
+ * See [Multiprocessor_Version1.4_May_1997].
  */
 
 #define SMP_ADDRESS_EBDA_ADDRESS	0x0040e
@@ -35,7 +36,7 @@
 #define SMP_MP_CPU_FLAGS_BP	0x2
 
 /*
- * See Intel MultiProcessor Specification, Version 1.4, May 1997, section 4.1:
+ * See [Multiprocessor_Version1.4_May_1997], section 4.1.
  */
 typedef struct {
   uint32_t signature;
@@ -64,7 +65,7 @@ typedef struct {
 } __attribute__((packed)) smp_mp_configuration_table_header_t;
 
 /*
- * See Intel MultiProcessor Specification, Version 1.4, May 1997, section 4.3.1:
+ * See [Multiprocessor_Version1.4_May_1997], section 4.3.1.
  */
 typedef struct {
   uint8_t entry_type;
@@ -78,7 +79,7 @@ typedef struct {
 } __attribute__((packed)) smp_mp_processor_entry_t;
 
 /*
- * See Intel MultiProcessor Specification, Version 1.4, May 1997, section 4.3.2:
+ * See [Multiprocessor_Version1.4_May_1997], section 4.3.2.
  */
 typedef struct {
   uint8_t entry_type;
@@ -87,7 +88,7 @@ typedef struct {
 } __attribute__((packed)) smp_mp_bus_entry_t;
 
 /*
- * See Intel MultiProcessor Specification, Version 1.4, May 1997, section 4.3.3:
+ * See [Multiprocessor_Version1.4_May_1997], section 4.3.3.
  */
 typedef struct {
   uint8_t entry_type;
@@ -98,7 +99,7 @@ typedef struct {
 } __attribute__((packed)) smp_mp_io_apic_entry_t;
 
 /*
- * See Intel MultiProcessor Specification, Version 1.4, May 1997, section 4.3.4:
+ * See [Multiprocessor_Version1.4_May_1997], section 4.3.4.
  */
 typedef struct {
   uint8_t entry_type;
@@ -111,7 +112,7 @@ typedef struct {
 } __attribute__((packed)) smp_mp_io_interrupt_entry_t;
 
 /*
- * See Intel MultiProcessor Specification, Version 1.4, May 1997, section 4.3.5:
+ * See [Multiprocessor_Version1.4_May_1997], section 4.3.5.
  */
 typedef struct {
   uint8_t entry_type;
@@ -147,7 +148,7 @@ uint64_t smp_search_mp_floating_pointer_structure(uint64_t address, uint64_t len
 
 void smp_search_mp_configuration_table_header(void) {
   /*
-   * See Intel MultiProcessor Specification, Version 1.4, May 1997, section 4.
+   * See [Multiprocessor_Version1.4_May_1997], section 4.
    */
   uint64_t area_start = ((uint64_t) *((uint32_t *) SMP_ADDRESS_EBDA_ADDRESS));
   INFO("search smp_mp_floating_pointer_structure into EBDA (%x obtained from %x)\n",
@@ -196,9 +197,8 @@ void smp_process_processor_entry(smp_mp_processor_entry_t *smp_mp_processor_entr
     INFO("          feature_flags=%x\n", smp_mp_processor_entry->feature_flags);
     INFO("          is bsp=%d\n", (uint32_t) (smp_mp_processor_entry->cpu_flags & SMP_MP_CPU_FLAGS_BP));
     /*
-     * Note: "Local APIC IDs must be unique, and need not be consecutive",
-     * as described in section 3.6.6 of 
-     * Intel MultiProcessor Specification, Version 1.4, May 1997.
+     * Local APIC IDs must be unique, and need not be consecutive.
+     * See [Multiprocessor_Version1.4_May_1997], section 3.6.6.
      */
     smp_cpu_ids[smp_nb_cpus] = smp_mp_processor_entry->local_apic_id;
     smp_nb_cpus = smp_nb_cpus + 1;
@@ -240,7 +240,7 @@ void smp_default_setup(void) {
 
 void smp_activate_ap(void) {
   /*
-   * From Intel section 8.4.4.1.
+   * See [Intel_August_2012], volume 3, section 8.4.4.1.
    */
   /*
    * Point 11: "Enable the local APIC by setting bit 8 of the APIC spurious
@@ -266,7 +266,7 @@ void smp_activate_ap(void) {
     if (i != smp_bsp_id) {
       INFO("activating cpu %d having local apic id %x\n", i, smp_cpu_ids[i]);
       /*
-       * See figure 10.12.
+       * See [Intel_August_2012], volume 3, section 10.6.1, figure 10.12.
        */
       *icr_address_high = ((uint32_t) smp_cpu_ids[i]) << 24;
       *icr_address_low = 0x00004500;
