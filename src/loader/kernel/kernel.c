@@ -76,18 +76,9 @@ void kernel_main(uint32_t magic, uint32_t *address) {
   kernel_vmm_allocation();
   vmem_setup(&vmm_info->vmem_info);
   pmem_copy_info(&vmm_info->pmem_mmap);
-<<<<<<< HEAD
   cpu_print_info();
   pmem_print_info(multiboot_get_info());
   vmem_print_info();
-=======
-
-  /*cpu_print_info();
-  pmem_print_info(mb_get_info());
-  vmem_print_info();
-  mod_print_info();*/
-
->>>>>>> 6695b0f0befe2eff1dbbff885d4cb318d8e99c9a
   ACTION("switching to long mode (vmm_info at %08x)\n", (uint32_t) vmm_info);
   ACTION("(vmm_entry at %08x)\n", (uint32_t) vmm_entry);
   ACTION("(vmm_physical_start at %08x)\n", (uint32_t) vmm_physical_start);
