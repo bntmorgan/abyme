@@ -168,8 +168,32 @@ void cpu_vmlaunch(void) {
   }
 }
 
+void cpu_vmresume(void) {
+  uint8_t ok = 0;
+  __asm__ __volatile__(
+      /*
+       * vmresume sets the carry flag or the zero flag on error.
+       * See Volume 3, Section 30.2 of intel documentation.
+       * See Volume 3, Section 30.3 of intel documentation.
+       */
+      "vmresume  ;"
+      "seta %%cl ;" // ok <- 1 if CF = 0 and ZF = 0
+      : "=c" (ok));
+  if (ok) {
+    INFO("vmresume successful\n");
+  } else {
+    ERROR("vmresume failed\n");
+  }
+}
+
 void cpu_vmwrite(uint32_t field, uint32_t value) {
   __asm__ __volatile__("vmwrite %%rax, %%rdx" : : "a" (value), "d" (field));
+}
+
+uint32_t cpu_vmread(uint32_t field) {
+  uint32_t value;
+  __asm__ __volatile__("vmread %%rdx, %%rax" : "=a" (value): "d" (field));
+  return value;
 }
 
 void cpu_stop(void) {

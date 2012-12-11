@@ -32,17 +32,21 @@ void kernel_main(vmm_info_t *vmm_info) {
 
   // XXX: Laid.
   vmm_stack = (uint64_t) vmm_info + sizeof(vmm_info_t);
+<<<<<<< HEAD
   ept_pml4_addr = vmem_virtual_address_to_physical_address((uint8_t *) &vmm_info->ept_info.PML4);
+=======
+  ept_pml4_addr = (uint64_t) vmem_virtual_address_to_physical_address((uint8_t*) vmm_info->ept_info.PML4);
+>>>>>>> 6695b0f0befe2eff1dbbff885d4cb318d8e99c9a
 
   /*
    * Enables core/cpu.
    */
-  smp_setup();
+  //smp_setup();
 
   vmm_setup();
   /*
    * TODO: replace the hardcoded size.
    */
-  vmm_ept_setup(&vmm_info->ept_info, vmm_info->kernel_info.kernel_physical_start, 2);
+  vmm_ept_setup(&vmm_info->ept_info, vmm_info->kernel_info.kernel_physical_start, 1);
   vmm_vm_setup_and_launch();
 }
