@@ -104,8 +104,10 @@ void vmm_vmcs_fill_guest_state_fields(void) {
   vmm_vmcs_write(GUEST_SYSENTER_ESP, eax);
   msr_read(MSR_ADDRESS_IA32_SYSENTER_EIP, &eax, &edx);
   vmm_vmcs_write(GUEST_SYSENTER_EIP, eax);
+  vmm_vmcs_write(GUEST_IA32_EFER, 0);
+  vmm_vmcs_write(GUEST_IA32_EFER_HIGH, 0);
   // GUEST_IA32_PERF_GLOBAL_CTRL{,_HIGH}, GUEST_IA32_PAT{,_HIGH},
-  // GUEST_IA32_EFER{,_HIGH}, GUEST_SMBASE unused
+  // GUEST_SMBASE unused
 
   // 24.4.2: Guest Non-Register State.
   vmm_vmcs_write(GUEST_ACTIVITY_STATE, 0);
@@ -195,6 +197,7 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   ecx = (1 << 31); // Activate secondary controls
   ecx |= eax;
   ecx &= ebx;
+  ecx &= ~((1 << 15) | (1 << 16)); // CR3-load, CR3-store
   vmm_vmcs_write(CPU_BASED_VM_EXEC_CONTROL, ecx); // From MSRs IA32_VMX_PROCBASED_CTLS and IA32_VMX_TRUE_PROCBASED_CTLS
  
   msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &ebx);
@@ -301,7 +304,9 @@ void vmm_vmcs_fill_vm_entry_control_fields(void) {
    */
   // 24.8.1: VM-Entry Controls
   msr_read(MSR_ADDRESS_IA32_VMX_ENTRY_CTLS, &eax, &ebx);
-  ecx = eax & ebx;
+  ecx = (1 << 15); // Load IA32_EFER
+  ecx |= eax;
+  ecx &= ebx;
   vmm_vmcs_write(VM_ENTRY_CONTROLS, ecx); // From MSRs IA32_VMX_ENTRY_CTLS and IA32_VMX_TRUE_ENTRY_CTLS
 
   // 24.8.2: VM-Entry Controls for MSRs.

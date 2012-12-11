@@ -217,6 +217,14 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
           "=b" (guest_gpr.rbx), "=c" (guest_gpr.rcx),
           "=d" (guest_gpr.rdx) : "a" (guest_gpr.rax));
       break;
+    case EXIT_REASON_RDMSR:
+      INFO("handling RDMSR (rcx = %x)\n", guest_gpr.rcx);
+      __asm__ __volatile__("rdmsr" : "=a" (guest_gpr.rax), "=d" (guest_gpr.rdx) : "c" (guest_gpr.rcx));
+      break;
+    case EXIT_REASON_WRMSR:
+      INFO("handling WRMSR (rcx = %x, rax = %x, rdx = %x)\n", guest_gpr.rcx, guest_gpr.rax, guest_gpr.rdx);
+      __asm__ __volatile__("wrmsr" : : "a" (guest_gpr.rax), "d" (guest_gpr.rdx), "c" (guest_gpr.rcx));
+      break;
     case EXIT_REASON_TASK_SWITCH: {
       // Checks here a gneral protection VM_EXIT
       // 25.4.2 Treatment of Task Switches
