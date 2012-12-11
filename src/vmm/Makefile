@@ -2,7 +2,7 @@ CC	= gcc
 CFLAGS	= -m64 -Wall -Wextra -nostdlib -fno-builtin -nostartfiles -nodefaultlibs -std=c99 -Wpointer-sign -O0 -I.
 LD	= ld
  
-OBJFILES = build/kernel/start.o build/kernel/kernel.o build/common/screen.o build/common/string.o build/arch/cpu.o build/kernel/vmem.o build/kernel/pmem.o build/arch/msr.o build/kernel/vmm.o build/kernel/vmm_vmcs.o build/kernel/smp.o
+OBJFILES = build/kernel/start.o build/kernel/kernel.o build/common/screen.o build/common/string.o build/arch/cpu.o build/kernel/vmem.o build/kernel/pmem.o build/arch/msr.o build/kernel/vmm.o build/kernel/vmm_vmcs.o build/kernel/vmm_vm_exit_handler.o build/kernel/smp.o
  
 all: vmm.bin
  

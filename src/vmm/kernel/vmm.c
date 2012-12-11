@@ -181,75 +181,32 @@ void vmm_ept_setup(ept_info_t *ept_info, uint32_t physical_mod_dest, uint32_t mo
   }
 }
 
-void vmm_vm_exit_handler(void) {
-  __asm__ __volatile__(
-    "push %rax    ;"
-    "push %rcx    ;"
-    "push %rdx    ;"
-    "push %rbx    ;"
-    "sub $8, %rsp ;" // push %rsp
-    "push %rbp    ;"
-    "push %rsi    ;"
-    "push %rdi    ;"
-    "push %r8     ;"
-    "push %r9     ;"
-    "push %r10    ;"
-    "push %r11    ;"
-    "push %r12    ;"
-    "push %r13    ;"
-    "push %r14    ;"
-    "push %r15    ;"
-
-    "call vmm_handle_vm_exit ;"
-
-    "pop %r15     ;"
-    "pop %r14     ;"
-    "pop %r13     ;"
-    "pop %r12     ;"
-    "pop %r11     ;"
-    "pop %r10     ;"
-    "pop %r9      ;"
-    "pop %r8      ;"
-    "pop %rdi     ;"
-    "pop %rsi     ;"
-    "pop %rbp     ;"
-    "add $8, %rsp ;" // pop %rsp
-    "pop %rbx     ;"
-    "pop %rdx     ;"
-    "pop %rcx     ;"
-    "pop %rax     ;");
-
-  vmm_vmresume();
-}
-
-void vmm_handle_vm_exit(gpr64_t *guest_gpr) {
-  INFO("VM-EXIT\n");
-
-  guest_gpr->rsp = vmm_vmcs_read(GUEST_RSP);
+void vmm_handle_vm_exit(gpr64_t guest_gpr) {
+  guest_gpr.rsp = vmm_vmcs_read(GUEST_RSP);
   uint32_t guest_rip = vmm_vmcs_read(GUEST_RIP);
   uint32_t exit_reason = vmm_vmcs_read(VM_EXIT_REASON);
   uint32_t exit_instruction_length = vmm_vmcs_read(VM_EXIT_INSTRUCTION_LEN);
 
   vmm_vmcs_write(GUEST_RIP, guest_rip + exit_instruction_length);
 
-  INFO("exit_reason = %d\n", exit_reason);
+  INFO("VMEXIT! exit_reason = %d\n", exit_reason);
   INFO("----------\n");
   INFO("rip = 0x%x\n", guest_rip);
-  INFO("rsp = 0x%x    rbp = 0x%x\n", guest_gpr->rsp, guest_gpr->rbp);
-  INFO("rax = 0x%x    rbx = 0x%x\n", guest_gpr->rax, guest_gpr->rbx);
-  INFO("rcx = 0x%x    rdx = 0x%x\n", guest_gpr->rcx, guest_gpr->rdx);
-  INFO("rsi = 0x%x    rdi = 0x%x\n", guest_gpr->rsi, guest_gpr->rdi);
-  INFO("r8  = 0x%x    r9  = 0x%x\n", guest_gpr->r8,  guest_gpr->r9);
-  INFO("r10 = 0x%x    r11 = 0x%x\n", guest_gpr->r10, guest_gpr->r11);
-  INFO("r12 = 0x%x    r13 = 0x%x\n", guest_gpr->r12, guest_gpr->r13);
-  INFO("r14 = 0x%x    r15 = 0x%x\n", guest_gpr->r14, guest_gpr->r15);
+  INFO("rsp = 0x%x    rbp = 0x%x\n", guest_gpr.rsp, guest_gpr.rbp);
+  INFO("rax = 0x%x    rbx = 0x%x\n", guest_gpr.rax, guest_gpr.rbx);
+  INFO("rcx = 0x%x    rdx = 0x%x\n", guest_gpr.rcx, guest_gpr.rdx);
+  INFO("rsi = 0x%x    rdi = 0x%x\n", guest_gpr.rsi, guest_gpr.rdi);
+  INFO("r8  = 0x%x    r9  = 0x%x\n", guest_gpr.r8,  guest_gpr.r9);
+  INFO("r10 = 0x%x    r11 = 0x%x\n", guest_gpr.r10, guest_gpr.r11);
+  INFO("r12 = 0x%x    r13 = 0x%x\n", guest_gpr.r12, guest_gpr.r13);
+  INFO("r14 = 0x%x    r15 = 0x%x\n", guest_gpr.r14, guest_gpr.r15);
 
   switch (exit_reason) {
     case EXIT_REASON_CPUID:
-      INFO("handling CPUID (rax = %d)\n", guest_gpr->rax);
-      __asm__ __volatile__("cpuid" : "=a" (guest_gpr->rax),
-          "=b" (guest_gpr->rbx), "=c"(guest_gpr->rcx),
-          "=d"(guest_gpr->rdx) : "a"(guest_gpr->rax));
+      INFO("handling CPUID (rax = %x)\n", guest_gpr.rax);
+      __asm__ __volatile__("cpuid" : "=a" (guest_gpr.rax),
+          "=b" (guest_gpr.rbx), "=c" (guest_gpr.rcx),
+          "=d" (guest_gpr.rdx) : "a" (guest_gpr.rax));
       break;
     case EXIT_REASON_TASK_SWITCH: {
       // Checks here a gneral protection VM_EXIT
@@ -261,18 +218,17 @@ void vmm_handle_vm_exit(gpr64_t *guest_gpr) {
       // interruption 0x15 Miscellaneous system services
       if ((int_info & 0xff) == 0x15 && ((int_info & 0x700) >> 8) == 0x6) {
         // Query System Address Map gate e820
-        if ((guest_gpr->rax & 0xff) == 0xe820) {
+        if ((guest_gpr.rax & 0xff) == 0xe820) {
           INFO("BIOS interrupt call 0xe820\n");
           while(1);
         }
       }
     }
     default:
-      INFO("unhandled reason: %d\n");
+      INFO("unhandled reason: %d\n", exit_reason);
       // Magic breakpoint!
       __asm__ __volatile__("xchg %bx, %bx");
   }
-
 }
 
 void vmm_create_vmxon_and_vmcs_regions(void) {
