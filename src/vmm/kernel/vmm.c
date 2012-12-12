@@ -173,15 +173,19 @@ void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t
   /*
    * Mark vmm memory as non-readable, non-writable and non-executable
    */
+  /*
+   * 1. Get the size of the vmm, including the padding between the start of the vmm
+   *    and the beginning of its first 2 MB page.
+   * 2. Get the address of the first 2 MB page of the vmm.
+   * 3. Count the number of 2 MB pages used for the vmm and adjust if the last one is
+   *    partially used.
+   */
   vmm_size = vmm_size + (vmm_physical_start % 0x200000);
   vmm_physical_start = vmm_physical_start - (vmm_physical_start % 0x200000);
   uint64_t vmm_nb_pages_2MB = vmm_size / 0x200000;
   if (vmm_size % 0x200000 > 0) {
     vmm_nb_pages_2MB = vmm_nb_pages_2MB + 1;
   }
-  INFO("nb: %d  %d  %X\n", vmm_nb_pages_2MB, vmm_size, vmm_physical_start);
-  /* TODO */
-  //while (1);
   for (uint64_t i = 0; i < vmm_nb_pages_2MB; i++) {
     if ((vmm_physical_start >> 30) != (((vmm_physical_start >> 21) + i) >> 9)) {
       ERROR("vmm pages don't belong to the same PDPT entry");

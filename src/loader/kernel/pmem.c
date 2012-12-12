@@ -30,13 +30,36 @@ void pmem_setup(multiboot_info_t *multiboot_info) {
  * Return the address of the end of the last usable memory area, large enough for
  * size bytes. This address must be aligned. Return 0 if none.
  */
-uint64_t pmem_get_aligned_memory_at_end_of_free_area(uint32_t size, uint32_t alignment) {
+uint64_t pmem_get_aligned_memory_at_end_of_free_area(uint32_t size, uint32_t align, uint32_t pages_size) {
+  /*
+   * Important: all pages used for the allocation must lie all over the same memory area.
+   */
   for (uint8_t i = 0; i < pmem_mmap.nb_area; i++) {
     uint8_t j = pmem_mmap.nb_area - i - 1;
-    if ((pmem_mmap.area[j].type == 1) && (pmem_mmap.area[j].len > size)) {
-      uint64_t value = ~((((uint64_t) 1) << alignment) - 1);
-      value = ((uint64_t) (pmem_mmap.area[j].addr + pmem_mmap.area[j].len - size)) & value;
-      if (value > pmem_mmap.area[j].addr) {
+    if (pmem_mmap.area[j].type == 1) {
+      uint64_t area_start_align = pmem_mmap.area[j].addr;
+      uint64_t area_end_align = pmem_mmap.area[j].addr + pmem_mmap.area[j].len;
+      /*
+       * The loader is executed in protected mode. The division for 64 bits number
+       * is not available. So, we cast on 32 bits number without loss of information.
+       */
+      uint32_t tmp = ((uint32_t) area_end_align) % pages_size;
+      area_end_align = area_end_align - tmp;
+      uint64_t value = area_end_align - size;
+      tmp = ((uint32_t) value) % align;
+      value = value - tmp;
+      tmp = ((uint32_t) value) % pages_size;
+      value = value - tmp;
+      /*
+       * With pages_size == 0x1000 and align == 0x1000:
+       *          0x1234         0x2000          0x5000        0x5234
+       *      area_start_align    value       area_end_align  addr+len
+       *    _________v______________v_____..._______v_____________v_______
+       *             |              #               #             |
+       *             |              #               #             |
+       *    _________|______________#_____..._______#_____________|_______
+       */
+      if (area_start_align <= value) {
         return value;
       }
     }
