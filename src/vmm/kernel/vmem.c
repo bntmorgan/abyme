@@ -38,7 +38,5 @@ void vmem_print_info(void) {
   /*
    * Print informations on CR3 (note that paging is configured for long mode).
    */
-  uint64_t cr3;
-  cpu_read_cr3(&cr3);
-  INFO("paging from cr3=%08x\n", cr3);
+  INFO("paging from cr3=%08x\n", cpu_read_cr3());
 }

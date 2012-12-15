@@ -2,7 +2,7 @@ CC	= gcc
 CFLAGS =  -I. -Iinclude -Wall -W -pipe -nostdlib -nostdinc -ffreestanding -fms-extensions -m64 -mno-red-zone -mcmodel=small -fpie -std=c99 -D__X86_64__
 LD	= ld
  
-OBJFILES = build/kernel/kernel.o build/common/screen.o build/common/string.o build/hardware/cpu.o build/kernel/vmem.o build/kernel/pmem.o build/hardware/msr.o build/kernel/vmm.o build/kernel/vmm_vmcs.o build/kernel/smp.o build/common/stdio.o build/common/stdlib.o build/kernel/start.o  build/kernel/vmm_vm_exit_handler.o
+OBJFILES = build/kernel/kernel.o build/common/screen.o build/common/string.o build/hardware/cpu.o build/kernel/vmem.o build/kernel/pmem.o build/hardware/msr.o build/kernel/vmm.o build/kernel/vmm_setup.o build/kernel/vmm_vmcs.o build/kernel/smp.o build/common/stdio.o build/common/stdlib.o build/kernel/start.o  build/kernel/vmm_vm_exit_handler.o
  
 all: vmm.bin
  

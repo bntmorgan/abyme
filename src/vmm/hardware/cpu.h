@@ -28,25 +28,25 @@ void cpu_read_gdt(uint8_t *gdt_ptr);
 
 void cpu_read_idt(uint8_t *idt_ptr);
 
-void cpu_read_cr0(uint64_t *reg);
+uint64_t cpu_read_cr0(void);
 
-void cpu_read_cr3(uint64_t *reg);
+uint64_t cpu_read_cr3(void);
 
-void cpu_read_cr4(uint64_t *reg);
+uint64_t cpu_read_cr4(void);
 
-void cpu_read_cs(uint64_t *reg);
+uint64_t cpu_read_cs(void);
 
-void cpu_read_ss(uint64_t *reg);
+uint64_t cpu_read_ss(void);
 
-void cpu_read_ds(uint64_t *reg);
+uint64_t cpu_read_ds(void);
 
-void cpu_read_es(uint64_t *reg);
+uint64_t cpu_read_es(void);
 
-void cpu_read_fs(uint64_t *reg);
+uint64_t cpu_read_fs(void);
 
-void cpu_read_gs(uint64_t *reg);
+uint64_t cpu_read_gs(void);
 
-void cpu_read_tr(uint64_t *reg);
+uint64_t cpu_read_tr(void);
 
 void cpu_write_cr0(uint64_t reg);
 
@@ -73,5 +73,9 @@ void cpu_vmwrite(uint32_t field, uint32_t value);
 uint32_t cpu_vmread(uint32_t field);
 
 void cpu_stop(void);
+
+uint32_t cpu_adjust32(uint32_t value, uint32_t msr);
+
+uint64_t cpu_adjust64(uint64_t value, uint32_t fixed0_msr, uint32_t fixed1_msr);
 
 #endif

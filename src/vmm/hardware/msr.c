@@ -9,6 +9,18 @@ void msr_read(uint32_t address, uint32_t *eax, uint32_t *edx) {
   __asm__ __volatile__("rdmsr" : "=a" (*eax), "=d" (*edx) : "c" (address));
 }
 
+uint32_t msr_read32(uint32_t address) {
+  uint32_t eax, edx;
+  msr_read(address, &eax, &edx);
+  return eax;
+}
+
+uint64_t msr_read64(uint32_t address) {
+  uint32_t eax, edx;
+  msr_read(address, &eax, &edx);
+  return (((uint64_t) edx) << 32) | ((uint64_t) eax);
+}
+
 void msr_write(uint32_t address, uint32_t eax, uint32_t edx) {
   __asm__ __volatile__("wrmsr" : : "a" (eax), "d" (edx), "c" (address));
 }

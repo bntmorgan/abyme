@@ -224,32 +224,14 @@ enum vm_exit_reason {
   EXIT_REASON_VMFUNC                       = 59,
 };
 
-void vmm_setup();
-
-void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t vmm_size);
-
-void vmm_vm_setup_and_launch();
-
-void vmm_vm_exit_handler(void);
+void vmm_setup(void);
 
 void vmm_create_vmxon_and_vmcs_regions(void);
 
-void vmm_vmx_cr0_fixed(void);
+void vmm_vm_setup_and_launch(void);
 
-void vmm_vmx_cr4_fixed(void);
+void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t vmm_size);
 
-void vmm_vmxon(void);
-
-void vmm_vmclear(void);
-
-void vmm_vmptrld(void);
-
-void vmm_vmlaunch(void);
-
-void vmm_vmresume(void);
-
-void vmm_vmcs_write(uint32_t field, uint32_t value);
-
-uint32_t vmm_vmcs_read(uint32_t field);
+void vmm_vm_exit_handler(void);
 
 #endif

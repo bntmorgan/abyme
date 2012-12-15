@@ -2,6 +2,9 @@
 .global vmm_vm_exit_handler
 
 vmm_vm_exit_handler:
+  /*
+   * Save guest general purpose registers.
+   */
   push %rax
   push %rcx
   push %rdx
@@ -19,8 +22,15 @@ vmm_vm_exit_handler:
   push %r14
   push %r15
 
+  /*
+   * Call our VM-Exit handler.
+   * It takes the guest general purpose registers as a parameter (see gpr64_t).
+   */
   call vmm_handle_vm_exit
 
+  /*
+   * Restore guest general-purpose registers, possibly modified by our handler.
+   */
   pop %r15
   pop %r14
   pop %r13
@@ -38,4 +48,8 @@ vmm_vm_exit_handler:
   pop %rcx
   pop %rax
 
+  /*
+   * Resume guest execution.
+   * TODO: error checking.
+   */
   vmresume

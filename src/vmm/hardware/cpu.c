@@ -1,7 +1,10 @@
 #include "cpu.h"
 
+#include "msr.h"
 #include "stdio.h"
 #include "vmm_info.h"
+
+static uint64_t reg;
 
 void cpu_outportb(uint32_t port, uint8_t value) {
   __asm__ __volatile__("outb %%al, %%dx" : : "d" (port), "a" (value));
@@ -15,45 +18,54 @@ void cpu_read_idt(uint8_t *idt_ptr) {
   __asm__ __volatile__("sidt %0" : : "m" (*idt_ptr) : "memory");
 }
 
-/* TODO: return instead of writing an output parameter? */
-void cpu_read_cr0(uint64_t *reg) {
-  __asm__ __volatile__("mov %%cr0, %0" : "=a" (*reg));
+uint64_t cpu_read_cr0(void) {
+  __asm__ __volatile__("mov %%cr0, %0" : "=a" (reg));
+  return reg;
 }
 
-void cpu_read_cr3(uint64_t *reg) {
-  __asm__ __volatile__("mov %%cr3, %0" : "=a" (*reg));
+uint64_t cpu_read_cr3(void) {
+  __asm__ __volatile__("mov %%cr3, %0" : "=a" (reg));
+  return reg;
 }
 
-void cpu_read_cr4(uint64_t *reg) {
-  __asm__ __volatile__("mov %%cr4, %0" : "=a" (*reg));
+uint64_t cpu_read_cr4(void) {
+  __asm__ __volatile__("mov %%cr4, %0" : "=a" (reg));
+  return reg;
 }
 
-void cpu_read_cs(uint64_t *reg) {
-  __asm__ __volatile__("mov %%cs, %0" : "=a" (*reg));
+uint64_t cpu_read_cs(void) {
+  __asm__ __volatile__("mov %%cs, %0" : "=a" (reg));
+  return reg;
 }
 
-void cpu_read_ss(uint64_t *reg) {
-  __asm__ __volatile__("mov %%ss, %0" : "=a" (*reg));
+uint64_t cpu_read_ss(void) {
+  __asm__ __volatile__("mov %%ss, %0" : "=a" (reg));
+  return reg;
 }
 
-void cpu_read_ds(uint64_t *reg) {
-  __asm__ __volatile__("mov %%ds, %0" : "=a" (*reg));
+uint64_t cpu_read_ds(void) {
+  __asm__ __volatile__("mov %%ds, %0" : "=a" (reg));
+  return reg;
 }
 
-void cpu_read_es(uint64_t *reg) {
-  __asm__ __volatile__("mov %%es, %0" : "=a" (*reg));
+uint64_t cpu_read_es(void) {
+  __asm__ __volatile__("mov %%es, %0" : "=a" (reg));
+  return reg;
 }
 
-void cpu_read_fs(uint64_t *reg) {
-  __asm__ __volatile__("mov %%fs, %0" : "=a" (*reg));
+uint64_t cpu_read_fs(void) {
+  __asm__ __volatile__("mov %%fs, %0" : "=a" (reg));
+  return reg;
 }
 
-void cpu_read_gs(uint64_t *reg) {
-  __asm__ __volatile__("mov %%gs, %0" : "=a" (*reg));
+uint64_t cpu_read_gs(void) {
+  __asm__ __volatile__("mov %%gs, %0" : "=a" (reg));
+  return reg;
 }
 
-void cpu_read_tr(uint64_t *reg) {
-  __asm__ __volatile__("str %0" : "=a" (*reg));
+uint64_t cpu_read_tr(void) {
+  __asm__ __volatile__("str %0" : "=a" (reg));
+  return reg;
 }
 
 void cpu_write_cr0(uint64_t value) {
@@ -202,4 +214,23 @@ uint32_t cpu_vmread(uint32_t field) {
 void cpu_stop(void) {
   __asm__ __volatile__("cli");
   while (1);
+}
+
+uint32_t cpu_adjust32(uint32_t value, uint32_t msr) {
+  /*
+   * TODO: Use new CPU capability MSRs (IA32_VMX_TRUE_PINBASED_CTLS,
+   * IA32_VMX_TRUE_PROCBASED_CTLS, IA32_VMX_TRUE_EXIT_CTLS and
+   * IA32_VMX_TRUE_ENTRY_CTLS for capability detection of the default1
+   * controls.
+   * It doesn't matter for now since we simply want to use default values.
+   */
+  uint32_t eax, ebx;
+  msr_read(msr, &eax, &ebx);
+  value |= eax;
+  value &= ebx;
+  return value;
+}
+
+uint64_t cpu_adjust64(uint64_t value, uint32_t fixed0_msr, uint32_t fixed1_msr) {
+  return (value & msr_read64(fixed1_msr)) | msr_read64(fixed0_msr);
 }
