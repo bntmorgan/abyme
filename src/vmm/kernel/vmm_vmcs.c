@@ -1,8 +1,11 @@
 #include "vmm.h"
-#include "vmem.h"
+#include "vmm_setup.h"
 
 #include "hardware/cpu.h"
 #include "hardware/msr.h"
+
+extern uint64_t vmm_stack;
+extern uint64_t ept_pml4_addr;
 
 void vmm_vmcs_fill_guest_state_fields(void) {
   /**

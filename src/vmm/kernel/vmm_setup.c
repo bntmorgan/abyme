@@ -1,10 +1,10 @@
 #include "vmm.h"
+#include "vmm_setup.h"
 #include "vmm_vmcs.h"
-#include "vmem.h"
 
 #include "hardware/msr.h"
+#include "vmem.h"
 #include "stdio.h"
-#include "vmm_info.h"
 
 uint32_t vmcs_revision_identifier;
 uint32_t number_bytes_regions;

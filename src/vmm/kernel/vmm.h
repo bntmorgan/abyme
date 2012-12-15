@@ -1,12 +1,6 @@
 #ifndef __VMM_H__
 #define __VMM_H__
 
-#include "types.h"
-#include "vmm_info.h"
-
-extern uint64_t vmm_stack;
-extern uint64_t ept_pml4_addr;
-
 /* VMCS Encodings */
 enum vmcs_field {
   VIRTUAL_PROCESSOR_ID            = 0x00000000,
@@ -223,14 +217,6 @@ enum vm_exit_reason {
   EXIT_REASON_INVPCID                      = 58,
   EXIT_REASON_VMFUNC                       = 59,
 };
-
-void vmm_setup(void);
-
-void vmm_create_vmxon_and_vmcs_regions(void);
-
-void vmm_vm_setup_and_launch(void);
-
-void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t vmm_size);
 
 void vmm_vm_exit_handler(void);
 

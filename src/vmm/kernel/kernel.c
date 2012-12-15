@@ -1,16 +1,13 @@
 #include "types.h"
-
 #include "screen.h"
 #include "stdio.h"
 
 #include "hardware/msr.h"
-
-#include "vmem.h"
-#include "vmm.h"
 #include "pmem.h"
-#include "smp.h"
-
+#include "vmem.h"
 #include "vmm_info.h"
+#include "vmm_setup.h"
+#include "smp.h"
 
 /*
  * Used to identify the size used of vmm (see the linker script).
