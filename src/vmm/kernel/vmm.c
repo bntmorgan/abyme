@@ -63,8 +63,6 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
     }
     default:
       INFO("unhandled reason: %d\n", exit_reason);
-      // Magic breakpoint!
-      /* TODO: what???????? */
-      __asm__ __volatile__("xchg %bx, %bx");
+      BREAKPOINT();
   }
 }

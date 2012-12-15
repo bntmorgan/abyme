@@ -3,6 +3,9 @@
 
 #include "types.h"
 
+/* BOCHS magic breakpoint */
+#define BREAKPOINT() __asm__ __volatile__("xchg %bx, %bx")
+
 typedef struct {
   uint64_t r15;
   uint64_t r14;
