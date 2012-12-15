@@ -133,8 +133,9 @@ void vmm_vmcs_fill_host_state_fields(void) {
   cpu_vmwrite(HOST_IA32_SYSENTER_CS, msr_read32(MSR_ADDRESS_IA32_SYSENTER_CS));
   cpu_vmwrite(HOST_IA32_SYSENTER_ESP, msr_read32(MSR_ADDRESS_IA32_SYSENTER_ESP));
   cpu_vmwrite(HOST_IA32_SYSENTER_EIP, msr_read32(MSR_ADDRESS_IA32_SYSENTER_EIP));
+  cpu_vmwrite(HOST_IA32_EFER, msr_read32(MSR_ADDRESS_IA32_EFER)),
+  cpu_vmwrite(HOST_IA32_EFER_HIGH, msr_read64(MSR_ADDRESS_IA32_EFER) >> 32);
   // HOST_IA32_PERF_GLOBAL_CTRL{,_HIGH}, HOST_IA32_PAT{,_HIGH},
-  // HOST_IA32_EFER{,_HIGH} unused
 }
 
 void vmm_vmcs_fill_vm_exec_control_fields(void) {
@@ -146,12 +147,12 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
 
   // 24.6.2: Processor-Based VM-Execution Controls
-  uint32_t procbased_ctls = (1 << 31); // Activate secondary controls
+  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS;
   procbased_ctls = cpu_adjust32(procbased_ctls, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS);
-  procbased_ctls &= ~((1 << 15) | (1 << 16)); // Disable exits on CR3-load and CR3-store, allowed on recent CPUs
+  procbased_ctls &= ~(CR3_LOAD_EXITING | CR3_STORE_EXITING);
   cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
 
-  uint32_t procbased_ctls_2 = (1 << 1) | (1 << 7); // EPT, Unrestricted guest
+  uint32_t procbased_ctls_2 = ENABLE_EPT | UNRESTRICTED_GUEST;
   cpu_vmwrite(SECONDARY_VM_EXEC_CONTROL, cpu_adjust32(procbased_ctls_2, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2));
 
   // 24.6.3: Exception Bitmap
@@ -213,7 +214,7 @@ void vmm_vmcs_fill_vm_exit_control_fields(void) {
    * 24.7: VM-Exit Control Fields.
    */
   // 24.7.1: VM-Exit Controls
-  uint32_t exit_controls = (1 << 9); // x86_64 host
+  uint32_t exit_controls = SAVE_IA32_EFER | LOAD_IA32_EFER | HOST_ADDR_SPACE_SIZE /* x86_64 host */;
   cpu_vmwrite(VM_EXIT_CONTROLS, cpu_adjust32(exit_controls, MSR_ADDRESS_IA32_VMX_EXIT_CTLS));
 
   // 24.7.2: VM-Exit Controls for MSRs
@@ -228,7 +229,7 @@ void vmm_vmcs_fill_vm_entry_control_fields(void) {
    * 24.8: VM-Entry Control fields.
    */
   // 24.8.1: VM-Entry Controls
-  uint32_t entry_controls = (1 << 15); // Load IA32_EFER
+  uint32_t entry_controls = ENTRY_LOAD_IA32_EFER;
   cpu_vmwrite(VM_ENTRY_CONTROLS, cpu_adjust32(entry_controls, MSR_ADDRESS_IA32_VMX_ENTRY_CTLS));
 
   // 24.8.2: VM-Entry Controls for MSRs.

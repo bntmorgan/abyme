@@ -3,6 +3,7 @@
 
 #include "types.h"
 
+#define MSR_ADDRESS_IA32_EFER                       0xc0000080
 #define MSR_ADDRESS_IA32_APIC_BASE                  0x01b
 #define MSR_ADDRESS_IA32_DEBUGCTL                   0x1d9
 #define MSR_ADDRESS_IA32_FEATURE_CONTROL_MSR        0x03a

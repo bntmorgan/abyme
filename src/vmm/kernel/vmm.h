@@ -157,12 +157,14 @@ enum vmcs_field {
   HOST_RIP                        = 0x00006c16,
 };
 
-/* VM-Exit reasons */
+/*
+ * See [Intel_August_2012], volume 3, C-1.
+ */
 enum vm_exit_reason {
-  EXIT_REASON_EXCEPTION_NMI                = 0,
+  EXIT_REASON_EXCEPTION_OR_NMI             = 0,
   EXIT_REASON_EXTERNAL_INTERRUPT           = 1,
   EXIT_REASON_TRIPLE_FAULT                 = 2,
-  EXIT_REASON_INIT                         = 3,
+  EXIT_REASON_INIT_SIGNAL                  = 3,
   EXIT_REASON_SIPI                         = 4,
   EXIT_REASON_IO_SMI                       = 5,
   EXIT_REASON_OTHER_SMI                    = 6,
@@ -188,17 +190,17 @@ enum vm_exit_reason {
   EXIT_REASON_VMXOFF                       = 26,
   EXIT_REASON_VMXON                        = 27,
   EXIT_REASON_CR_ACCESS                    = 28,
-  EXIT_REASON_DR_ACCESS                    = 29,
+  EXIT_REASON_MOV_DR                       = 29,
   EXIT_REASON_IO_INSTRUCTION               = 30,
   EXIT_REASON_RDMSR                        = 31,
   EXIT_REASON_WRMSR                        = 32,
   EXIT_REASON_INVALID_GUEST_STATE          = 33,
-  EXIT_REASON_MSR_LOADING                  = 34,
+  EXIT_REASON_MSR_LOADING_FAILED           = 34,
   EXIT_REASON_MWAIT                        = 36,
   EXIT_REASON_MONITOR_TRAP_FLAG            = 37,
   EXIT_REASON_MONITOR                      = 39,
   EXIT_REASON_PAUSE                        = 40,
-  EXIT_REASON_MCE_DURING_VMENTRY           = 41,
+  EXIT_REASON_MCE_DURING_VM_ENTRY          = 41,
   EXIT_REASON_TPR_BELOW_THRESHOLD          = 43,
   EXIT_REASON_APIC_ACCESS                  = 44,
   EXIT_REASON_VIRTUALIZED_EOI              = 45,
@@ -216,6 +218,92 @@ enum vm_exit_reason {
   EXIT_REASON_RDRAND                       = 57,
   EXIT_REASON_INVPCID                      = 58,
   EXIT_REASON_VMFUNC                       = 59,
+};
+
+/*
+ * See [Intel_August_2012], volume 3, table 24-5.
+ */
+enum pin_based_vm_exec_control {
+  EXT_INTR_EXITING        = (1 << 0),
+  NMI_EXITING             = (1 << 3),
+  VIRTUAL_NMIS            = (1 << 5),
+  ACT_VMX_PREEMPT_TIMER   = (1 << 6),
+  PROCESS_POSTED_INTR     = (1 << 7),
+};
+
+/*
+ * See [Intel_August_2012], volume 3, table 24-6.
+ */
+enum proc_based_vm_exec_control {
+  INTR_WINDOW_EXITING     = (1 << 2),
+  USE_TSC_OFFSETTING      = (1 << 3),
+  HLT_EXITING             = (1 << 7),
+  INVLPG_EXITING          = (1 << 9),
+  MWAIT_EXITING           = (1 << 10),
+  RDPMC_EXITING           = (1 << 11),
+  RDTSC_EXITING           = (1 << 12),
+  CR3_LOAD_EXITING        = (1 << 15),
+  CR3_STORE_EXITING       = (1 << 16),
+  CR8_LOAD_EXITING        = (1 << 19),
+  CR8_STORE_EXITING       = (1 << 20),
+  USE_TPR_SHADOW          = (1 << 21),
+  NMI_WINDOW_EXITING      = (1 << 22),
+  MOV_DR_EXITING          = (1 << 23),
+  UNCOND_IO_EXITING       = (1 << 24),
+  USE_IO_BITMAPS          = (1 << 25),
+  MONITOR_TRAP_FLAG       = (1 << 27),
+  USE_MSR_BITMAPS         = (1 << 28),
+  MONITOR_EXITING         = (1 << 29),
+  PAUSE_EXITING           = (1 << 30),
+  ACT_SECONDARY_CONTROLS  = (1 << 31),
+};
+
+/*
+ * See [Intel_August_2012], volume 3, table 24-7.
+ */
+enum secondary_proc_based_vm_exec_control {
+  VIRT_APIC_ACCESSES        = (1 << 0),
+  ENABLE_EPT                = (1 << 1),
+  DESCRIPTOR_TABLE_EXITING  = (1 << 2),
+  ENABLE_RDTSCP             = (1 << 3),
+  VIRT_X2APIC_MODE          = (1 << 4),
+  ENABLE_VPID               = (1 << 5),
+  WBINVD_EXITING            = (1 << 6),
+  UNRESTRICTED_GUEST        = (1 << 7),
+  APIC_REGISTER_VIRT        = (1 << 8),
+  VIRT_INTR_DELIVERY        = (1 << 9),
+  PAUSE_LOOP_EXITING        = (1 << 10),
+  RDRAND_EXITING            = (1 << 11),
+  ENABLE_INVPCID            = (1 << 12),
+  ENABLE_VM_FUNCTIONS       = (1 << 13),
+};
+
+/*
+ * See [Intel_August_2012], volume 3, table 24-10.
+ */
+enum vm_exit_control {
+  SAVE_DEBUG_CONTROLS         = (1 << 2),
+  HOST_ADDR_SPACE_SIZE        = (1 << 9),
+  LOAD_IA32_PERF_GLOBAL_CTRL  = (1 << 12),
+  ACK_INTR_ON_EXIT            = (1 << 15),
+  SAVE_IA32_PAT               = (1 << 18),
+  LOAD_IA32_PAT               = (1 << 19),
+  SAVE_IA32_EFER              = (1 << 20),
+  LOAD_IA32_EFER              = (1 << 21),
+  SAVE_VMX_PREEMPT_TIMER_VAL  = (1 << 22),
+};
+
+/*
+ * See [Intel_August_2012], volume 3, table 24-12.
+ */
+enum vm_entry_control {
+  LOAD_DEBUG_CONTROLS               = (1 << 2),
+  IA32E_MODE_GUEST                  = (1 << 9),
+  ENTRY_TO_SMM                      = (1 << 10),
+  DEACT_DUAL_MONITOR_TREATMENT      = (1 << 11),
+  ENTRY_LOAD_IA32_PERF_GLOBAL_CTRL  = (1 << 13),
+  ENTRY_LOAD_IA32_PAT               = (1 << 14),
+  ENTRY_LOAD_IA32_EFER              = (1 << 15),
 };
 
 void vmm_vm_exit_handler(void);
