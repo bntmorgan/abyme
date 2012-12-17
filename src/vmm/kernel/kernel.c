@@ -38,6 +38,7 @@ void kernel_main(vmm_info_t *vmm_info) {
    */
   //smp_setup();
 
+  vmm_read_cmos();
   vmm_setup();
   vmm_ept_setup(&vmm_info->ept_info, vmm_info->vmm_physical_start, vmm_info->vmm_physical_end - vmm_info->vmm_physical_start + 1);
   vmm_vm_setup_and_launch();

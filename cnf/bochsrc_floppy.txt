@@ -3,7 +3,8 @@ plugin_ctrl: unmapped=1, biosdev=1, speaker=1, extfpuirq=1, parallel=1, serial=1
 config_interface: textconfig
 display_library: x
 memory: host=32, guest=32
-#romimage: file="/usr/share/bochs/BIOS-bochs-latest"
+romimage: file="/usr/share/bochs/BIOS-bochs-latest"
+##romimage: file="/home/ealata/VMM/git/tinyvisor/seabios/bios.bin"
 #vgaromimage: file="/usr/share/bochs/VGABIOS-lgpl-latest"
 boot: floppy, disk
 floppy_bootsig_check: disabled=0
@@ -35,6 +36,7 @@ panic: action=ask
 error: action=report
 info: action=report
 debug: action=ignore
+#debug: action=report
 keyboard: type=mf, serial_delay=250, paste_delay=100000, keymap=
 user_shortcut: keys=none
 mouse: enabled=0, type=ps2, toggle=ctrl+mbutton

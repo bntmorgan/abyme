@@ -1,11 +1,16 @@
 #include "vmm.h"
 #include "vmm_setup.h"
 
+#include "string.h"
+
 #include "hardware/cpu.h"
 #include "hardware/msr.h"
 
 extern uint64_t vmm_stack;
 extern uint64_t ept_pml4_addr;
+
+uint8_t io_bitmap_a[0x1000] __attribute__((aligned(0x1000)));
+uint8_t io_bitmap_b[0x1000] __attribute__((aligned(0x1000)));
 
 void vmm_vmcs_fill_guest_state_fields(void) {
   /**
@@ -147,7 +152,7 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
 
   // 24.6.2: Processor-Based VM-Execution Controls
-  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS;
+  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_IO_BITMAPS;
   procbased_ctls = cpu_adjust32(procbased_ctls, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS);
   procbased_ctls &= ~(CR3_LOAD_EXITING | CR3_STORE_EXITING);
   cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
@@ -161,10 +166,18 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(PAGE_FAULT_ERROR_CODE_MATCH, 0);
 
   // 24.6.4: I/O-Bitmap Addresses
-  cpu_vmwrite(IO_BITMAP_A, 0);
-  cpu_vmwrite(IO_BITMAP_A_HIGH, 0);
-  cpu_vmwrite(IO_BITMAP_B, 0);
-  cpu_vmwrite(IO_BITMAP_B_HIGH, 0);
+  memset(&io_bitmap_a[0], 0, 0x1000);
+  memset(&io_bitmap_b[0], 0, 0x1000);
+  io_bitmap_a[0x70 / 8] = io_bitmap_a[0x70 / 8] | (1 << (0x70 % 8));
+  io_bitmap_a[0x71 / 8] = io_bitmap_a[0x71 / 8] | (1 << (0x71 % 8));
+  cpu_vmwrite(IO_BITMAP_A, (uint32_t) (((uint64_t) &io_bitmap_a[0]) & 0xffffffff));
+  cpu_vmwrite(IO_BITMAP_A_HIGH, (uint32_t) ((((uint64_t) &io_bitmap_a[0]) >> 32) & 0xffffffff));
+  cpu_vmwrite(IO_BITMAP_B, (uint32_t) (((uint64_t) &io_bitmap_b[0]) & 0xffffffff));
+  cpu_vmwrite(IO_BITMAP_B_HIGH, (uint32_t) ((((uint64_t) &io_bitmap_b[0]) >> 32) & 0xffffffff));
+  //cpu_vmwrite(IO_BITMAP_A, 0);
+  //cpu_vmwrite(IO_BITMAP_A_HIGH, 0);
+  //cpu_vmwrite(IO_BITMAP_B, 0);
+  //cpu_vmwrite(IO_BITMAP_B_HIGH, 0);
 
   // 24.6.5: Time-Stamp Counter Offset
   cpu_vmwrite(TSC_OFFSET, 0);

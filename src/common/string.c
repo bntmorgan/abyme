@@ -4,7 +4,7 @@ void memset(void *dst, uint8_t c, size_t size) {
   __asm__ __volatile__(
       "pushf     ;"
       "cld       ;"
-      "rep movsb ;"
+      "rep stosb ;"
       "popf      ;"
     : : "D"(dst), "a"(c), "c"(size));
 }
