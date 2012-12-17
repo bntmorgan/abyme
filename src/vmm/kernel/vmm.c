@@ -188,36 +188,40 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
           : "a" (guest_gpr.rax), "c" (ins), "d" (guest_gpr.rdx)
           : "rbx");
  
-        if (is_out == 0 && port == 0x71 && (value_previous == 0x34 || value_previous == 0xb4)) {
+        if (is_out == 0 && port == 0x71 && (is_out_previous == 1 && (value_previous == 0x34 || value_previous == 0xb4))) {
           uint64_t new_value = (uint64_t) &kernel_start;
-uint64_t old_value = (cmos[0x34] + (cmos[0x35] << 8)) * 64 * 1024;
-INFO("before: %X after: %X\n", old_value, new_value);
+          uint64_t old_value = (cmos[0x34] + (cmos[0x35] << 8)) * 64 * 1024;
+          new_value = old_value - (2 * 1024 * 1024);
+          //INFO("before: %X after: %X\n", old_value, new_value);
           // TODO: with shifts!!!
           new_value = new_value / 1024 / 64;
           new_value = new_value & 0xff;
           if (in_size == 8) {
-            guest_gpr.rax = (guest_gpr.rax & 0xff) + new_value;
+            guest_gpr.rax = (guest_gpr.rax & ~0xff) + new_value;
           } else if (in_size == 16) {
-            guest_gpr.rax = (guest_gpr.rax & 0xffff) + new_value;
+            guest_gpr.rax = (guest_gpr.rax & ~0xffff) + new_value;
           } else if (in_size == 32) {
-            guest_gpr.rax = (guest_gpr.rax & 0xffffffff) + new_value;
+            guest_gpr.rax = (guest_gpr.rax & ~0xffffffff) + new_value;
           }
-          INFO("read cmos 0x71 0x34 send %x instead of %x\n", new_value, cmos[0x34]);
-          __asm__ __volatile__("xchg %bx, %bx");
-        } else if (is_out == 0 && port == 0x71 && (value_previous == 0x35 || value_previous == 0xb5)) {
+          //INFO("read cmos 0x71 0x34 send %x instead of %x\n", new_value, cmos[0x34]);
+          //BREAKPOINT();
+        } else if (is_out == 0 && port == 0x71 && (is_out_previous == 1 && (value_previous == 0x35 || value_previous == 0xb5))) {
           uint64_t new_value = (uint64_t) &kernel_start;
+          uint64_t old_value = (cmos[0x34] + (cmos[0x35] << 8)) * 64 * 1024;
+          new_value = old_value - (2 * 1024 * 1024);
+          //INFO("before: %X after: %X\n", old_value, new_value);
           // TODO: with shifts!!!
           new_value = new_value / 1024 / 64;
           new_value = (new_value >> 8) & 0xff;
           if (in_size == 8) {
-            guest_gpr.rax = (guest_gpr.rax & 0xff) + new_value;
+            guest_gpr.rax = (guest_gpr.rax & ~0xff) + new_value;
           } else if (in_size == 16) {
-            guest_gpr.rax = (guest_gpr.rax & 0xffff) + new_value;
+            guest_gpr.rax = (guest_gpr.rax & ~0xffff) + new_value;
           } else if (in_size == 32) {
-            guest_gpr.rax = (guest_gpr.rax & 0xffffffff) + new_value;
+            guest_gpr.rax = (guest_gpr.rax & ~0xffffffff) + new_value;
           }
-          INFO("read cmos 0x71 0x35 send %x instead of %x\n", new_value, cmos[0x35]);
-          __asm__ __volatile__("xchg %bx, %bx");
+          //INFO("read cmos 0x71 0x35 send %x instead of %x\n", new_value, cmos[0x35]);
+          //BREAKPOINT();
         }
         port_previous = port;
         value_previous = value;
