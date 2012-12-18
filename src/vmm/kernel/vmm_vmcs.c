@@ -12,6 +12,13 @@ extern uint64_t ept_pml4_addr;
 uint8_t io_bitmap_a[0x1000] __attribute__((aligned(0x1000)));
 uint8_t io_bitmap_b[0x1000] __attribute__((aligned(0x1000)));
 
+struct {
+  uint8_t low_msrs_read_bitmap[128];
+  uint8_t high_msrs_read_bitmap[128];
+  uint8_t low_msrs_write_bitmap[128];
+  uint8_t high_msrs_write_bitmap[128];
+} __attribute__((packed)) msr_bitmaps __attribute__((aligned(0x1000)));
+
 void vmm_vmcs_fill_guest_state_fields(void) {
   /**
    * 24.4: Guest-state area.
@@ -152,7 +159,7 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
 
   // 24.6.2: Processor-Based VM-Execution Controls
-  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_IO_BITMAPS;
+  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_IO_BITMAPS | USE_MSR_BITMAPS;
   procbased_ctls = cpu_adjust32(procbased_ctls, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS);
   procbased_ctls &= ~(CR3_LOAD_EXITING | CR3_STORE_EXITING);
   cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
@@ -201,8 +208,10 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   // EOI_EXIT_BITMAP[0-4]{,_HIGH}, POSTED_INTR_NOTIF_VECTOR,
   // POSTED_INTR_DESC_ADDRESS{,_HIGH} unused
 
-  // 24.6.9: MSR-Bitmap Address (optional, unused)
-  // MSR_BITMAP{,_HIGH} unused
+  // 24.6.9: MSR-Bitmap Address
+  memset(&msr_bitmaps, 0, sizeof(msr_bitmaps));
+  cpu_vmwrite(MSR_BITMAP, (uint64_t) &msr_bitmaps & 0xFFFFFFFF);
+  cpu_vmwrite(MSR_BITMAP_HIGH, (uint64_t) &msr_bitmaps >> 32);
 
   // 24.6.10: Executive-VMCS Pointer (optional, unused)
   // EXEC_VMCS_PTR{,_HIGH} unused
