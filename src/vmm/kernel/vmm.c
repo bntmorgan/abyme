@@ -2,6 +2,7 @@
 
 #include "hardware/cpu.h"
 #include "stdio.h"
+#include "string.h"
 
 extern uint8_t kernel_start;
 uint8_t cmos[128];
@@ -32,7 +33,8 @@ void vmm_set_guest_rip(uint64_t guest_rip, uint32_t exit_instruction_length) {
 }
 
 void vmm_read_cmos(void) {
-      __asm__ __volatile__("xchg %bx, %bx");
+  BREAKPOINT();
+
 /*
  * TODO: pourquoi ca marche pas???
  *  for(uint8_t index = 0; index < 128; index++) {
@@ -125,7 +127,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
       //INFO("handling IO Ins (rax = %x, rdx = %x, rip = %X)\n", guest_gpr.rax, guest_gpr.rdx, guest_rip);
       if (exit_instruction_length > 4) {
         INFO("unhandled length: %d\n", exit_instruction_length);
-        __asm__ __volatile__("xchg %bx, %bx");
+        BREAKPOINT();
       } else {
         uint32_t ins = *((uint32_t *) guest_rip);
         uint8_t *ins_byte = (uint8_t *) &ins;
@@ -178,7 +180,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
             i++;
           }
           printk("\n");
-          __asm__ __volatile__("xchg %bx, %bx");
+          BREAKPOINT();
         }
         //INFO("IO Ins port=%x value=%x is_out=%x\n", port, value, is_out);
         __asm__ __volatile__(

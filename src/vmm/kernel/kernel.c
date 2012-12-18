@@ -5,6 +5,7 @@
 #include "hardware/msr.h"
 #include "pmem.h"
 #include "vmem.h"
+#include "vmm.h"
 #include "vmm_info.h"
 #include "vmm_setup.h"
 #include "smp.h"

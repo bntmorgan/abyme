@@ -306,6 +306,7 @@ enum vm_entry_control {
   ENTRY_LOAD_IA32_EFER              = (1 << 15),
 };
 
+void vmm_read_cmos(void);
 void vmm_vm_exit_handler(void);
 
 #endif
