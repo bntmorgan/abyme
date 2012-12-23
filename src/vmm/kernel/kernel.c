@@ -18,6 +18,7 @@ extern uint8_t kernel_start;
 
 uint64_t vmm_stack;
 uint64_t ept_pml4_addr;
+pmem_mmap_t *pmem_mmap;
 
 void kernel_print_info(void) {
   INFO("kernel_start: %08X\n", (uint64_t) &kernel_start);
@@ -28,11 +29,14 @@ void kernel_main(vmm_info_t *vmm_info) {
   screen_clear();
   kernel_print_info();
   //vmem_print_info();
-  //pmem_print_info(&vmm_info->pmem_mmap);
+  pmem_print_info(&vmm_info->pmem_mmap);
+  pmem_fix_info(&vmm_info->pmem_mmap, VMEM_ADDR_PHYSICAL_TO_VIRTUAL(vmm_info->vmm_physical_start));
+  pmem_print_info(&vmm_info->pmem_mmap);
 
   // XXX: Laid.
   vmm_stack = (uint64_t) vmm_info + sizeof(vmm_info_t);
   ept_pml4_addr = (uint64_t) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&vmm_info->ept_info.PML4[0]);
+  pmem_mmap = &vmm_info->pmem_mmap;
 
   /*
    * Enables core/cpu.

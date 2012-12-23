@@ -5,4 +5,6 @@
 
 void pmem_print_info(pmem_mmap_t *pmem_info);
 
+void pmem_fix_info(pmem_mmap_t *pmem_info, uint64_t vmm_start);
+
 #endif

@@ -3,8 +3,10 @@
 #include "hardware/cpu.h"
 #include "stdio.h"
 #include "string.h"
+#include "vmm_info.h"
 
 extern uint8_t kernel_start;
+extern pmem_mmap_t *pmem_mmap;
 uint8_t cmos[128];
 uint32_t port_previous;
 uint32_t value_previous;
@@ -106,24 +108,54 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
       INFO("handling WRMSR (rcx = %x, rax = %x, rdx = %x)\n", guest_gpr.rcx, guest_gpr.rax, guest_gpr.rdx);
       __asm__ __volatile__("wrmsr" : : "a" (guest_gpr.rax), "d" (guest_gpr.rdx), "c" (guest_gpr.rcx));
       break;
-    case EXIT_REASON_TASK_SWITCH: {
-      // Checks here a gneral protection VM_EXIT
-      // 25.4.2 Treatment of Task Switches
-      // If CALL, INT n, or JMP accesses a task gate in IA-32e mode, a general-protection exception occurs
-      // BIOS Call INT 15h (rax a e820)
-      // Get the vm exit interrupt information
-      uint32_t int_info = cpu_vmread(VM_EXIT_INTR_INFO);
-      // interruption 0x15 Miscellaneous system services
-      if ((int_info & 0xff) == 0x15 && ((int_info & 0x700) >> 8) == 0x6) {
-        // Query System Address Map gate e820
-        if ((guest_gpr.rax & 0xff) == 0xe820) {
-          INFO("BIOS interrupt call 0xe820\n");
-          while(1);
+    case EXIT_REASON_VMCALL: {
+      /* TODO: pass an argument to VMCALL */
+      if (guest_gpr.rax == 0xe820) {
+        INFO("e820 detected!\n");
+        if (guest_gpr.rdx != 0x534D4150 /* "SMAP" */ ||
+            guest_gpr.rbx >= pmem_mmap->nb_area ||
+            guest_gpr.rcx < pmem_mmap->area[guest_gpr.rbx].size) {
+          cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) | (1 << 0) /* CF */);
+          return;
         }
+
+	uint32_t segment_base = cpu_vmread(GUEST_ES_BASE);
+        memcpy((uint8_t*) (segment_base + guest_gpr.rdi), &pmem_mmap->area[guest_gpr.rbx].addr, pmem_mmap->area[guest_gpr.rbx].size);
+
+        guest_gpr.rax = 0x534D4150; /* "SMAP" */
+        guest_gpr.rcx = pmem_mmap->area[guest_gpr.rbx].size;
+        if (guest_gpr.rbx == pmem_mmap->nb_area - 1) {
+          guest_gpr.rbx = 0;
+        } else {
+          guest_gpr.rbx++;
+        }
+
+        cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(1 << 0) /* CF */);
+      } else {
+        /* Jump to real INT 15h handler */
+        /* TODO: fix hardcoded address */
+        cpu_vmwrite(GUEST_CS_SELECTOR, 0xF000);
+        cpu_vmwrite(GUEST_CS_BASE, 0xF0000);
+        cpu_vmwrite(GUEST_RIP, 0x0000F859);
       }
       break;
     }
     case EXIT_REASON_IO_INSTRUCTION: {
+      /* Install new INT 0x15 handler at the end of the BIOS IVT (unused) */
+      /* TODO: move it to another place? */
+      *((uint8_t*) (255 * 4 + 0)) = 0x0f; /* VMCALL (3 bytes) */
+      *((uint8_t*) (255 * 4 + 1)) = 0x01;
+      *((uint8_t*) (255 * 4 + 2)) = 0xc1;
+      *((uint8_t*) (255 * 4 + 3)) = 0xcf; /* IRET (1 byte) */
+      /* Change the INT 0x15 handler address in the BIOS IVT */
+      *((uint16_t*) (4 * 0x15 + 2)) = 0;
+      *((uint16_t*) (4 * 0x15 + 0)) = 255 * 4;
+
+      /* We don't need to exit on I/O instructions any more */
+      cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, cpu_vmread(CPU_BASED_VM_EXEC_CONTROL) & ~USE_IO_BITMAPS);
+
+      return;
+
       //INFO("handling IO Ins (rax = %x, rdx = %x, rip = %X)\n", guest_gpr.rax, guest_gpr.rdx, guest_rip);
       if (exit_instruction_length > 4) {
         INFO("unhandled length: %d\n", exit_instruction_length);

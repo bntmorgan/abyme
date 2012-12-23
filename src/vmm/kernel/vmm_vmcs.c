@@ -175,8 +175,10 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   // 24.6.4: I/O-Bitmap Addresses
   memset(&io_bitmap_a[0], 0, 0x1000);
   memset(&io_bitmap_b[0], 0, 0x1000);
-  io_bitmap_a[0x70 / 8] = io_bitmap_a[0x70 / 8] | (1 << (0x70 % 8));
-  io_bitmap_a[0x71 / 8] = io_bitmap_a[0x71 / 8] | (1 << (0x71 % 8));
+  //io_bitmap_a[0x70 / 8] = io_bitmap_a[0x70 / 8] | (1 << (0x70 % 8));
+  //io_bitmap_a[0x71 / 8] = io_bitmap_a[0x71 / 8] | (1 << (0x71 % 8));
+  // 0x20 = PORT_PIC1_CMD, used at the end of the POST, when the IVT has already been setup
+  io_bitmap_a[0x20 / 8] = io_bitmap_a[0x20 / 8] | (1 << (0x20 % 8));
   cpu_vmwrite(IO_BITMAP_A, (uint32_t) (((uint64_t) &io_bitmap_a[0]) & 0xffffffff));
   cpu_vmwrite(IO_BITMAP_A_HIGH, (uint32_t) ((((uint64_t) &io_bitmap_a[0]) >> 32) & 0xffffffff));
   cpu_vmwrite(IO_BITMAP_B, (uint32_t) (((uint64_t) &io_bitmap_b[0]) & 0xffffffff));
