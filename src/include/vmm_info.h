@@ -64,6 +64,7 @@ typedef struct {
   ept_info_t ept_info;
   uint32_t vmm_physical_start;
   uint32_t vmm_physical_end;
+  uint32_t vmm_stack;
 } vmm_info_t;
 
 #endif

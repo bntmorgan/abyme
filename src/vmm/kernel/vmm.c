@@ -6,7 +6,6 @@
 #include "vmm_info.h"
 
 extern uint8_t kernel_start;
-extern pmem_mmap_t *pmem_mmap;
 extern uint32_t bios_ivt[256];
 uint8_t cmos[128];
 uint32_t port_previous;
@@ -110,6 +109,8 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
       __asm__ __volatile__("wrmsr" : : "a" (guest_gpr.rax), "d" (guest_gpr.rdx), "c" (guest_gpr.rcx));
       break;
     case EXIT_REASON_VMCALL: {
+      pmem_mmap_t *pmem_mmap = &vmm_info->pmem_mmap;
+
       /* TODO: pass an argument to VMCALL */
       if (guest_gpr.rax == 0xe820) {
         INFO("e820 detected!\n");

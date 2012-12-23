@@ -22,7 +22,6 @@ uint32_t __mb_flags = MB_FLAGS;
 uint32_t __mb_checksum = MB_CHECKSUM;
 
 vmm_info_t *vmm_info;
-uint32_t vmm_stack;
 uint32_t vmm_entry;
 
 uint32_t vmm_physical_start;
@@ -33,18 +32,21 @@ void kernel_vmm_allocation(void) {
   uint32_t vmm_size = (uint32_t) elf64_get_size(vmm_header);
   uint32_t vmm_algn = (uint32_t) elf64_get_alignment(vmm_header);
   uint32_t padding = 4096 - (vmm_size % 4096);
-  /* TODO: VMM stack allocation is ugly. */
-  uint32_t size = vmm_size + padding + VMM_STACK_SIZE + sizeof(vmm_info_t);
+  uint32_t size = vmm_size + padding + sizeof(vmm_info_t) + VMM_STACK_SIZE;
+
   vmm_physical_start = pmem_get_aligned_memory_at_end_of_free_area(size, vmm_algn, 0x200000);
   vmm_physical_end = vmm_physical_start + size;
   vmm_entry = vmm_physical_start + elf64_get_entry(vmm_header);
-  vmm_info = (vmm_info_t *) (vmm_physical_start + padding + vmm_size);
-  vmm_stack = vmm_physical_start + vmm_size + padding + sizeof(vmm_info_t);
+  vmm_info = (vmm_info_t *) (vmm_physical_start + vmm_size + padding);
+
   elf64_load_relocatable_segment(vmm_header, (void *) vmm_physical_start);
+
   vmm_info->vmm_physical_start = vmm_physical_start;
   vmm_info->vmm_physical_end = vmm_physical_end;
+  vmm_info->vmm_stack = vmm_physical_start + vmm_size + padding + sizeof(vmm_info_t);
+
   INFO("vmm_info at %08x\n", (uint32_t) vmm_info);
-  INFO("vmm_stack at %08x\n", (uint32_t) vmm_stack);
+  INFO("vmm_stack at %08x\n", vmm_info->vmm_stack);
 }
 
 void kernel_check(void) {
@@ -95,5 +97,5 @@ void kernel_main(uint32_t magic, uint32_t *address) {
       "pushl $0x10   ;"
       "pushl %1      ;"
       "lret          ;"
-    : : "d"(vmm_info), "m"(vmm_entry));
+    : : "d" (vmm_info), "m" (vmm_entry));
 }

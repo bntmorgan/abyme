@@ -1,13 +1,11 @@
 #include "vmm.h"
 #include "vmm_setup.h"
+#include "vmem.h"
 
 #include "string.h"
 
 #include "hardware/cpu.h"
 #include "hardware/msr.h"
-
-extern uint64_t vmm_stack;
-extern uint64_t ept_pml4_addr;
 
 uint8_t io_bitmap_a[0x1000] __attribute__((aligned(0x1000)));
 uint8_t io_bitmap_b[0x1000] __attribute__((aligned(0x1000)));
@@ -122,7 +120,7 @@ void vmm_vmcs_fill_host_state_fields(void) {
   cpu_vmwrite(HOST_CR0, cpu_read_cr0());
   cpu_vmwrite(HOST_CR3, cpu_read_cr3());
   cpu_vmwrite(HOST_CR4, cpu_read_cr4());
-  cpu_vmwrite(HOST_RSP, vmm_stack);
+  cpu_vmwrite(HOST_RSP, vmm_info->vmm_stack);
   cpu_vmwrite(HOST_RIP, (uint64_t) vmm_vm_exit_handler);
 
   cpu_vmwrite(HOST_CS_SELECTOR, cpu_read_cs() & 0xf8);
@@ -219,7 +217,7 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   // EXEC_VMCS_PTR{,_HIGH} unused
 
   // 24.6.11: Extended-Page-Table Pointer (EPTP)
-  uint64_t eptp = ept_pml4_addr | (3 << 3) /* Page walk length - 1 */;
+  uint64_t eptp = VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&vmm_info->ept_info.PML4[0]) | (3 << 3) /* Page walk length - 1 */;
   cpu_vmwrite(EPT_POINTER, eptp & 0xFFFFFFFF);
   cpu_vmwrite(EPT_POINTER_HIGH, (eptp & 0xFFFFFFFF) >> 32);
 

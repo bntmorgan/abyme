@@ -1,6 +1,10 @@
 #ifndef __VMM_H__
 #define __VMM_H__
 
+#include "vmm_info.h"
+
+extern vmm_info_t *vmm_info;
+
 /* VMCS Encodings */
 enum vmcs_field {
   VIRTUAL_PROCESSOR_ID            = 0x00000000,
