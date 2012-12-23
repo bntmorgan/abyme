@@ -19,14 +19,27 @@ extern uint8_t kernel_start;
 uint64_t vmm_stack;
 uint64_t ept_pml4_addr;
 pmem_mmap_t *pmem_mmap;
+/* Vector of addresses: segment (first word) : offset (second word) */
+uint32_t bios_ivt[256];
 
 void kernel_print_info(void) {
   INFO("kernel_start: %08X\n", (uint64_t) &kernel_start);
   INFO("kernel_end:   %08X\n", ((uint64_t) &kernel_end) & 0xffffffff);
 }
 
+void dump_bios_ivt() {
+  for (int i = 0; i < 256; i++) {
+    bios_ivt[i] = *((uint32_t*) (uint64_t) (4 * i));
+  }
+
+  /*for (int i = 0; i < 256; i++) {
+    INFO("vector for int 0x%02x: segment = %04x, offset = %04x\n", i, bios_ivt[i] >> 16, bios_ivt[i] & 0xFFFF);
+  }*/
+}
+
 void kernel_main(vmm_info_t *vmm_info) {
   screen_clear();
+  dump_bios_ivt();
   kernel_print_info();
   //vmem_print_info();
   pmem_print_info(&vmm_info->pmem_mmap);

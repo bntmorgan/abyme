@@ -7,6 +7,7 @@
 
 extern uint8_t kernel_start;
 extern pmem_mmap_t *pmem_mmap;
+extern uint32_t bios_ivt[256];
 uint8_t cmos[128];
 uint32_t port_previous;
 uint32_t value_previous;
@@ -119,7 +120,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
           return;
         }
 
-	uint32_t segment_base = cpu_vmread(GUEST_ES_BASE);
+        uint32_t segment_base = cpu_vmread(GUEST_ES_BASE);
         memcpy((uint8_t*) (segment_base + guest_gpr.rdi), &pmem_mmap->area[guest_gpr.rbx].addr, pmem_mmap->area[guest_gpr.rbx].size);
 
         guest_gpr.rax = 0x534D4150; /* "SMAP" */
@@ -133,10 +134,9 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
         cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(1 << 0) /* CF */);
       } else {
         /* Jump to real INT 15h handler */
-        /* TODO: fix hardcoded address */
-        cpu_vmwrite(GUEST_CS_SELECTOR, 0xF000);
-        cpu_vmwrite(GUEST_CS_BASE, 0xF0000);
-        cpu_vmwrite(GUEST_RIP, 0x0000F859);
+        cpu_vmwrite(GUEST_CS_SELECTOR, bios_ivt[0x15] >> 16);
+        cpu_vmwrite(GUEST_CS_BASE, (bios_ivt[0x15] >> 16) << 4);
+        cpu_vmwrite(GUEST_RIP, bios_ivt[0x15] & 0xFFFF);
       }
       break;
     }
@@ -153,6 +153,9 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
 
       /* We don't need to exit on I/O instructions any more */
       cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, cpu_vmread(CPU_BASED_VM_EXEC_CONTROL) & ~USE_IO_BITMAPS);
+
+      /* Replay instruction */
+      vmm_set_guest_rip(guest_rip, 0);
 
       return;
 
