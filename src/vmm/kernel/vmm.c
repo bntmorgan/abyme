@@ -34,6 +34,16 @@ void vmm_set_guest_rip(uint64_t guest_rip, uint32_t exit_instruction_length) {
   }
 }
 
+void vmm_set_guest_cf_during_int(uint8_t cf) {
+  uint8_t *guest_stack_ptr = cpu_vmread(GUEST_SS_BASE) + cpu_vmread(GUEST_RSP);
+  // int pushes FLAGS, CS and IP in this order, so IP is at SS:SP, CS at SS:SP + 2 and FLAGS at SS:SP + 4
+  if (cf) {
+    *((uint16_t*) (guest_stack_ptr + 4)) |= 1;
+  } else {
+    *((uint16_t*) (guest_stack_ptr + 4)) &= 0xFFFE;
+  }
+}
+
 void vmm_read_cmos(void) {
   BREAKPOINT();
 
@@ -87,8 +97,8 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
 */
 
   switch (exit_reason) {
-    case EXIT_REASON_CPUID:
-      INFO("handling CPUID (rax = %x)\n", guest_gpr.rax);
+    case EXIT_REASON_CPUID: {
+      //INFO("handling CPUID (rax = %x)\n", guest_gpr.rax);
       uint64_t command = guest_gpr.rax;
       __asm__ __volatile__("cpuid" : "=a" (guest_gpr.rax),
           "=b" (guest_gpr.rbx), "=c" (guest_gpr.rcx),
@@ -100,6 +110,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
         guest_gpr.rcx = 0x212f6f5c;
       }
       break;
+    }
     case EXIT_REASON_RDMSR:
       INFO("handling RDMSR (rcx = %x)\n", guest_gpr.rcx);
       __asm__ __volatile__("rdmsr" : "=a" (guest_gpr.rax), "=d" (guest_gpr.rdx) : "c" (guest_gpr.rcx));
@@ -113,11 +124,11 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
 
       /* TODO: pass an argument to VMCALL */
       if (guest_gpr.rax == 0xe820) {
-        INFO("e820 detected!\n");
+        //INFO("e820 detected!\n");
         if (guest_gpr.rdx != 0x534D4150 /* "SMAP" */ ||
             guest_gpr.rbx >= pmem_mmap->nb_area ||
             guest_gpr.rcx < pmem_mmap->area[guest_gpr.rbx].size) {
-          cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) | (1 << 0) /* CF */);
+          vmm_set_guest_cf_during_int(1);
           return;
         }
 
@@ -132,7 +143,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
           guest_gpr.rbx++;
         }
 
-        cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(1 << 0) /* CF */);
+        vmm_set_guest_cf_during_int(0);
       } else {
         /* Jump to real INT 15h handler */
         cpu_vmwrite(GUEST_CS_SELECTOR, bios_ivt[0x15] >> 16);
