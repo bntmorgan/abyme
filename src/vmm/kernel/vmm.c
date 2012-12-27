@@ -121,8 +121,8 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
           return;
         }
 
-        uint32_t segment_base = cpu_vmread(GUEST_ES_BASE);
-        memcpy((uint8_t*) (segment_base + guest_gpr.rdi), &pmem_mmap->area[guest_gpr.rbx].addr, pmem_mmap->area[guest_gpr.rbx].size);
+        uint8_t *es_di_addr = (uint8_t*) (cpu_vmread(GUEST_ES_BASE) + (guest_gpr.rdi & 0xFFFF));
+        memcpy(es_di_addr, &pmem_mmap->area[guest_gpr.rbx].addr, pmem_mmap->area[guest_gpr.rbx].size);
 
         guest_gpr.rax = 0x534D4150; /* "SMAP" */
         guest_gpr.rcx = pmem_mmap->area[guest_gpr.rbx].size;
