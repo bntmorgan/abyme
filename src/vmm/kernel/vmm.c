@@ -13,6 +13,11 @@ uint32_t value_previous;
 uint8_t is_out_previous;
 uint8_t in_size_previous;
 
+#define CR3_LOGS_SIZE 0x800
+uint64_t cr3_logs[CR3_LOGS_SIZE];
+uint32_t cr3_log_index;
+uint32_t cr3_missed_logs;
+
 uint64_t vmm_get_guest_rip(void) {
   uint64_t guest_rip = cpu_vmread(GUEST_RIP);
   uint64_t guest_cr0 = cpu_vmread(GUEST_CR0);
@@ -78,6 +83,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   guest_gpr.rsp = cpu_vmread(GUEST_RSP);
   uint64_t guest_rip = vmm_get_guest_rip();
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
+  uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
   uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
 
   vmm_set_guest_rip(guest_rip, exit_instruction_length);
@@ -119,36 +125,96 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
       INFO("handling WRMSR (rcx = %x, rax = %x, rdx = %x)\n", guest_gpr.rcx, guest_gpr.rax, guest_gpr.rdx);
       __asm__ __volatile__("wrmsr" : : "a" (guest_gpr.rax), "d" (guest_gpr.rdx), "c" (guest_gpr.rcx));
       break;
-    case EXIT_REASON_VMCALL: {
-      pmem_mmap_t *pmem_mmap = &vmm_info->pmem_mmap;
+    case EXIT_REASON_CR_ACCESS: {
+      uint8_t cr = exit_qualification & 0xF;
+      uint8_t access_type = (exit_qualification & 0x30) >> 4;
+      uint8_t gpr = (exit_qualification & 0xF00) >> 8;
 
-      /* TODO: pass an argument to VMCALL */
-      if (guest_gpr.rax == 0xe820) {
-        //INFO("e820 detected!\n");
-        if (guest_gpr.rdx != 0x534D4150 /* "SMAP" */ ||
-            guest_gpr.rbx >= pmem_mmap->nb_area ||
-            guest_gpr.rcx < pmem_mmap->area[guest_gpr.rbx].size) {
-          vmm_set_guest_cf_during_int(1);
-          return;
+      if (cr == 3 && access_type == 0) {
+        uint64_t cr3_value;
+        switch (gpr) {
+          case  0: cr3_value = guest_gpr.rax; break;
+          case  1: cr3_value = guest_gpr.rcx; break;
+          case  2: cr3_value = guest_gpr.rdx; break;
+          case  3: cr3_value = guest_gpr.rbx; break;
+          case  4: cr3_value = guest_gpr.rsp; break;
+          case  5: cr3_value = guest_gpr.rbp; break;
+          case  6: cr3_value = guest_gpr.rsi; break;
+          case  7: cr3_value = guest_gpr.rdi; break;
+          case  8: cr3_value =  guest_gpr.r8; break;
+          case  9: cr3_value =  guest_gpr.r9; break;
+          case 10: cr3_value = guest_gpr.r10; break;
+          case 11: cr3_value = guest_gpr.r11; break;
+          case 12: cr3_value = guest_gpr.r12; break;
+          case 13: cr3_value = guest_gpr.r13; break;
+          case 14: cr3_value = guest_gpr.r14; break;
+          case 15: cr3_value = guest_gpr.r15; break;
         }
 
-        uint8_t *es_di_addr = (uint8_t*) (cpu_vmread(GUEST_ES_BASE) + (guest_gpr.rdi & 0xFFFF));
-        memcpy(es_di_addr, &pmem_mmap->area[guest_gpr.rbx].addr, pmem_mmap->area[guest_gpr.rbx].size);
-
-        guest_gpr.rax = 0x534D4150; /* "SMAP" */
-        guest_gpr.rcx = pmem_mmap->area[guest_gpr.rbx].size;
-        if (guest_gpr.rbx == pmem_mmap->nb_area - 1) {
-          guest_gpr.rbx = 0;
+        if (cr3_log_index < CR3_LOGS_SIZE) {
+          cr3_logs[cr3_log_index++] = cr3_value;
         } else {
-          guest_gpr.rbx++;
+          cr3_missed_logs++;
         }
 
-        vmm_set_guest_cf_during_int(0);
+        cpu_vmwrite(GUEST_CR3, cr3_value);
       } else {
-        /* Jump to real INT 15h handler */
-        cpu_vmwrite(GUEST_CS_SELECTOR, bios_ivt[0x15] >> 16);
-        cpu_vmwrite(GUEST_CS_BASE, (bios_ivt[0x15] >> 16) << 4);
-        cpu_vmwrite(GUEST_RIP, bios_ivt[0x15] & 0xFFFF);
+        INFO("unhandled cr access: cr = %d, access_type = %d, gpr = %d\n", cr, access_type, gpr);
+        BREAKPOINT();
+      }
+      break;
+    }
+    case EXIT_REASON_VMCALL: {
+      if ((cpu_vmread(GUEST_CR0) & 0x1) == 0 /* Real mode */) {
+        pmem_mmap_t *pmem_mmap = &vmm_info->pmem_mmap;
+
+        /* TODO: pass an argument to VMCALL */
+        if (guest_gpr.rax == 0xe820) {
+          //INFO("e820 detected!\n");
+          if (guest_gpr.rdx != 0x534D4150 /* "SMAP" */ ||
+              guest_gpr.rbx >= pmem_mmap->nb_area ||
+              guest_gpr.rcx < pmem_mmap->area[guest_gpr.rbx].size) {
+            vmm_set_guest_cf_during_int(1);
+            return;
+          }
+
+          uint8_t *es_di_addr = (uint8_t*) (cpu_vmread(GUEST_ES_BASE) + (guest_gpr.rdi & 0xFFFF));
+          memcpy(es_di_addr, &pmem_mmap->area[guest_gpr.rbx].addr, pmem_mmap->area[guest_gpr.rbx].size);
+
+          guest_gpr.rax = 0x534D4150; /* "SMAP" */
+          guest_gpr.rcx = pmem_mmap->area[guest_gpr.rbx].size;
+          if (guest_gpr.rbx == pmem_mmap->nb_area - 1) {
+            guest_gpr.rbx = 0;
+          } else {
+            guest_gpr.rbx++;
+          }
+
+          vmm_set_guest_cf_during_int(0);
+        } else {
+          /* Jump to real INT 15h handler */
+          cpu_vmwrite(GUEST_CS_SELECTOR, bios_ivt[0x15] >> 16);
+          cpu_vmwrite(GUEST_CS_BASE, (bios_ivt[0x15] >> 16) << 4);
+          cpu_vmwrite(GUEST_RIP, bios_ivt[0x15] & 0xFFFF);
+        }
+      } else if (guest_gpr.rax == 1) {
+        // Enable CR3 logging
+        cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, cpu_vmread(CPU_BASED_VM_EXEC_CONTROL) | CR3_LOAD_EXITING);
+        guest_gpr.rbx = (uint64_t) cr3_logs;
+        cr3_log_index = 0;
+        cr3_missed_logs = 0;
+      } else if (guest_gpr.rax == 2) {
+        // Ask for read permission
+        guest_gpr.rax = (cr3_log_index >= CR3_LOGS_SIZE / 2);
+        guest_gpr.rcx = cr3_log_index;
+      } else if (guest_gpr.rax == 3) {
+        // Signal end of reading
+        guest_gpr.rax = cr3_missed_logs;
+        guest_gpr.rcx = cr3_log_index;
+        cr3_log_index = 0;
+        cr3_missed_logs = 0;
+      } else if (guest_gpr.rax == 4) {
+        // Disable CR3 logging
+        cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, cpu_vmread(CPU_BASED_VM_EXEC_CONTROL) & ~CR3_LOAD_EXITING);
       }
       break;
     }

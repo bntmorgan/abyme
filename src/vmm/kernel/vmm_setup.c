@@ -190,7 +190,8 @@ void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t
     if ((vmm_physical_start >> 30) != (((vmm_physical_start >> 21) + i) >> 9)) {
       ERROR("vmm pages don't belong to the same PDPT entry");
     }
-    ept_info->PD_PDPT0_PML40[((vmm_physical_start >> 21) + i) & 0x1ff] = ((uint64_t) (vmm_physical_start + (i << 21))) | (1 << 7) /* 2MB page */;
+    /* TODO: create separate readable pages for VMM data that can be read by the guest */
+    ept_info->PD_PDPT0_PML40[((vmm_physical_start >> 21) + i) & 0x1ff] = ((uint64_t) (vmm_physical_start + (i << 21))) | (1 << 7) /* 2MB page */ | 1 /* R */;
   }
 }
 
