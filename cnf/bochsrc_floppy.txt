@@ -38,7 +38,7 @@ error: action=report
 info: action=report
 debug: action=ignore
 #debug: action=report
-keyboard: type=mf, serial_delay=250, paste_delay=100000, keymap=
+keyboard: type=mf, serial_delay=250, paste_delay=100000, keymap=/usr/local/share/bochs/keymaps/x11-pc-fr.map
 user_shortcut: keys=none
 mouse: enabled=0, type=ps2, toggle=ctrl+mbutton
 parport1: enabled=1, file=""
