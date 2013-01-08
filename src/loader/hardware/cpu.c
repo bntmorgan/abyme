@@ -2,8 +2,16 @@
 
 #include "stdio.h"
 
-#define MSR_ADDRESS_IA32_EFER		0xc0000080
-#define MSR_ADDRESS_IA32_EFER__BIT__LME	0x8
+#define MSR_ADDRESS_IA32_EFER                 0xc0000080
+#define MSR_ADDRESS_IA32_EFER__BIT__LME       0x8
+#define MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2  0x48B
+
+/*
+ * eax is the low value and edx the high value.
+ */
+void cpu_read_msr(uint32_t address, uint32_t *eax, uint32_t *edx) {
+  __asm__ __volatile__("rdmsr" : "=a" (*eax), "=d" (*edx) : "c" (address));
+}
 
 void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg) {
   __asm__ __volatile__(
@@ -145,6 +153,26 @@ uint8_t cpu_is_protected_mode_enabled(void) {
     return 1;
   }
   return 0;
+}
+
+uint8_t cpu_is_ept_supported(void) {
+  /*
+   * See [Intel_August_2012], volume 3, section A.3.3.
+   * See [Intel_August_2012], volume 3, section 24.6.2, table 24-7.
+   */
+  uint32_t eax, edx;
+  cpu_read_msr(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &edx);
+  return (edx & (1 << 1)) == (1 << 1);
+}
+
+uint8_t cpu_is_unrestricted_guest_supported(void) {
+  /*
+   * See [Intel_August_2012], volume 3, section A.3.3.
+   * See [Intel_August_2012], volume 3, section 24.6.2, table 24-7.
+   */
+  uint32_t eax, edx;
+  cpu_read_msr(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &edx);
+  return (edx & (1 << 7)) == (1 << 7);
 }
 
 void cpu_print_info(void) {

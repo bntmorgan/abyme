@@ -9,6 +9,8 @@
     reg;                                             \
   })
 
+void cpu_read_msr(uint32_t address, uint32_t *eax, uint32_t *edx);
+
 void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg);
 
 void cpu_read_gdt(uint32_t *gdt_ptr);
@@ -36,5 +38,9 @@ void cpu_enable_paging(void);
 void cpu_write_cr3(uint32_t value);
 
 void cpu_enable_long_mode(void);
+
+uint8_t cpu_is_ept_supported(void);
+
+uint8_t cpu_is_unrestricted_guest_supported(void);
 
 #endif

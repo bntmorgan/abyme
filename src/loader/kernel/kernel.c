@@ -65,6 +65,12 @@ void kernel_check(void) {
   if (cpuid_is_vmx_supported() == 0) {
     ERROR("vmx not supported\n");
   }
+  if (cpu_is_ept_supported() == 0) {
+    ERROR("ept not supported\n");
+  }
+  if (cpu_is_unrestricted_guest_supported() == 0) {
+    ERROR("unrestricted guest not supported\n");
+  }
   if (cpuid_is_page1g_supported() == 0) {
     ERROR("1 GB pages not supported\n");
   }
