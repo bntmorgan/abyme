@@ -71,9 +71,9 @@ void kernel_check(void) {
   if (cpu_is_unrestricted_guest_supported() == 0) {
     ERROR("unrestricted guest not supported\n");
   }
-  if (cpuid_is_page1g_supported() == 0) {
+  /*if (cpuid_is_page1g_supported() == 0) {
     ERROR("1 GB pages not supported\n");
-  }
+  }*/
   if (cpuid_has_local_apic() == 0) {
     ERROR("no local apic\n");
   }

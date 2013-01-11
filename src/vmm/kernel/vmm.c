@@ -88,9 +88,11 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
 
   vmm_set_guest_rip(guest_rip, exit_instruction_length);
 
-/*
-  INFO("VMEXIT! exit_reason = %d\n", exit_reason);
-  INFO("----------\n");
+  uint64_t guest_cs_base = cpu_vmread(GUEST_CS_BASE);
+
+  //INFO("VMEXIT! guest_rip = %x:%x, exit_reason = %x (%d), exit_qualification = %x\n", guest_cs_base, guest_rip, exit_reason, exit_reason, exit_qualification);
+  //for (unsigned int i = 0; i < 0x10000000; i++);
+/*  INFO("----------\n");
   INFO("rip = 0x%X\n", guest_rip);
   INFO("rsp = 0x%x    rbp = 0x%x\n", guest_gpr.rsp, guest_gpr.rbp);
   INFO("rax = 0x%x    rbx = 0x%x\n", guest_gpr.rax, guest_gpr.rbx);
@@ -103,6 +105,26 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
 */
 
   switch (exit_reason) {
+#if 0
+    case EXIT_REASON_EXCEPTION_OR_NMI: {
+      INFO("BREAKPOINT! rip = %x:%x\n", guest_cs_base, guest_rip);
+      guest_rip &= 0xFFFF;
+      INFO("%x %x %x %x %x %x %x %x\n", *((char*) guest_cs_base + guest_rip + 0), *((char*) guest_cs_base + guest_rip + 1), *((char*) guest_cs_base + guest_rip + 2), *((char*) guest_cs_base + guest_rip + 3), *((char*) guest_cs_base + guest_rip + 4), *((char*) guest_cs_base + guest_rip + 5), *((char*) guest_cs_base + guest_rip + 6), *((char*) guest_cs_base + guest_rip + 7));
+      INFO("going to %x:%x\n", guest_cs_base, (guest_rip + exit_instruction_length) % 0x10000);
+      for (unsigned int i = 0; i < 0x10000000; i++);
+      vmm_set_guest_rip(guest_rip, 0);
+      break;
+    }
+    case EXIT_REASON_MONITOR_TRAP_FLAG: {
+      INFO("MTF BREAKPOINT! rip = %x:%x\n", guest_cs_base, guest_rip);
+      /*if (count > 100000) {
+        for (unsigned int i = 0; i < 0x10000000; i++);
+      }*/
+      vmm_set_guest_rip(guest_rip, 0);
+      //count++;
+      break;
+    }
+#endif
     case EXIT_REASON_CPUID: {
       //INFO("handling CPUID (rax = %x)\n", guest_gpr.rax);
       uint64_t command = guest_gpr.rax;
@@ -117,6 +139,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
       }
       break;
     }
+#if 0
     case EXIT_REASON_RDMSR:
       INFO("handling RDMSR (rcx = %x)\n", guest_gpr.rcx);
       __asm__ __volatile__("rdmsr" : "=a" (guest_gpr.rax), "=d" (guest_gpr.rdx) : "c" (guest_gpr.rcx));
@@ -164,6 +187,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
       }
       break;
     }
+#endif
     case EXIT_REASON_VMCALL: {
       if ((cpu_vmread(GUEST_CR0) & 0x1) == 0 /* Real mode */) {
         pmem_mmap_t *pmem_mmap = &vmm_info->pmem_mmap;
@@ -196,7 +220,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
           cpu_vmwrite(GUEST_CS_BASE, (bios_ivt[0x15] >> 16) << 4);
           cpu_vmwrite(GUEST_RIP, bios_ivt[0x15] & 0xFFFF);
         }
-      } else if (guest_gpr.rax == 1) {
+      }/* else if (guest_gpr.rax == 1) {
         // Enable CR3 logging
         cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, cpu_vmread(CPU_BASED_VM_EXEC_CONTROL) | CR3_LOAD_EXITING);
         guest_gpr.rbx = (uint64_t) cr3_logs;
@@ -215,9 +239,10 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
       } else if (guest_gpr.rax == 4) {
         // Disable CR3 logging
         cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, cpu_vmread(CPU_BASED_VM_EXEC_CONTROL) & ~CR3_LOAD_EXITING);
-      }
+      }*/
       break;
     }
+#if 0
     case EXIT_REASON_IO_INSTRUCTION: {
       /* Install new INT 0x15 handler at the end of the BIOS IVT (unused) */
       /* TODO: move it to another place? */
@@ -345,6 +370,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
       }
       break;
     }
+#endif
     default:
       INFO("unhandled reason: %d\n", exit_reason);
       BREAKPOINT();

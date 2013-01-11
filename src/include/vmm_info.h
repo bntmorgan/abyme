@@ -11,7 +11,7 @@ typedef struct {
 } __attribute__((packed)) pmem_area_t;
 
 typedef struct {
-  pmem_area_t area[16];
+  pmem_area_t area[32];
   uint32_t nb_area;
 } __attribute__((packed)) pmem_mmap_t;
 
@@ -48,6 +48,7 @@ typedef struct {
   uint8_t gdt_desc[5 * 8]      __attribute((aligned(8)));
   uint64_t PML4[512]           __attribute__((aligned(0x1000)));
   uint64_t PDPT_PML40[512]     __attribute__((aligned(0x1000)));
+  uint64_t PD_PDPT_PML40[512][512] __attribute__((aligned(0x1000)));
 } __attribute__((aligned(8))) vmem_info_t;
 
 #define VMM_STACK_SIZE 0x4000
@@ -55,7 +56,7 @@ typedef struct {
 typedef struct {
   uint64_t PML4[512]           __attribute__((aligned(0x1000)));
   uint64_t PDPT_PML40[512]     __attribute__((aligned(0x1000)));
-  uint64_t PD_PDPT0_PML40[512] __attribute__((aligned(0x1000)));
+  uint64_t PD_PDPT_PML40[512][512] __attribute__((aligned(0x1000)));
 } __attribute__((aligned(8))) ept_info_t;
 
 typedef struct {

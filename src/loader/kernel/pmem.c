@@ -36,9 +36,10 @@ uint64_t pmem_get_aligned_memory_at_end_of_free_area(uint32_t size, uint32_t ali
    */
   for (uint8_t i = 0; i < pmem_mmap.nb_area; i++) {
     uint8_t j = pmem_mmap.nb_area - i - 1;
-    if (pmem_mmap.area[j].type == 1) {
-      uint64_t area_start_align = pmem_mmap.area[j].addr;
-      uint64_t area_end_align = pmem_mmap.area[j].addr + pmem_mmap.area[j].len;
+    uint64_t area_start_align = pmem_mmap.area[j].addr;
+    uint64_t area_end_align = pmem_mmap.area[j].addr + pmem_mmap.area[j].len;
+
+    if (pmem_mmap.area[j].type == 1 && (area_end_align >> 32) == 0) {
       /*
        * The loader is executed in protected mode. The division for 64 bits number
        * is not available. So, we cast on 32 bits number without loss of information.
@@ -60,6 +61,8 @@ uint64_t pmem_get_aligned_memory_at_end_of_free_area(uint32_t size, uint32_t ali
        *    _________|______________#_____..._______#_____________|_______
        */
       if (area_start_align <= value) {
+        INFO("Copying vmm at %X (end of area: %X)\n", value, area_end_align);
+        __asm__ __volatile__("xchg %bx, %bx");
         return value;
       }
     }

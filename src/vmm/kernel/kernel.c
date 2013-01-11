@@ -40,11 +40,25 @@ void kernel_main(vmm_info_t *_vmm_info) {
   vmm_info = _vmm_info;
   screen_clear();
   dump_bios_ivt();
+
+  /* Install new INT 0x15 handler at the end of the BIOS IVT (unused) */
+  /* TODO: move it to another place? */
+  *((uint8_t*) (255 * 4 + 0)) = 0x0f; /* VMCALL (3 bytes) */
+  *((uint8_t*) (255 * 4 + 1)) = 0x01;
+  *((uint8_t*) (255 * 4 + 2)) = 0xc1;
+  *((uint8_t*) (255 * 4 + 3)) = 0xcf; /* IRET (1 byte) */
+  /* Change the INT 0x15 handler address in the BIOS IVT */
+  *((uint16_t*) (4 * 0x15 + 2)) = 0;
+  *((uint16_t*) (4 * 0x15 + 0)) = 255 * 4;
+
+  *((uint8_t*) (254 * 4 + 0)) = 0xcd; /* INT 0x19 (2 bytes) */
+  *((uint8_t*) (254 * 4 + 1)) = 0x19;
+
   kernel_print_info();
   //vmem_print_info();
-  pmem_print_info(&vmm_info->pmem_mmap);
+  //pmem_print_info(&vmm_info->pmem_mmap);
   pmem_fix_info(&vmm_info->pmem_mmap, VMEM_ADDR_PHYSICAL_TO_VIRTUAL(vmm_info->vmm_physical_start));
-  pmem_print_info(&vmm_info->pmem_mmap);
+  //pmem_print_info(&vmm_info->pmem_mmap);
 
   /*
    * Enables core/cpu.

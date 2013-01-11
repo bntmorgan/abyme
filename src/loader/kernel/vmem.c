@@ -101,7 +101,7 @@ void vmem_setup_gdt(vmem_info_t *vmem_info) {
  */
 void vmem_setup_paging(vmem_info_t *vmem_info) {
   /*
-   * Everything stand into the first 512 GB (more precisely, into the first 4 BG, due to
+   * Everything stand into the first 512 GB (more precisely, into the first 4 GB, due to
    * protected mode limitation), so we only need the first entry of PML4.
    */
   for (uint32_t i = 1; i < sizeof(vmem_info->PML4) / sizeof(vmem_info->PML4[0]); i++) {
@@ -118,10 +118,36 @@ void vmem_setup_paging(vmem_info_t *vmem_info) {
   cpu_write_cr3((uint32_t) &vmem_info->PML4);
 }
 
+/*
+ * All the memory is mapped with 2 MB pages using identity mapping.
+ * See [Intel_August_2012], volume 3, section 4.5.1, figure 4.9.
+ */
+void vmem_setup_paging_2MB(vmem_info_t *vmem_info) {
+  /*
+   * Everything stand into the first 512 GB (more precisely, into the first 4 GB, due to
+   * protected mode limitation), so we only need the first entry of PML4.
+   */
+  for (uint32_t i = 1; i < sizeof(vmem_info->PML4) / sizeof(vmem_info->PML4[0]); i++) {
+    vmem_info->PML4[i] = 0;
+  }
+  vmem_info->PML4[0] = ((uint64_t) ((uint32_t) &vmem_info->PDPT_PML40[0])) | 0x03;
+  /*
+   * Automatically map all memory accessed with PDPT_PML40 in 2MB pages.
+   */
+  for (uint32_t i = 0; i < sizeof(vmem_info->PDPT_PML40) / sizeof(vmem_info->PDPT_PML40[0]); i++) {
+    vmem_info->PDPT_PML40[i] = ((uint64_t) &vmem_info->PD_PDPT_PML40[i][0]) | 0x7;
+    for (uint32_t j = 0; j < sizeof(vmem_info->PD_PDPT_PML40[i]) / sizeof(vmem_info->PD_PDPT_PML40[i][0]); j++) {
+      vmem_info->PD_PDPT_PML40[i][j] = (((uint64_t) (i * (sizeof(vmem_info->PD_PDPT_PML40[i]) / sizeof(vmem_info->PD_PDPT_PML40[i][0])) + j)) << 21) | VMEM_PDPT_PS_1G | 0x7;
+    }
+  }
+  INFO("eip before modifying cr3: %x\n", CPU_READ_EIP());
+  cpu_write_cr3((uint32_t) &vmem_info->PML4);
+}
+
 void vmem_setup(vmem_info_t *vmem_info) {
   vmem_check_current_gdt_base();
   vmem_setup_gdt(vmem_info);
-  vmem_setup_paging(vmem_info);
+  vmem_setup_paging_2MB(vmem_info);
 }
 
 void vmem_print_info(void) {

@@ -52,11 +52,14 @@ void vmm_vmcs_fill_guest_state_fields(void) {
 
   cpu_vmwrite(GUEST_DR7, 0x00000400);
   cpu_vmwrite(GUEST_RSP, 0);
-  cpu_vmwrite(GUEST_RIP, 0x0000FFF0);
+  //cpu_vmwrite(GUEST_RIP, 0x0000FFF0);
+  cpu_vmwrite(GUEST_RIP, 254 * 4);
   cpu_vmwrite(GUEST_RFLAGS, 0x00000002);
 
-  cpu_vmwrite(GUEST_CS_SELECTOR, 0xF000);
-  cpu_vmwrite(GUEST_CS_BASE, 0xFFFF0000);
+  //cpu_vmwrite(GUEST_CS_SELECTOR, 0xF000);
+  //cpu_vmwrite(GUEST_CS_BASE, 0xFFFF0000);
+  cpu_vmwrite(GUEST_CS_SELECTOR, 0);
+  cpu_vmwrite(GUEST_CS_BASE, 0);
   cpu_vmwrite(GUEST_CS_LIMIT, 0xFFFF);
   cpu_vmwrite(GUEST_CS_AR_BYTES, 0x93 /* Present, R/W, Accessed */);
   cpu_vmwrite(GUEST_SS_SELECTOR, 0);
@@ -157,7 +160,7 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
 
   // 24.6.2: Processor-Based VM-Execution Controls
-  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_IO_BITMAPS | USE_MSR_BITMAPS;
+  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS;
   procbased_ctls = cpu_adjust32(procbased_ctls, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS);
   procbased_ctls &= ~(CR3_LOAD_EXITING | CR3_STORE_EXITING);
   cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
