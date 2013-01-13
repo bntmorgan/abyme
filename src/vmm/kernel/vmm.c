@@ -40,7 +40,7 @@ void vmm_set_guest_rip(uint64_t guest_rip, uint32_t exit_instruction_length) {
 }
 
 void vmm_set_guest_cf_during_int(uint8_t cf) {
-  uint8_t *guest_stack_ptr = cpu_vmread(GUEST_SS_BASE) + cpu_vmread(GUEST_RSP);
+  uint8_t *guest_stack_ptr = (uint8_t*) (uint64_t) (cpu_vmread(GUEST_SS_BASE) + cpu_vmread(GUEST_RSP));
   // int pushes FLAGS, CS and IP in this order, so IP is at SS:SP, CS at SS:SP + 2 and FLAGS at SS:SP + 4
   if (cf) {
     *((uint16_t*) (guest_stack_ptr + 4)) |= 1;
@@ -83,12 +83,12 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   guest_gpr.rsp = cpu_vmread(GUEST_RSP);
   uint64_t guest_rip = vmm_get_guest_rip();
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
-  uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
+  //uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
   uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
 
   vmm_set_guest_rip(guest_rip, exit_instruction_length);
 
-  uint64_t guest_cs_base = cpu_vmread(GUEST_CS_BASE);
+  //uint64_t guest_cs_base = cpu_vmread(GUEST_CS_BASE);
 
   //INFO("VMEXIT! guest_rip = %x:%x, exit_reason = %x (%d), exit_qualification = %x\n", guest_cs_base, guest_rip, exit_reason, exit_reason, exit_qualification);
   //for (unsigned int i = 0; i < 0x10000000; i++);

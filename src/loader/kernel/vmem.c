@@ -130,12 +130,12 @@ void vmem_setup_paging_2MB(vmem_info_t *vmem_info) {
   for (uint32_t i = 1; i < sizeof(vmem_info->PML4) / sizeof(vmem_info->PML4[0]); i++) {
     vmem_info->PML4[i] = 0;
   }
-  vmem_info->PML4[0] = ((uint64_t) ((uint32_t) &vmem_info->PDPT_PML40[0])) | 0x03;
+  vmem_info->PML4[0] = ((uint64_t) (uint32_t) &vmem_info->PDPT_PML40[0]) | 0x03;
   /*
    * Automatically map all memory accessed with PDPT_PML40 in 2MB pages.
    */
   for (uint32_t i = 0; i < sizeof(vmem_info->PDPT_PML40) / sizeof(vmem_info->PDPT_PML40[0]); i++) {
-    vmem_info->PDPT_PML40[i] = ((uint64_t) &vmem_info->PD_PDPT_PML40[i][0]) | 0x7;
+    vmem_info->PDPT_PML40[i] = ((uint64_t) (uint32_t) &vmem_info->PD_PDPT_PML40[i][0]) | 0x7;
     for (uint32_t j = 0; j < sizeof(vmem_info->PD_PDPT_PML40[i]) / sizeof(vmem_info->PD_PDPT_PML40[i][0]); j++) {
       vmem_info->PD_PDPT_PML40[i][j] = (((uint64_t) (i * (sizeof(vmem_info->PD_PDPT_PML40[i]) / sizeof(vmem_info->PD_PDPT_PML40[i][0])) + j)) << 21) | VMEM_PDPT_PS_1G | 0x7;
     }
