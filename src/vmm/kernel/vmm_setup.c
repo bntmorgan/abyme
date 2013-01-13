@@ -159,9 +159,11 @@ void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t
    * Automatically map all memory accessed with PDPT_PML40 in 2MB pages.
    */
   for (uint32_t i = 0; i < sizeof(ept_info->PDPT_PML40) / sizeof(ept_info->PDPT_PML40[0]); i++) {
-    ept_info->PDPT_PML40[i] = ((uint64_t) &ept_info->PD_PDPT_PML40[i][0]) | 0x7 /* R, W, X */;
-    for (uint32_t j = 0; j < sizeof(ept_info->PD_PDPT_PML40[i]) / sizeof(ept_info->PD_PDPT_PML40[i][0]); j++) {
-      ept_info->PD_PDPT_PML40[i][j] = (((uint64_t) (i * (sizeof(ept_info->PD_PDPT_PML40[i]) / sizeof(ept_info->PD_PDPT_PML40[i][0])) + j)) << 21) | (1 << 7) /* 2MB page */ | 0x7 /* R, W, X */;
+    ept_info->PDPT_PML40[i] = ((uint64_t) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&ept_info->PD_PDPT_PML40[i][0])) | 0x7 /* R, W, X */;
+
+    uint32_t nb_pde = sizeof(ept_info->PD_PDPT_PML40[i]) / sizeof(ept_info->PD_PDPT_PML40[i][0]);
+    for (uint32_t j = 0; j < nb_pde; j++) {
+      ept_info->PD_PDPT_PML40[i][j] = (((uint64_t) (i * nb_pde + j)) << 21) | (1 << 7) /* 2MB page */ | 0x7 /* R, W, X */;
     }
   }
 
@@ -175,21 +177,23 @@ void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t
    * 3. Count the number of 2 MB pages used for the vmm and adjust if the last one is
    *    partially used.
    */
-  #if 0
   vmm_size = vmm_size + (vmm_physical_start % 0x200000);
   vmm_physical_start = vmm_physical_start - (vmm_physical_start % 0x200000);
+
   uint64_t vmm_nb_pages_2MB = vmm_size / 0x200000;
   if (vmm_size % 0x200000 > 0) {
     vmm_nb_pages_2MB = vmm_nb_pages_2MB + 1;
   }
+
   for (uint64_t i = 0; i < vmm_nb_pages_2MB; i++) {
     if ((vmm_physical_start >> 30) != (((vmm_physical_start >> 21) + i) >> 9)) {
       ERROR("vmm pages don't belong to the same PDPT entry");
     }
+
     /* TODO: create separate readable pages for VMM data that can be read by the guest */
-    ept_info->PD_PDPT_PML40[0][((vmm_physical_start >> 21) + i) & 0x1ff] = ((uint64_t) (vmm_physical_start + (i << 21))) | (1 << 7) /* 2MB page */ | 1 /* R */;
+    ept_info->PD_PDPT_PML40[vmm_physical_start >> 30][((vmm_physical_start >> 21) + i) & 0x1ff] =
+        ((uint64_t) (vmm_physical_start + (i << 21))) | (1 << 7) /* 2MB page */;
   }
-  #endif
 }
 
 void vmm_create_vmxon_and_vmcs_regions(void) {

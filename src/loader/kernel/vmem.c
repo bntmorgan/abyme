@@ -101,19 +101,21 @@ void vmem_setup_gdt(vmem_info_t *vmem_info) {
  */
 void vmem_setup_paging(vmem_info_t *vmem_info) {
   /*
-   * Everything stand into the first 512 GB (more precisely, into the first 4 GB, due to
+   * Everything stands into the first 512 GB (more precisely, into the first 4 GB, due to
    * protected mode limitation), so we only need the first entry of PML4.
    */
+  vmem_info->PML4[0] = ((uint64_t) ((uint32_t) &vmem_info->PDPT_PML40[0])) | 0x03 /* R/W, P */;
   for (uint32_t i = 1; i < sizeof(vmem_info->PML4) / sizeof(vmem_info->PML4[0]); i++) {
     vmem_info->PML4[i] = 0;
   }
-  vmem_info->PML4[0] = ((uint64_t) ((uint32_t) &vmem_info->PDPT_PML40[0])) | 0x03;
+
   /*
-   * Automatically map all memory accessed with PDPT_PML40 in 1GB pages.
+   * Automatically map all memory accessed with PDPT_PML40 in 1 GB pages.
    */
   for (uint32_t i = 0; i < sizeof(vmem_info->PDPT_PML40) / sizeof(vmem_info->PDPT_PML40[0]); i++) {
-    vmem_info->PDPT_PML40[i] = (((uint64_t) i) << 30) | VMEM_PDPT_PS_1G | 0x7;
+    vmem_info->PDPT_PML40[i] = (((uint64_t) i) << 30) | VMEM_PDPT_PS_1G | 0x7 /* U/S, R/W, P */; /* XXX: pourquoi U/S ? */
   }
+
   INFO("eip before modifying cr3: %x\n", CPU_READ_EIP());
   cpu_write_cr3((uint32_t) &vmem_info->PML4);
 }
@@ -124,22 +126,26 @@ void vmem_setup_paging(vmem_info_t *vmem_info) {
  */
 void vmem_setup_paging_2MB(vmem_info_t *vmem_info) {
   /*
-   * Everything stand into the first 512 GB (more precisely, into the first 4 GB, due to
+   * Everything stands into the first 512 GB (more precisely, into the first 4 GB, due to
    * protected mode limitation), so we only need the first entry of PML4.
    */
+  vmem_info->PML4[0] = ((uint64_t) (uint32_t) &vmem_info->PDPT_PML40[0]) | 0x03 /* R/W, P */;
   for (uint32_t i = 1; i < sizeof(vmem_info->PML4) / sizeof(vmem_info->PML4[0]); i++) {
     vmem_info->PML4[i] = 0;
   }
-  vmem_info->PML4[0] = ((uint64_t) (uint32_t) &vmem_info->PDPT_PML40[0]) | 0x03;
+
   /*
-   * Automatically map all memory accessed with PDPT_PML40 in 2MB pages.
+   * Automatically map all memory accessed with PDPT_PML40 in 2 MB pages.
    */
   for (uint32_t i = 0; i < sizeof(vmem_info->PDPT_PML40) / sizeof(vmem_info->PDPT_PML40[0]); i++) {
-    vmem_info->PDPT_PML40[i] = ((uint64_t) (uint32_t) &vmem_info->PD_PDPT_PML40[i][0]) | 0x7;
-    for (uint32_t j = 0; j < sizeof(vmem_info->PD_PDPT_PML40[i]) / sizeof(vmem_info->PD_PDPT_PML40[i][0]); j++) {
-      vmem_info->PD_PDPT_PML40[i][j] = (((uint64_t) (i * (sizeof(vmem_info->PD_PDPT_PML40[i]) / sizeof(vmem_info->PD_PDPT_PML40[i][0])) + j)) << 21) | VMEM_PDPT_PS_1G | 0x7;
+    vmem_info->PDPT_PML40[i] = ((uint64_t) (uint32_t) &vmem_info->PD_PDPT_PML40[i][0]) | 0x3 /* R/W, P */;
+
+    uint32_t nb_pde = sizeof(vmem_info->PD_PDPT_PML40[i]) / sizeof(vmem_info->PD_PDPT_PML40[i][0]);
+    for (uint32_t j = 0; j < nb_pde; j++) {
+      vmem_info->PD_PDPT_PML40[i][j] = (((uint64_t) (i * nb_pde + j)) << 21) | VMEM_PDPT_PS_2M | 0x3 /* R/W, P */;
     }
   }
+
   INFO("eip before modifying cr3: %x\n", CPU_READ_EIP());
   cpu_write_cr3((uint32_t) &vmem_info->PML4);
 }

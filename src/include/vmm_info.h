@@ -16,6 +16,7 @@ typedef struct {
 } __attribute__((packed)) pmem_mmap_t;
 
 #define VMEM_PDPT_PS_1G 128
+#define VMEM_PDPT_PS_2M 128
 
 typedef struct {
   uint32_t base;
