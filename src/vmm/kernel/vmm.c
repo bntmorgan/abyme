@@ -80,6 +80,121 @@ void vmm_read_cmos(void) {
   cmos[0x34] = tmp;
 }
 
+struct vm_state {
+  uint32_t cr0;
+  uint32_t cr3;
+  uint32_t cr4;
+  uint64_t cs_base;
+  uint64_t ds_base;
+  uint64_t es_base;
+  uint64_t ss_base;
+  uint64_t rip;
+  uint64_t rsp;
+  uint64_t rbp;
+  uint64_t rax;
+  uint64_t rbx;
+  uint64_t rcx;
+  uint64_t rdx;
+  uint64_t rsi;
+  uint64_t rdi;
+  uint64_t r8;
+  uint64_t r9;
+  uint64_t r10;
+  uint64_t r11;
+  uint64_t r12;
+  uint64_t r13;
+};
+
+struct vm_state state0;
+struct vm_state state1;
+struct vm_state *current_state;
+struct vm_state *previous_state;
+
+void debug_save_vm_current_state(struct vm_state *state, gpr64_t *guest_gpr, uint64_t guest_rip) {
+  state->cr0 = cpu_vmread(GUEST_CR0);
+  state->cr3 = cpu_vmread(GUEST_CR3);
+  state->cr4 = cpu_vmread(GUEST_CR4);
+  state->cs_base = cpu_vmread(GUEST_CS_BASE);
+  state->ds_base = cpu_vmread(GUEST_DS_BASE);
+  state->es_base = cpu_vmread(GUEST_ES_BASE);
+  state->ss_base = cpu_vmread(GUEST_SS_BASE);
+  state->rip = guest_rip;
+  state->rsp = guest_gpr->rsp;
+  state->rbp = guest_gpr->rbp;
+  state->rax = guest_gpr->rax;
+  state->rbx = guest_gpr->rbx;
+  state->rcx = guest_gpr->rcx;
+  state->rdx = guest_gpr->rdx;
+  state->rsi = guest_gpr->rsi;
+  state->rdi = guest_gpr->rdi;
+  state->r8 = guest_gpr->r8;
+  state->r9 = guest_gpr->r9;
+  state->r10 = guest_gpr->r10;
+  state->r11 = guest_gpr->r11;
+  state->r12 = guest_gpr->r12;
+  state->r13 = guest_gpr->r13;
+}
+
+void debug_print_cregs(struct vm_state *state) {
+  INFO("cr0 = 0x%x\n", state->cr0);
+  INFO("cr3 = 0x%x\n", state->cr3);
+  INFO("cr4 = 0x%x\n", state->cr4);
+}
+
+void debug_print_sregs(struct vm_state *state) {
+  INFO("cs_base = 0x%x\n", state->cs_base);
+  INFO("ds_base = 0x%x\n", state->ds_base);
+  INFO("es_base = 0x%x\n", state->es_base);
+  INFO("ss_base = 0x%x\n", state->ss_base);
+}
+
+void debug_print_frame(struct vm_state *state) {
+  INFO("rip = 0x%x\n", state->rip);
+  INFO("rbp = 0x%x\n", state->rbp);
+  INFO("rsp = 0x%x\n", state->rsp);
+}
+
+void debug_print_regs(struct vm_state *state) {
+  INFO("rax = 0x%x  rbx\n", state->rax, state->rbx);
+  INFO("rcx = 0x%x  rdx\n", state->rcx, state->rdx);
+  INFO("rsi = 0x%x  rdi\n", state->rsi, state->rdi);
+  INFO("r8  = 0x%x  r9\n",  state->r8,  state->r9);
+  INFO("r10 = 0x%x  r11\n", state->r10, state->r11);
+  INFO("r12 = 0x%x  r13\n", state->r12, state->r13);
+}
+
+#define DEBUG_STATE_PRINT_DIFF(a, b, c)           \
+  do {                                            \
+    if (a != b) {                                 \
+      INFO("%4s: 0x%016x -> 0x%016x\n", c, a, b); \
+    }                                             \
+  } while (0)
+
+void debug_print_vm_change(struct vm_state *state_a, struct vm_state *state_b) {
+  DEBUG_STATE_PRINT_DIFF(state_a->cr0, state_b->cr0, "cr0");
+  DEBUG_STATE_PRINT_DIFF(state_a->cr3, state_b->cr3, "cr3");
+  DEBUG_STATE_PRINT_DIFF(state_a->cr4, state_b->cr4, "cr4");
+  DEBUG_STATE_PRINT_DIFF(state_a->cs_base, state_b->cs_base, "cs_base");
+  DEBUG_STATE_PRINT_DIFF(state_a->ds_base, state_b->ds_base, "ds_base");
+  DEBUG_STATE_PRINT_DIFF(state_a->es_base, state_b->es_base, "es_base");
+  DEBUG_STATE_PRINT_DIFF(state_a->ss_base, state_b->ss_base, "ss_base");
+  DEBUG_STATE_PRINT_DIFF(state_a->rip, state_b->rip, "rip");
+  DEBUG_STATE_PRINT_DIFF(state_a->rsp, state_b->rsp, "rsp");
+  DEBUG_STATE_PRINT_DIFF(state_a->rbp, state_b->rbp, "rbp");
+  DEBUG_STATE_PRINT_DIFF(state_a->rax, state_b->rax, "rax");
+  DEBUG_STATE_PRINT_DIFF(state_a->rbx, state_b->rbx, "rbx");
+  DEBUG_STATE_PRINT_DIFF(state_a->rcx, state_b->rcx, "rcx");
+  DEBUG_STATE_PRINT_DIFF(state_a->rdx, state_b->rdx, "rdx");
+  DEBUG_STATE_PRINT_DIFF(state_a->rsi, state_b->rsi, "rsi");
+  DEBUG_STATE_PRINT_DIFF(state_a->rdi, state_b->rsi, "rdi");
+  DEBUG_STATE_PRINT_DIFF(state_a->r8,  state_b->r8,  "r8");
+  DEBUG_STATE_PRINT_DIFF(state_a->r9,  state_b->r9,  "r9");
+  DEBUG_STATE_PRINT_DIFF(state_a->r10, state_b->r10, "r10");
+  DEBUG_STATE_PRINT_DIFF(state_a->r11, state_b->r11, "r11");
+  DEBUG_STATE_PRINT_DIFF(state_a->r12, state_b->r12, "r12");
+  DEBUG_STATE_PRINT_DIFF(state_a->r13, state_b->r13, "r13");
+}
+
 void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   guest_gpr.rsp = cpu_vmread(GUEST_RSP);
   uint64_t guest_rip = vmm_get_guest_rip();
