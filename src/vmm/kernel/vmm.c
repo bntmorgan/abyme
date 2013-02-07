@@ -79,20 +79,33 @@ void vmm_read_cmos(void) {
   cmos[0x34] = tmp;
 }
 
+// Wait for keyboard event
+char waitkey() { 
+  unsigned char k;
+  do {
+    cpu_inportb(0x60, k);
+  }
+  while (k<128);
+  do {
+    cpu_inportb(0x60, k);
+  }
+  while (k>128);
+}
+
 void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   guest_gpr.rsp = cpu_vmread(GUEST_RSP);
   uint64_t guest_rip = vmm_get_guest_rip();
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
-  //uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
+  uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
   uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
 
   vmm_set_guest_rip(guest_rip, exit_instruction_length);
 
-  //uint64_t guest_cs_base = cpu_vmread(GUEST_CS_BASE);
+  uint64_t guest_cs_base = cpu_vmread(GUEST_CS_BASE);
 
-  //INFO("VMEXIT! guest_rip = %x:%x, exit_reason = %x (%d), exit_qualification = %x\n", guest_cs_base, guest_rip, exit_reason, exit_reason, exit_qualification);
+  INFO("VMEXIT! guest_rip = %x:%x, exit_reason = %x (%d), exit_qualification = %x\n", guest_cs_base, guest_rip, exit_reason, exit_reason, exit_qualification);
   //for (unsigned int i = 0; i < 0x10000000; i++);
-/*  INFO("----------\n");
+  INFO("----------\n");
   INFO("rip = 0x%X\n", guest_rip);
   INFO("rsp = 0x%x    rbp = 0x%x\n", guest_gpr.rsp, guest_gpr.rbp);
   INFO("rax = 0x%x    rbx = 0x%x\n", guest_gpr.rax, guest_gpr.rbx);
@@ -102,7 +115,8 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   INFO("r10 = 0x%x    r11 = 0x%x\n", guest_gpr.r10, guest_gpr.r11);
   INFO("r12 = 0x%x    r13 = 0x%x\n", guest_gpr.r12, guest_gpr.r13);
   INFO("r14 = 0x%x    r15 = 0x%x\n", guest_gpr.r14, guest_gpr.r15);
-*/
+
+  waitkey();
 
   switch (exit_reason) {
 #if 0

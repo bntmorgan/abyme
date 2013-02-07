@@ -10,6 +10,12 @@ void cpu_outportb(uint32_t port, uint8_t value) {
   __asm__ __volatile__("outb %%al, %%dx" : : "d" (port), "a" (value));
 }
 
+uint8_t cpu_inportb(uint32_t port) {
+  uint8_t value;
+  __asm__ __volatile__("inb %%dx, %%al" : "=a" (value) : "d" (port));
+  return value;
+}
+
 void cpu_read_gdt(uint8_t *gdt_ptr) {
   __asm__ __volatile__("sgdt %0" : : "m" (*gdt_ptr) : "memory");
 }
