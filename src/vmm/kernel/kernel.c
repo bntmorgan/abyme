@@ -43,16 +43,18 @@ void kernel_main(vmm_info_t *_vmm_info) {
 
   /* Install new INT 0x15 handler at the end of the BIOS IVT (unused) */
   /* TODO: move it to another place? */
-  *((uint8_t*) (255 * 4 + 0)) = 0x0f; /* VMCALL (3 bytes) */
-  *((uint8_t*) (255 * 4 + 1)) = 0x01;
-  *((uint8_t*) (255 * 4 + 2)) = 0xc1;
-  *((uint8_t*) (255 * 4 + 3)) = 0xcf; /* IRET (1 byte) */
+  *((uint8_t*) (255 * 4 + 4)) = 0x0f; /* VMCALL (3 bytes) */
+  *((uint8_t*) (255 * 4 + 5)) = 0x01;
+  *((uint8_t*) (255 * 4 + 6)) = 0xc1;
+  *((uint8_t*) (255 * 4 + 7)) = 0xcf; /* IRET (1 byte) */
   /* Change the INT 0x15 handler address in the BIOS IVT */
   *((uint16_t*) (4 * 0x15 + 2)) = 0;
   *((uint16_t*) (4 * 0x15 + 0)) = 255 * 4;
 
-  *((uint8_t*) (254 * 4 + 0)) = 0xcd; /* INT 0x19 (2 bytes) */
-  *((uint8_t*) (254 * 4 + 1)) = 0x19;
+  *((uint8_t*) (254 * 4 + 0)) = 0xba; /* MOV dl, 0x80 */
+  *((uint8_t*) (254 * 4 + 1)) = 0x80;
+  *((uint8_t*) (254 * 4 + 2)) = 0xcd; /* INT 0x19 (2 bytes) */
+  *((uint8_t*) (254 * 4 + 3)) = 0x19;
 
   kernel_print_info();
   //vmem_print_info();

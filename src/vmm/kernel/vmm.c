@@ -83,13 +83,14 @@ void vmm_read_cmos(void) {
 char waitkey() { 
   unsigned char k;
   do {
-    cpu_inportb(0x60, k);
+    k = cpu_inportb(0x60);
   }
   while (k<128);
   do {
-    cpu_inportb(0x60, k);
+    k = cpu_inportb(0x60);
   }
   while (k>128);
+  return k;
 }
 
 void vmm_handle_vm_exit(gpr64_t guest_gpr) {
@@ -98,6 +99,20 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
   uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
   uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
+  
+  uint32_t cs = cpu_vmread(HOST_CS_SELECTOR);
+  uint32_t ss = cpu_vmread(HOST_SS_SELECTOR);
+  uint32_t ds = cpu_vmread(HOST_DS_SELECTOR);
+  uint32_t es = cpu_vmread(HOST_ES_SELECTOR);
+  uint32_t fs = cpu_vmread(HOST_FS_SELECTOR);
+  uint32_t gs = cpu_vmread(HOST_GS_SELECTOR);
+  uint32_t tr = cpu_vmread(HOST_TR_SELECTOR);
+
+  uint32_t cr0 = cpu_vmread(GUEST_CR0);
+  uint32_t cr3 = cpu_vmread(GUEST_CR3);
+  uint32_t cr4 = cpu_vmread(GUEST_CR4);
+
+  uint64_t inst = *((uint32_t *)guest_rip);
 
   vmm_set_guest_rip(guest_rip, exit_instruction_length);
 
@@ -114,7 +129,12 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   INFO("r8  = 0x%x    r9  = 0x%x\n", guest_gpr.r8,  guest_gpr.r9);
   INFO("r10 = 0x%x    r11 = 0x%x\n", guest_gpr.r10, guest_gpr.r11);
   INFO("r12 = 0x%x    r13 = 0x%x\n", guest_gpr.r12, guest_gpr.r13);
-  INFO("r14 = 0x%x    r15 = 0x%x\n", guest_gpr.r14, guest_gpr.r15);
+  INFO("cs = 0x%x     ss = 0x%x\n", cs, ss);
+  INFO("ds = 0x%x     es = 0x%x\n", ds, es);
+  INFO("fs = 0x%x     gs = 0x%x\n", fs, gs);
+  INFO("tr = 0x%x     inst = 0x%x\n", tr, inst);
+  INFO("cr0 = 0x%x    cr3 = 0x%x\n", cr0, cr3);
+  INFO("cr4 = 0x%x    \n", cr4);
 
   waitkey();
 

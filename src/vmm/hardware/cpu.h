@@ -27,6 +27,8 @@ typedef struct {
 
 void cpu_outportb(uint32_t port, uint8_t value);
 
+uint8_t cpu_inportb(uint32_t port);
+
 void cpu_read_gdt(uint8_t *gdt_ptr);
 
 void cpu_read_idt(uint8_t *idt_ptr);
