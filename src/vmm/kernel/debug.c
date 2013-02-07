@@ -105,19 +105,24 @@ char scancodes[DEBUG_SCANCODES_SIZE] = {
 };
 
 void debug_breakpoint_add(uint64_t address) {
-  breakpoints[bsize] = address;
-  bsize++;
+  if (bsize < DEBUG_BREAKPOINTS_SIZE) {
+    breakpoints[bsize] = address;
+    bsize++;
+  }
 }
 
-void debug_breakpoint_del(unsigned int index) {
-  bsize--;
+void debug_breakpoint_del(int index) {
+  if (bsize > 0 && index > 1 && index <= bsize) {
+    breakpoints[index - 1] = breakpoints[bsize - 1];
+    bsize--;
+  }
 }
 
 void debug_breakpoint_print() {
   int i;
   printk("Breakpoints :\n");
   for (i = 0; i < bsize; ++i) {
-    printk("%d : %d\n", i + 1, breakpoints[i]);
+    printk("%x : %x\n", i + 1, breakpoints[i]);
   }
 }
 

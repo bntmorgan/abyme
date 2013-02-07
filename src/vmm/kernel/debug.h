@@ -9,6 +9,6 @@
 uint8_t waitkey();
 char getchar();
 void debug_breakpoint_add(uint64_t address);
-void debug_breakpoint_del(unsigned int index);
+void debug_breakpoint_del(int index);
 
 #endif
