@@ -80,8 +80,44 @@ void vmm_read_cmos(void) {
   cmos[0x34] = tmp;
 }
 
-struct vm_state {
-  uint32_t cr0;
+//#define GUEST_CREG     0
+//#define GUEST_SEG_BASE 1
+//#define GUEST_REG      2
+
+#define DEBUG_GUEST_STATE \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_VMCS, cr0, GUEST_CR0) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_VMCS, cr3, GUEST_CR3) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_VMCS, cr4, GUEST_CR4) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_VMCS, cs_base, GUEST_CS_BASE) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_VMCS, ds_base, GUEST_DS_BASE) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_VMCS, es_base, GUEST_ES_BASE) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_VMCS, ss_base, GUEST_SS_BASE) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, rip) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, rsp) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, rbp) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, rax) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, rbx) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, rcx) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, rdx) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, rsi) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, rdi) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, r8) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, r9) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, r10) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, r11) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, r12) \
+  DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_REG, r13)
+
+#define DEBUG_GUEST_STATE_FIELD_TOKENPASTE(x, y) x ## _ ## y
+#define DEBUG_GUEST_STATE_FIELD_TOKENPASTE2(x, y) DEBUG_GUEST_STATE_FIELD_TOKENPASTE(x, y)
+#define DEBUG_GUEST_STATE_FIELD(type, ...) DEBUG_GUEST_STATE_FIELD_TOKENPASTE2(DEBUG_GUEST_STATE_FIELD, type)(__VA_ARGS__)
+
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG(field) uint64_t field;
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_VMCS(field, vmcs_field) uint64_t field;
+//#define DEBUG_GUEST_STATE_FIELD(type, field, ...) uint64_t field;
+struct guest_state {
+  DEBUG_GUEST_STATE
+  /*uint32_t cr0;
   uint32_t cr3;
   uint32_t cr4;
   uint64_t cs_base;
@@ -102,16 +138,22 @@ struct vm_state {
   uint64_t r10;
   uint64_t r11;
   uint64_t r12;
-  uint64_t r13;
+  uint64_t r13;*/
 };
+//#undef DEBUG_GUEST_STATE_FIELD
+#undef DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG
+#undef DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_VMCS
 
-struct vm_state state0;
-struct vm_state state1;
-struct vm_state *current_state;
-struct vm_state *previous_state;
+#define NB_GUEST_STATES 2
+uint32_t guest_states_index = 0;
+// TODO: fill with 0!!!
+struct guest_state guest_states[NB_GUEST_STATES];
 
-void debug_save_vm_current_state(struct vm_state *state, gpr64_t *guest_gpr, uint64_t guest_rip) {
-  state->cr0 = cpu_vmread(GUEST_CR0);
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG(field) state-> field = guest_gpr-> field;
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_VMCS(field, vmcs_field) state-> field = cpu_vmread(vmcs_field);
+void debug_save_guest_state(struct guest_state *state, gpr64_t *guest_gpr) {
+  DEBUG_GUEST_STATE
+  /*state->cr0 = cpu_vmread(GUEST_CR0);
   state->cr3 = cpu_vmread(GUEST_CR3);
   state->cr4 = cpu_vmread(GUEST_CR4);
   state->cs_base = cpu_vmread(GUEST_CS_BASE);
@@ -132,29 +174,42 @@ void debug_save_vm_current_state(struct vm_state *state, gpr64_t *guest_gpr, uin
   state->r10 = guest_gpr->r10;
   state->r11 = guest_gpr->r11;
   state->r12 = guest_gpr->r12;
-  state->r13 = guest_gpr->r13;
+  state->r13 = guest_gpr->r13;*/
 }
+#undef DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG
+#undef DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_VMCS
 
-void debug_print_cregs(struct vm_state *state) {
-  INFO("cr0 = 0x%x\n", state->cr0);
+#define DEBUG_GUEST_STATE_FIELD_PRINT(field) \
+  do {\
+    if (field_index_from <= i && i <= field_index_to) {\
+      INFO(#field " = 0x%016x\n", state->field); \
+    }\
+    i++;\
+  } while (0);
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG(field) DEBUG_GUEST_STATE_FIELD_PRINT(field)
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_VMCS(field, vmcs_field) DEBUG_GUEST_STATE_FIELD_PRINT(field)
+void debug_print_guest_state(struct guest_state *state, uint32_t field_index_from, uint32_t field_index_to) {
+  uint32_t i = 0;
+  DEBUG_GUEST_STATE
+  /*INFO("cr0 = 0x%x\n", state->cr0);
   INFO("cr3 = 0x%x\n", state->cr3);
-  INFO("cr4 = 0x%x\n", state->cr4);
+  INFO("cr4 = 0x%x\n", state->cr4);*/
 }
-
-void debug_print_sregs(struct vm_state *state) {
+/*
+void debug_print_sregs(struct guest_state *state) {
   INFO("cs_base = 0x%x\n", state->cs_base);
   INFO("ds_base = 0x%x\n", state->ds_base);
   INFO("es_base = 0x%x\n", state->es_base);
   INFO("ss_base = 0x%x\n", state->ss_base);
 }
 
-void debug_print_frame(struct vm_state *state) {
+void debug_print_frame(struct guest_state *state) {
   INFO("rip = 0x%x\n", state->rip);
   INFO("rbp = 0x%x\n", state->rbp);
   INFO("rsp = 0x%x\n", state->rsp);
 }
 
-void debug_print_regs(struct vm_state *state) {
+void debug_print_regs(struct guest_state *state) {
   INFO("rax = 0x%x  rbx\n", state->rax, state->rbx);
   INFO("rcx = 0x%x  rdx\n", state->rcx, state->rdx);
   INFO("rsi = 0x%x  rdi\n", state->rsi, state->rdi);
@@ -162,16 +217,29 @@ void debug_print_regs(struct vm_state *state) {
   INFO("r10 = 0x%x  r11\n", state->r10, state->r11);
   INFO("r12 = 0x%x  r13\n", state->r12, state->r13);
 }
+*/
+#undef DEBUG_GUEST_STATE_FIELD_PRINT_DIFF
+#undef DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG
+#undef DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_VMCS
 
-#define DEBUG_STATE_PRINT_DIFF(a, b, c)           \
+#define DEBUG_GUEST_STATE_FIELD_PRINT_DIFF(field) \
+  do {\
+    if (state_a->field != state_b->field) { \
+      INFO(#field ": 0x%016x -> 0x%016x\n", state_a->field, state_b->field); \
+    }\
+  } while (0);
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG(field) DEBUG_GUEST_STATE_FIELD_PRINT_DIFF(field)
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_VMCS(field, vmcs_field) DEBUG_GUEST_STATE_FIELD_PRINT_DIFF(field)
+/*#define DEBUG_STATE_PRINT_DIFF(a, b, c)           \
   do {                                            \
     if (a != b) {                                 \
       INFO("%4s: 0x%016x -> 0x%016x\n", c, a, b); \
     }                                             \
   } while (0)
-
-void debug_print_vm_change(struct vm_state *state_a, struct vm_state *state_b) {
-  DEBUG_STATE_PRINT_DIFF(state_a->cr0, state_b->cr0, "cr0");
+*/
+void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_state *state_b) {
+  DEBUG_GUEST_STATE
+  /*DEBUG_STATE_PRINT_DIFF(state_a->cr0, state_b->cr0, "cr0");
   DEBUG_STATE_PRINT_DIFF(state_a->cr3, state_b->cr3, "cr3");
   DEBUG_STATE_PRINT_DIFF(state_a->cr4, state_b->cr4, "cr4");
   DEBUG_STATE_PRINT_DIFF(state_a->cs_base, state_b->cs_base, "cs_base");
@@ -192,17 +260,18 @@ void debug_print_vm_change(struct vm_state *state_a, struct vm_state *state_b) {
   DEBUG_STATE_PRINT_DIFF(state_a->r10, state_b->r10, "r10");
   DEBUG_STATE_PRINT_DIFF(state_a->r11, state_b->r11, "r11");
   DEBUG_STATE_PRINT_DIFF(state_a->r12, state_b->r12, "r12");
-  DEBUG_STATE_PRINT_DIFF(state_a->r13, state_b->r13, "r13");
+  DEBUG_STATE_PRINT_DIFF(state_a->r13, state_b->r13, "r13");*/
 }
 
 void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   guest_gpr.rsp = cpu_vmread(GUEST_RSP);
-  uint64_t guest_rip = vmm_get_guest_rip();
+  guest_gpr.rip = vmm_get_guest_rip();
+  //uint64_t guest_rip = vmm_get_guest_rip();
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
   uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
   uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
   
-  uint32_t cs = cpu_vmread(HOST_CS_SELECTOR);
+  /*uint32_t cs = cpu_vmread(HOST_CS_SELECTOR);
   uint32_t ss = cpu_vmread(HOST_SS_SELECTOR);
   uint32_t ds = cpu_vmread(HOST_DS_SELECTOR);
   uint32_t es = cpu_vmread(HOST_ES_SELECTOR);
@@ -212,17 +281,21 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
 
   uint32_t cr0 = cpu_vmread(GUEST_CR0);
   uint32_t cr3 = cpu_vmread(GUEST_CR3);
-  uint32_t cr4 = cpu_vmread(GUEST_CR4);
+  uint32_t cr4 = cpu_vmread(GUEST_CR4);*/
 
-  uint64_t inst = *((uint32_t *)guest_rip);
+  uint64_t inst = *((uint32_t *)guest_gpr.rip);
+  //uint64_t inst = *((uint32_t *)guest_rip);
   
-  uint64_t guest_cs_base = cpu_vmread(GUEST_CS_BASE);
+  /*uint64_t guest_cs_base = cpu_vmread(GUEST_CS_BASE);
   uint64_t guest_ds_base = cpu_vmread(GUEST_DS_BASE);
   uint64_t guest_ss_base = cpu_vmread(GUEST_SS_BASE);
-
+*/
   // Due to monitor trap
   if (exit_reason != EXIT_REASON_MONITOR_TRAP_FLAG) {
-    vmm_set_guest_rip(guest_rip, exit_instruction_length);
+    vmm_set_guest_rip(guest_gpr.rip, exit_instruction_length);
+  } else {
+    guest_states_index = (guest_states_index + 1) % NB_GUEST_STATES;
+    debug_save_guest_state(&guest_states[guest_states_index], &guest_gpr);
   }
 
   /*INFO("VMEXIT! guest_rip = %x:%x, exit_reason = %x (%d), exit_qualification = %x\n", guest_cs_base, guest_rip, exit_reason, exit_reason, exit_qualification);

@@ -21,6 +21,7 @@ vmm_vm_exit_handler:
   push %r13
   push %r14
   push %r15
+  pushq $0x0 /* Will contain rip */
 
   /*
    * Call our VM-Exit handler.
@@ -31,6 +32,7 @@ vmm_vm_exit_handler:
   /*
    * Restore guest general-purpose registers, possibly modified by our handler.
    */
+  pop %r15 /* Pop rip */
   pop %r15
   pop %r14
   pop %r13
