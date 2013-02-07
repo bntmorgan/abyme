@@ -51,7 +51,7 @@ void kernel_main(vmm_info_t *_vmm_info) {
   *((uint16_t*) (4 * 0x15 + 2)) = 0;
   *((uint16_t*) (4 * 0x15 + 0)) = 255 * 4;
 
-  *((uint8_t*) (254 * 4 + 0)) = 0xba; /* MOV dl, 0x80 */
+  *((uint8_t*) (254 * 4 + 0)) = 0xb2; /* MOV dl, 0x80 */
   *((uint8_t*) (254 * 4 + 1)) = 0x80;
   *((uint8_t*) (254 * 4 + 2)) = 0xcd; /* INT 0x19 (2 bytes) */
   *((uint8_t*) (254 * 4 + 3)) = 0x19;

@@ -1,6 +1,8 @@
 #include "debug.h"
+#include "stdio.h"
 
-uint32_t breakpoints[DEBUG_BREAKPOINTS_SIZE];
+uint64_t breakpoints[DEBUG_BREAKPOINTS_SIZE];
+int bsize;
 
 /**
  * Scancodes to ASCII CODE convertion
@@ -102,6 +104,23 @@ char scancodes[DEBUG_SCANCODES_SIZE] = {
   0x00, // Mod (Windows)
 };
 
+void debug_breakpoint_add(uint64_t address) {
+  breakpoints[bsize] = address;
+  bsize++;
+}
+
+void debug_breakpoint_del(unsigned int index) {
+  bsize--;
+}
+
+void debug_breakpoint_print() {
+  int i;
+  printk("Breakpoints :\n");
+  for (i = 0; i < bsize; ++i) {
+    printk("%d : %d\n", i + 1, breakpoints[i]);
+  }
+}
+
 /** 
  * Wait for keyboard event
  */
@@ -119,5 +138,7 @@ uint8_t waitkey() {
 }
 
 char getchar() {
-  return scancodes[waitkey()];
+  char c = scancodes[waitkey()];
+  printk("%c", c);
+  return c;
 }

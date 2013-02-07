@@ -3,6 +3,7 @@
 #include "hardware/cpu.h"
 #include "stdio.h"
 #include "string.h"
+#include "debug.h"
 #include "vmm_info.h"
 
 extern uint8_t kernel_start;
@@ -79,20 +80,6 @@ void vmm_read_cmos(void) {
   cmos[0x34] = tmp;
 }
 
-// Wait for keyboard event
-char waitkey() { 
-  unsigned char k;
-  do {
-    k = cpu_inportb(0x60);
-  }
-  while (k<128);
-  do {
-    k = cpu_inportb(0x60);
-  }
-  while (k>128);
-  return k;
-}
-
 void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   guest_gpr.rsp = cpu_vmread(GUEST_RSP);
   uint64_t guest_rip = vmm_get_guest_rip();
@@ -113,15 +100,19 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   uint32_t cr4 = cpu_vmread(GUEST_CR4);
 
   uint64_t inst = *((uint32_t *)guest_rip);
-
-  vmm_set_guest_rip(guest_rip, exit_instruction_length);
-
+  
   uint64_t guest_cs_base = cpu_vmread(GUEST_CS_BASE);
+  uint64_t guest_ds_base = cpu_vmread(GUEST_DS_BASE);
+  uint64_t guest_ss_base = cpu_vmread(GUEST_SS_BASE);
 
-  INFO("VMEXIT! guest_rip = %x:%x, exit_reason = %x (%d), exit_qualification = %x\n", guest_cs_base, guest_rip, exit_reason, exit_reason, exit_qualification);
-  //for (unsigned int i = 0; i < 0x10000000; i++);
+  // Due to monitor trap
+  if (exit_reason != EXIT_REASON_MONITOR_TRAP_FLAG) {
+    vmm_set_guest_rip(guest_rip, exit_instruction_length);
+  }
+
+  /*INFO("VMEXIT! guest_rip = %x:%x, exit_reason = %x (%d), exit_qualification = %x\n", guest_cs_base, guest_rip, exit_reason, exit_reason, exit_qualification);
   INFO("----------\n");
-  INFO("rip = 0x%X\n", guest_rip);
+  INFO("rip = 0x%X,   Phy addr = %X\n", guest_rip,guest_rip + (cs << 4));
   INFO("rsp = 0x%x    rbp = 0x%x\n", guest_gpr.rsp, guest_gpr.rbp);
   INFO("rax = 0x%x    rbx = 0x%x\n", guest_gpr.rax, guest_gpr.rbx);
   INFO("rcx = 0x%x    rdx = 0x%x\n", guest_gpr.rcx, guest_gpr.rdx);
@@ -132,11 +123,34 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   INFO("cs = 0x%x     ss = 0x%x\n", cs, ss);
   INFO("ds = 0x%x     es = 0x%x\n", ds, es);
   INFO("fs = 0x%x     gs = 0x%x\n", fs, gs);
+  INFO("dsb = 0x%x    ssb%x\n", guest_ds_base, guest_ss_base);
   INFO("tr = 0x%x     inst = 0x%x\n", tr, inst);
   INFO("cr0 = 0x%x    cr3 = 0x%x\n", cr0, cr3);
-  INFO("cr4 = 0x%x    \n", cr4);
+  INFO("cr4 = 0x%x    \n", cr4);*/
 
-  waitkey();
+  getchar();
+  getchar();
+  getchar();
+  getchar();
+  getchar();
+  getchar();
+  getchar();
+  getchar();
+  getchar();
+
+  /*debug_breakpoint_add(0xfafafafa);
+  debug_breakpoint_add(0xafafafaf);
+  debug_breakpoint_add(0xfafafafa);
+  debug_breakpoint_add(0xafafafaf);
+  debug_breakpoint_add(0xfafafafa);
+  debug_breakpoint_add(0xafafafaf);
+  debug_breakpoint_add(0xfafafafa);
+
+  debug_breakpoint_print();
+
+  debug_breakpoint_del(0);
+  debug_breakpoint_del(0);
+  debug_breakpoint_del(0);*/
 
   switch (exit_reason) {
 #if 0
