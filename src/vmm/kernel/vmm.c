@@ -316,22 +316,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   INFO("cr0 = 0x%x    cr3 = 0x%x\n", cr0, cr3);
   INFO("cr4 = 0x%x    \n", cr4);*/
 
-  debug_breakpoint_add(0xfafafaf1);
-  debug_breakpoint_add(0xafafafa2);
-  debug_breakpoint_add(0xfafafaf3);
-  debug_breakpoint_add(0xafafafa4);
-  debug_breakpoint_add(0xfafafaf5);
-  debug_breakpoint_add(0xafafafa6);
-  debug_breakpoint_add(0xfafafaf7);
-
-  debug_breakpoint_print();
-
-  debug_breakpoint_del(6);
-  debug_breakpoint_del(4);
-  debug_breakpoint_del(3);
-
-  debug_breakpoint_print();
-
+  debug(EXIT_REASON_MONITOR_TRAP_FLAG);
 
   switch (exit_reason) {
 #if 0
