@@ -108,7 +108,51 @@ char scancodes[DEBUG_SCANCODES_SIZE] = {
   0x00, // Mod (Windows)
 };
 
-#define DEBUG_PRINT_USAGE \
+//#define GUEST_CREG     0
+//#define GUEST_SEG_BASE 1
+//#define GUEST_REG      2
+uint32_t guest_states_index = 0;
+// TODO: fill with 0!!!
+struct guest_state guest_states[NB_GUEST_STATES];
+
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG(field) state-> field = guest_gpr-> field;
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_VMCS(field, vmcs_field) state-> field = cpu_vmread(vmcs_field);
+void debug_save_guest_state(struct guest_state *state, gpr64_t *guest_gpr) {
+  DEBUG_GUEST_STATE
+}
+#undef DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG
+#undef DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_VMCS
+
+#define DEBUG_GUEST_STATE_FIELD_PRINT(field) \
+  do {\
+    if (field_index_from <= i && i <= field_index_to) {\
+      INFO(#field " = 0x%016x\n", state->field); \
+    }\
+    i++;\
+  } while (0);
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG(field) DEBUG_GUEST_STATE_FIELD_PRINT(field)
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_VMCS(field, vmcs_field) DEBUG_GUEST_STATE_FIELD_PRINT(field)
+void debug_print_guest_state(struct guest_state *state, uint32_t field_index_from, uint32_t field_index_to) {
+  uint32_t i = 0;
+  DEBUG_GUEST_STATE
+}
+#undef DEBUG_GUEST_STATE_FIELD_PRINT_DIFF
+#undef DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG
+#undef DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_VMCS
+
+#define DEBUG_GUEST_STATE_FIELD_PRINT_DIFF(field) \
+  do {\
+    if (state_a->field != state_b->field) { \
+      INFO(#field ": 0x%016x -> 0x%016x\n", state_a->field, state_b->field); \
+    }\
+  } while (0);
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG(field) DEBUG_GUEST_STATE_FIELD_PRINT_DIFF(field)
+#define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_VMCS(field, vmcs_field) DEBUG_GUEST_STATE_FIELD_PRINT_DIFF(field)
+void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_state *state_b) {
+  DEBUG_GUEST_STATE
+}
+
+#define DEBUG_PRINT_USAGE {\
   printk("\n"); \
   printk("b : new breakpoint\n"); \
   printk("d : del\n"); \
@@ -119,33 +163,53 @@ char scancodes[DEBUG_SCANCODES_SIZE] = {
   printk("c : continue execution\n"); \
   printk("s : step by step\n"); \
   printk("h : help\n"); \
+}
 
-#define DEBUG_PRINT_PROMPT \
-  printk("debug$ "); \
+#define DEBUG_PRINT_PROMPT {\
+  printk("debug@%x$", guest_states[0].rip); \
+}
 
-#define DEBUG_HANDLE_BREAKPOINT_PRINT \
+#define DEBUG_HANDLE_BREAKPOINT_PRINT {\
   printk("\n"); \
-  debug_breakpoint_print();
+  debug_breakpoint_print(); \
+}
 
-#define DEBUG_HANDLE_BREAKPOINT_ADD \
+#define DEBUG_HANDLE_BREAKPOINT_ADD {\
   printk(" address ? "); \
   getstring(input, DEBUG_INPUT_SIZE); \
   printk("\n"); \
   uint64_t addr = atoi_hexa(input); \
-  debug_breakpoint_add(addr);
+  debug_breakpoint_add(addr); \
+}
 
-#define DEBUG_HANDLE_BREAKPOINT_DEL \
+#define DEBUG_HANDLE_BREAKPOINT_DEL {\
   printk(" number ? "); \
   getstring(input, DEBUG_INPUT_SIZE); \
   printk("\n"); \
   uint64_t idx = atoi_hexa(input); \
-  debug_breakpoint_del(idx);
+  debug_breakpoint_del(idx); \
+}
+
+#define DEBUG_HANDLE_STATE_PRINT {\
+  printk("\n"); \
+  debug_print_guest_state(guest_states, 0, 21); \
+}
+
+#define DEBUG_HANDLE_LAST_STATE_PRINT {\
+  printk("\n"); \
+  debug_print_guest_state(guest_states + 1, 0, 21); \
+}
+
+#define DEBUG_HANDLE_STATE_DIFF {\
+  printk("\n"); \
+  debug_print_guest_state_diff(guest_states, guest_states + 1); \
+}
 
 void debug(int reason) {
   if (reason != EXIT_REASON_MONITOR_TRAP_FLAG) {
     return;
   }
-  if (!step) {
+  if (!step && !debug_breakpoint_break(guest_states[0].rip)) {
     return;
   }
   char c;
@@ -164,10 +228,13 @@ void debug(int reason) {
         DEBUG_HANDLE_BREAKPOINT_PRINT
         break; 
       case 'v':
+        DEBUG_HANDLE_STATE_PRINT
         break; 
       case 'w':
+        DEBUG_HANDLE_LAST_STATE_PRINT
         break; 
       case 'x':
+        DEBUG_HANDLE_STATE_DIFF
         break; 
       case 'c':
         run = 0;
@@ -205,6 +272,17 @@ void debug_breakpoint_print() {
   for (i = 0; i < bsize; ++i) {
     printk("%x : %x\n", i + 1, breakpoints[i]);
   }
+}
+
+int debug_breakpoint_break(uint64_t rip) {
+  int i, b = 0;
+  for (i = 0; i < bsize; ++i) {
+    if (rip == breakpoints[i]) {
+      b = 1;
+      break;
+    }
+  }
+  return b;
 }
 
 /** 
