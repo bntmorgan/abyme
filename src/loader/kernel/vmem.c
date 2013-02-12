@@ -69,18 +69,26 @@ void vmem_check_current_gdt_base(void) {
    * we don't care about the TI and RPL.
    * See [Intel_August_2012], volume 3, section 3.4.2.
    */
-  gdt_desc = (uint8_t *) gdt_ptr.base;
   cpu_read_gdt((uint32_t *) &gdt_ptr);
+  gdt_desc = (uint8_t *) gdt_ptr.base;
   cpu_read_cs(&segment_selector);
   vmem_get_gdt_desc(gdt_desc + (8 * (segment_selector & ~0x7)), &entry_cs);
   cpu_read_ds(&segment_selector);
   vmem_get_gdt_desc(gdt_desc + (8 * (segment_selector & ~0x7)), &entry_ds);
   if (entry_cs.base != 0x0 || entry_ds.base != 0x0) {
+vmem_print_info();
     /*
      * Otherwise, we must take the base into account while switching
      * to the new GDT with cpu_write_gdt.
      */
-    ERROR("the loader has not started its execution in flat model.\n");
+    cpu_read_cs(&segment_selector);
+    vmem_get_gdt_desc(gdt_desc + (8 * (segment_selector & ~0x7)), &entry_cs);
+    INFO(" cs %x %x.\n", entry_cs.base, segment_selector);
+    cpu_read_ds(&segment_selector);
+    vmem_get_gdt_desc(gdt_desc + (8 * (segment_selector & ~0x7)), &entry_ds);
+    INFO(" ds %x %x.\n", entry_ds.base, segment_selector);
+    INFO("TODO the loader has not started its execution in flat model.\n");
+    //TODO ERROR("the loader has not started its execution in flat model.\n");
   }
 }
 

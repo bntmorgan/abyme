@@ -84,6 +84,7 @@ void kernel_main(uint32_t magic, uint32_t *address) {
   cpuid_setup();
   kernel_check();
   multiboot_setup(magic, address);
+  vmem_print_info();
   pmem_setup(multiboot_get_info());
   kernel_vmm_allocation();
   vmem_setup(&vmm_info->vmem_info);
