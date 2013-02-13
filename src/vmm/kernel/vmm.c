@@ -133,7 +133,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   INFO("cr0 = 0x%x    cr3 = 0x%x\n", cr0, cr3);
   INFO("cr4 = 0x%x    \n", cr4);*/
 
-  debug(EXIT_REASON_MONITOR_TRAP_FLAG);
+  //debug(EXIT_REASON_MONITOR_TRAP_FLAG);
 
   switch (exit_reason) {
 #if 0

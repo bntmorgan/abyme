@@ -69,12 +69,16 @@ void vmem_check_current_gdt_base(void) {
    * we don't care about the TI and RPL.
    * See [Intel_August_2012], volume 3, section 3.4.2.
    */
-  gdt_desc = (uint8_t *) gdt_ptr.base;
   cpu_read_gdt((uint32_t *) &gdt_ptr);
+  gdt_desc = (uint8_t *) gdt_ptr.base;
+  INFO("GDT base 0x%x\n", gdt_desc);
   cpu_read_cs(&segment_selector);
-  vmem_get_gdt_desc(gdt_desc + (8 * (segment_selector & ~0x7)), &entry_cs);
+  vmem_get_gdt_desc(gdt_desc + (segment_selector & ~0x7), &entry_cs);
+  INFO("CS 0x%x BASE CS 0x%x\n", segment_selector & ~0x7, entry_cs.base);
   cpu_read_ds(&segment_selector);
-  vmem_get_gdt_desc(gdt_desc + (8 * (segment_selector & ~0x7)), &entry_ds);
+  vmem_get_gdt_desc(gdt_desc + (segment_selector & ~0x7), &entry_ds);
+  INFO("DS 0x%x BASE DS 0x%x\n", segment_selector & ~0x7, entry_ds.base);
+  vmem_print_info();
   if (entry_cs.base != 0x0 || entry_ds.base != 0x0) {
     /*
      * Otherwise, we must take the base into account while switching

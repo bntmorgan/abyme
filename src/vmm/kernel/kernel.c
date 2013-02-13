@@ -15,6 +15,8 @@
  */
 extern uint8_t kernel_end;
 extern uint8_t kernel_start;
+extern uint8_t pepin_end;
+extern uint8_t pepin_start;
 
 /* Vector of addresses: segment (first word) : offset (second word) */
 uint32_t bios_ivt[256];
@@ -37,6 +39,8 @@ void dump_bios_ivt() {
 }
 
 void kernel_main(vmm_info_t *_vmm_info) {
+  uint8_t *dst;
+  uint32_t i;
   vmm_info = _vmm_info;
   screen_clear();
   dump_bios_ivt();
@@ -48,13 +52,17 @@ void kernel_main(vmm_info_t *_vmm_info) {
   *((uint8_t*) (255 * 4 + 6)) = 0xc1;
   *((uint8_t*) (255 * 4 + 7)) = 0xcf; /* IRET (1 byte) */
   /* Change the INT 0x15 handler address in the BIOS IVT */
-  *((uint16_t*) (4 * 0x15 + 2)) = 0;
-  *((uint16_t*) (4 * 0x15 + 0)) = 255 * 4;
+  //*((uint16_t*) (4 * 0x15 + 2)) = 0;
+  //*((uint16_t*) (4 * 0x15 + 0)) = 255 * 4;
 
-  *((uint8_t*) (254 * 4 + 0)) = 0xb2; /* MOV dl, 0x80 */
-  *((uint8_t*) (254 * 4 + 1)) = 0x80;
-  *((uint8_t*) (254 * 4 + 2)) = 0xcd; /* INT 0x19 (2 bytes) */
-  *((uint8_t*) (254 * 4 + 3)) = 0x19;
+//  *((uint8_t*) (254 * 4 + 0)) = 0xb2; /* MOV dl, 0x80 */
+//  *((uint8_t*) (254 * 4 + 1)) = 0x80;
+//  *((uint8_t*) (254 * 4 + 2)) = 0xcd; /* INT 0x19 (2 bytes) */
+//  *((uint8_t*) (254 * 4 + 3)) = 0x19;
+  dst = (uint8_t *) 0x7C00;
+  for (i = 0; i < &pepin_end - &pepin_start + 1; i++) {
+    dst[i] = ((uint8_t *) (&pepin_start))[i];
+  }
 
   kernel_print_info();
   //vmem_print_info();

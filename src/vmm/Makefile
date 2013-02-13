@@ -22,9 +22,13 @@ hardware/msr.t: hardware/msr.c
 kernel/vmm.t: kernel/vmm.c
 	$(CC) -g -S $(CFLAGS) -o $@ -c $<
  
-vmm.bin: $(OBJFILES) trampoline/trampoline.bin
+vmm.bin: $(OBJFILES) trampoline/trampoline.bin pepin/pepin.bin
 	cat trampoline/trampoline.bin | hexdump -v -e '"BYTE(0x" 1/1 "%02X" ")\n"' > trampoline_bytes.ld
+	cat pepin/pepin.bin | hexdump -v -e '"BYTE(0x" 1/1 "%02X" ")\n"' > pepin_bytes.ld
 	$(LD)  --warn-common --no-check-sections -n -melf_x86_64 -pie -T linker.ld -o $@ $(OBJFILES)
+
+pepin/pepin.bin: pepin/pepin.c
+	make -C pepin
 
 trampoline/trampoline.bin: trampoline/trampoline.s
 	make -C trampoline
