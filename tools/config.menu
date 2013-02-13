@@ -1,0 +1,33 @@
+menu   main
+title  Tinyvisor
+data   usb
+
+menu   usb
+title  Usb key configuration
+desc   usb, change usb generation settings 
+data   usb_device, usb_mount_point, usb_boot_directory, usb_syslinux_command, usb_syslinux_config_file
+
+input  usb_device
+title  enter the usb device
+desc   device, change the usb device
+data   CONFIG_USB_DEVICE
+
+input  usb_mount_point
+title  enter the usb mount point
+desc   device, change the usb mount point
+data   CONFIG_USB_MOUNT_POINT
+
+input  usb_boot_directory
+title  Enter the boot folder
+desc   boot, change the boot folder
+data   CONFIG_USB_BOOT_DIRECTORY
+
+input  usb_syslinux_command
+title  Enter the syslinux installation command
+desc   install, change the syslinux installation command
+data   CONFIG_USB_SYSLINUX_COMMAND
+
+input  usb_syslinux_config_file
+title  Enter the syslinux configuration file name
+desc   config, change the syslinux configuration file name
+data   CONFIG_USB_SYSLINUX_CONFIG_FILE
