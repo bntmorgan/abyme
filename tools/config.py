@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import itertools, sys, curses, os
+import itertools, sys, curses, os, pprint
 
 ##
 ## Ordered Dictionnary
@@ -94,7 +94,6 @@ class Config(Ordict):
             print "failed to write config"
             sys.exit(1)
 
-
     def __write(self):
         fc = open(self.files["config"],"w")
         fs = open(self.files["config"] + ".sh","w")
@@ -151,24 +150,26 @@ class Config(Ordict):
         # List and copy files from bin/pepins/pm_kernels/<name>/kernel.bin to boot/pm_kernels/<name>/kernel.bin
         for dirname, dirnames, filenames in os.walk('bin/pepins/pm_kernels'):
           for subdirname in dirnames:
+            kernel = os.listdir(dirname + '/' + subdirname)[0]
             fs.write("mkdir %s/%s/pepins/pm_kernels/%s -p\n" % (mount_point, boot_directory, subdirname))
-            fs.write("cp bin/pepins/pm_kernels/%s/kernel.bin %s/%s/pepins/pm_kernels/%s\n" % (subdirname, mount_point, boot_directory, subdirname))
+            fs.write("cp bin/pepins/pm_kernels/%s/%s %s/%s/pepins/pm_kernels/%s\n" % (subdirname, kernel, mount_point, boot_directory, subdirname))
             # Syslinux entry
-            fsc.write("label protected_%s\n" % (subdirname))
-            fsc.write("menu label %s without tinyvisor\n" % (subdirname))
+            fsc.write("label protected_%s\n" % (kernel))
+            fsc.write("menu label %s without tinyvisor\n" % (kernel))
             fsc.write("kernel mboot.c32\n")
-            fsc.write("append %s/%s/pepins/pm_kernels/%s/kernel.bin\n\n" % (mount_point, boot_directory, subdirname))
+            fsc.write("append %s/%s/pepins/pm_kernels/%s/%s\n\n" % (mount_point, boot_directory, subdirname, kernel))
 
         # List and copy files from bin/pepins/rm_kernels/<name>/kernel.bin to boot/rm_kernels/<name>/kernel.bin
         for dirname, dirnames, filenames in os.walk('bin/pepins/rm_kernels'):
           for subdirname in dirnames:
+            kernel = os.listdir(dirname + '/' + subdirname)[0]
             fs.write("mkdir %s/%s/pepins/rm_kernels/%s -p\n" % (mount_point, boot_directory, subdirname))
-            fs.write("cp bin/pepins/rm_kernels/%s/kernel.bin %s/%s/pepins/rm_kernels/%s\n" % (subdirname, mount_point, boot_directory, subdirname))
+            fs.write("cp bin/pepins/rm_kernels/%s/%s %s/%s/pepins/rm_kernels/%s\n" % (subdirname, kernel, mount_point, boot_directory, subdirname))
             # Syslinux entry
-            fsc.write("label real_%s\n" % (subdirname))
-            fsc.write("menu label %s with tinyvisor\n" % (subdirname))
+            fsc.write("label real_%s\n" % (kernel))
+            fsc.write("menu label %s with tinyvisor\n" % (kernel))
             fsc.write("kernel mboot.c32\n")
-            fsc.write("append %s/%s/loader/loader.bin --- %s/%s/vmm/vmm.bin --- %s/%s/pepins/rm_kernels/%s/kernel.bin\n\n" % (mount_point, boot_directory, mount_point, boot_directory, mount_point, boot_directory, subdirname))
+            fsc.write("append %s/%s/loader/loader.bin --- %s/%s/vmm/vmm.bin --- %s/%s/pepins/rm_kernels/%s/%s\n\n" % (mount_point, boot_directory, mount_point, boot_directory, mount_point, boot_directory, subdirname, kernel))
 
         # Copy the syslinux configuration file
         fs.write("cp %s %s/%s\n" % (self.files["config"] + ".syslinux.cfg", mount_point, config_file))
