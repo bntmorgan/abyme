@@ -140,36 +140,36 @@ class Config(Ordict):
         # Create loader folder
         fs.write("mkdir %s/%s/loader -p\n" % (mount_point, boot_directory))
         # Copy the loader
-        fs.write("cp bin/loader/loader.bin %s/%s/loader \n" % (mount_point, boot_directory))
+        fs.write("cp binary/loader/loader.elf32 %s/%s/loader \n" % (mount_point, boot_directory))
         
         # Create vmm folder
         fs.write("mkdir %s/%s/vmm -p\n" % (mount_point, boot_directory))
         # Copy the vmm
-        fs.write("cp bin/vmm/vmm.bin %s/%s/vmm \n" % (mount_point, boot_directory))
+        fs.write("cp binary/vmm/vmm.elf32 %s/%s/vmm \n" % (mount_point, boot_directory))
 
-        # List and copy files from bin/pepins/pm_kernels/<name>/kernel.bin to boot/pm_kernels/<name>/kernel.bin
-        for dirname, dirnames, filenames in os.walk('bin/pepins/pm_kernels'):
+        # List and copy files from bin/pm_kernels/<name>/kernel.bin to boot/pm_kernels/<name>/kernel.bin
+        for dirname, dirnames, filenames in os.walk('binary/pm_kernels'):
           for subdirname in dirnames:
             kernel = os.listdir(dirname + '/' + subdirname)[0]
-            fs.write("mkdir %s/%s/pepins/pm_kernels/%s -p\n" % (mount_point, boot_directory, subdirname))
-            fs.write("cp bin/pepins/pm_kernels/%s/%s %s/%s/pepins/pm_kernels/%s\n" % (subdirname, kernel, mount_point, boot_directory, subdirname))
+            fs.write("mkdir %s/%s/pm_kernels/%s -p\n" % (mount_point, boot_directory, subdirname))
+            fs.write("cp binary/pm_kernels/%s/%s %s/%s/pm_kernels/%s\n" % (subdirname, kernel, mount_point, boot_directory, subdirname))
             # Syslinux entry
-            fsc.write("label protected_%s\n" % (kernel))
-            fsc.write("menu label %s without tinyvisor\n" % (kernel))
+            fsc.write("label protected_%s_%s\n" % (subdirname, kernel))
+            fsc.write("menu label %s %s without tinyvisor\n" % (subdirname, kernel))
             fsc.write("kernel mboot.c32\n")
-            fsc.write("append %s/%s/pepins/pm_kernels/%s/%s\n\n" % (mount_point, boot_directory, subdirname, kernel))
+            fsc.write("append %s/pm_kernels/%s/%s\n\n" % (boot_directory, subdirname, kernel))
 
-        # List and copy files from bin/pepins/rm_kernels/<name>/kernel.bin to boot/rm_kernels/<name>/kernel.bin
-        for dirname, dirnames, filenames in os.walk('bin/pepins/rm_kernels'):
+        # List and copy files from binary/rm_kernels/<name>/kernel.bin to boot/rm_kernels/<name>/kernel.bin
+        for dirname, dirnames, filenames in os.walk('binary/rm_kernels'):
           for subdirname in dirnames:
             kernel = os.listdir(dirname + '/' + subdirname)[0]
-            fs.write("mkdir %s/%s/pepins/rm_kernels/%s -p\n" % (mount_point, boot_directory, subdirname))
-            fs.write("cp bin/pepins/rm_kernels/%s/%s %s/%s/pepins/rm_kernels/%s\n" % (subdirname, kernel, mount_point, boot_directory, subdirname))
+            fs.write("mkdir %s/%s/rm_kernels/%s -p\n" % (mount_point, boot_directory, subdirname))
+            fs.write("cp binary/rm_kernels/%s/%s %s/%s/rm_kernels/%s\n" % (subdirname, kernel, mount_point, boot_directory, subdirname))
             # Syslinux entry
-            fsc.write("label real_%s\n" % (kernel))
-            fsc.write("menu label %s with tinyvisor\n" % (kernel))
+            fsc.write("label tinyvisor_%s_%s\n" % (subdirname, kernel))
+            fsc.write("menu label %s %s with tinyvisor\n" % (subdirname, kernel))
             fsc.write("kernel mboot.c32\n")
-            fsc.write("append %s/%s/loader/loader.bin --- %s/%s/vmm/vmm.bin --- %s/%s/pepins/rm_kernels/%s/%s\n\n" % (mount_point, boot_directory, mount_point, boot_directory, mount_point, boot_directory, subdirname, kernel))
+            fsc.write("append %s/loader/loader.bin --- %s/vmm/vmm.bin --- %s/rm_kernels/%s/%s\n\n" % (boot_directory, boot_directory, boot_directory, subdirname, kernel))
 
         # Copy the syslinux configuration file
         fs.write("cp %s %s/%s\n" % (self.files["config"] + ".syslinux.cfg", mount_point, config_file))

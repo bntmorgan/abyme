@@ -1,1 +1,0 @@
---enable-vmx=2 --enable-smp --enable-x86-64 --enable-debugger
