@@ -3,7 +3,7 @@ import os
 import re
 
 def render(template, __namespace=None, **kw):
-  file = open('templates' + os.sep + template, 'r')
+  file = open(template, 'r')
   template = file.read()
   file.close()
   template = Template(template)

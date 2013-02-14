@@ -2,8 +2,8 @@
 
 #import itertools, sys, curses, os, pprint
 import sys, os
-from template import Template
-from config import Config, Menu
+from template import render
+from config import Config, Menu, Ordict
 
 class TinyConfig(Config):
   def __init__(self, fname):
@@ -16,6 +16,37 @@ class TinyConfig(Config):
       print "failed to write config" + e.strerror
       sys.exit(1)
     
+  def __write(self):
+    d = {}
+    d["device"] = self.get("CONFIG_USB_DEVICE")
+    d["mount_point"] = self.get("CONFIG_USB_MOUNT_POINT")
+    d["boot_directory"] = self.get("CONFIG_USB_BOOT_DIRECTORY")
+    d["command"] = self.get("CONFIG_USB_SYSLINUX_COMMAND")
+    d["config_file"] = self.get("CONFIG_USB_SYSLINUX_CONFIG_FILE")
+    bins = self.get("CONFIG_USB_SYSLINUX_BINS")
+    d["bs"] = bins.rsplit(",")
+    d["config_file"] = self.files['config']
+    
+    # List and copy files from bin/pm_kernels/<name>/kernel.bin to boot/pm_kernels/<name>/kernel.bin
+    pm_kernels = []
+    for dirname, dirnames, filenames in os.walk('binary/pm_kernels'):
+      for kernel in dirnames:
+        kernel_bin = os.listdir(dirname + '/' + kernel)[0]
+        pm_kernels.append((kernel, kernel_bin))
+    d["pm_kernels"] = pm_kernels
+
+
+    # List and copy files from binary/rm_kernels/<name>/kernel.bin to boot/rm_kernels/<name>/kernel.bin
+    rm_kernels = []
+    for dirname, dirnames, filenames in os.walk('binary/rm_kernels'):
+      for kernel in dirnames:
+        kernel_bin = os.listdir(dirname + '/' + kernel)[0]
+        rm_kernels.append((kernel, kernel_bin))
+    d["rm_kernels"] = rm_kernels
+
+    print d
+
+    print render("tools/scriptshell.tpl", d)
 
   def __write_old(self):
     # Call config write
