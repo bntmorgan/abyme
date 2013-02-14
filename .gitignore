@@ -1,4 +1,4 @@
-*.o
-*.bin
 *.sw*
-bin/usb.img
+binary
+build
+config
