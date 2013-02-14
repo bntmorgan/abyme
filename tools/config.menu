@@ -5,7 +5,7 @@ data   usb
 menu   usb
 title  Usb key configuration
 desc   usb, change usb generation settings 
-data   usb_device, usb_mount_point, usb_boot_directory, usb_syslinux_command, usb_syslinux_config_file
+data   usb_device, usb_mount_point, usb_boot_directory, usb_syslinux_command, usb_syslinux_config_file, usb_syslinux_bins
 
 input  usb_device
 title  enter the usb device
@@ -31,3 +31,8 @@ input  usb_syslinux_config_file
 title  Enter the syslinux configuration file name
 desc   config, change the syslinux configuration file name
 data   CONFIG_USB_SYSLINUX_CONFIG_FILE
+
+input  usb_syslinux_bins
+title  Enter the syslinux binaries to be copied (In addition of menu.c32 and mboot.c32) 
+desc   config, Extra syslinux binaries
+data   CONFIG_USB_SYSLINUX_BINS

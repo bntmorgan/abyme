@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import itertools, sys, curses
+import itertools, sys, curses, os
 
 ##
 ## Ordered Dictionnary
@@ -63,7 +63,10 @@ class Ordict:
 class Config(Ordict):
     def __init__(self, fname):
         Ordict.__init__(self)
-        self.files = {"default":"tools/config.default"}
+        self.files = {
+          "default":"tools/config.default",
+          "syslinux.top":"tools/syslinux.top.cfg"
+        }
         self.read(fname)
 
     def read(self, fname):
@@ -95,9 +98,20 @@ class Config(Ordict):
     def __write(self):
         fc = open(self.files["config"],"w")
         fs = open(self.files["config"] + ".sh","w")
+        # Top syslinux configuration file
+        fst = open(self.files["syslinux.top"],"r")
+        # Top syslinux generated configuration file
+        fsc = open(self.files["config"] + ".syslinux.cfg","w")
+        # Copy top syslinux file in syslinux config
+        for l in (ln.strip() for ln in fst):
+          if l != '':
+            fsc.write(l+"\n");
+        fst.close()
+        
         # Save the changes
         for t in self.items():
             fc.write("%s=%s\n" % (t[0],t[1]))
+        
         
         # Get the config vars
         device = self.get("CONFIG_USB_DEVICE")
@@ -105,36 +119,66 @@ class Config(Ordict):
         boot_directory = self.get("CONFIG_USB_BOOT_DIRECTORY")
         command = self.get("CONFIG_USB_SYSLINUX_COMMAND")
         config_file = self.get("CONFIG_USB_SYSLINUX_CONFIG_FILE")
+        bins = self.get("CONFIG_USB_SYSLINUX_BINS")
 
         # Generate the scriptshell
         fs.write("#!/bin/bash\n")
         fs.write("# Generated with %s configuration file :)\n" % self.files["config"])
         fs.write("mount %s %s\n" % (device, mount_point))
+
+        # Installing Syslinux
+        fs.write("if [ ! -e %s/%s ]; then\n" % (mount_point, config_file))
         fs.write("%s %s\n" % (command, mount_point))
+        #Copying the syslinux files
+        bs = bins.rsplit(",")
+        for b in bs:
+          fs.write("cp /usr/lib/syslinux/%s %s/\n" % (b.strip(), mount_point))
+        fs.write("fi\n")
 
         # Create boot folder
-        fs.write("mkdir %s/%s &> /dev/null\n" % (mount_point, boot_directory))
+        fs.write("mkdir %s/%s -p\n" % (mount_point, boot_directory))
 
         # Create loader folder
-        fs.write("mkdir %s/%s/loader &> /dev/null\n" % (mount_point, boot_directory))
+        fs.write("mkdir %s/%s/loader -p\n" % (mount_point, boot_directory))
         # Copy the loader
         fs.write("cp bin/loader/loader.bin %s/%s/loader \n" % (mount_point, boot_directory))
         
         # Create vmm folder
-        fs.write("mkdir %s/%s/vmm &> /dev/null\n" % (mount_point, boot_directory))
+        fs.write("mkdir %s/%s/vmm -p\n" % (mount_point, boot_directory))
         # Copy the vmm
         fs.write("cp bin/vmm/vmm.bin %s/%s/vmm \n" % (mount_point, boot_directory))
 
         # List and copy files from bin/pepins/pm_kernels/<name>/kernel.bin to boot/pm_kernels/<name>/kernel.bin
-
+        for dirname, dirnames, filenames in os.walk('bin/pepins/pm_kernels'):
+          for subdirname in dirnames:
+            fs.write("mkdir %s/%s/pepins/pm_kernels/%s -p\n" % (mount_point, boot_directory, subdirname))
+            fs.write("cp bin/pepins/pm_kernels/%s/kernel.bin %s/%s/pepins/pm_kernels/%s\n" % (subdirname, mount_point, boot_directory, subdirname))
+            # Syslinux entry
+            fsc.write("label protected_%s\n" % (subdirname))
+            fsc.write("menu label %s without tinyvisor\n" % (subdirname))
+            fsc.write("kernel mboot.c32\n")
+            fsc.write("append %s/%s/pepins/pm_kernels/%s/kernel.bin\n\n" % (mount_point, boot_directory, subdirname))
 
         # List and copy files from bin/pepins/rm_kernels/<name>/kernel.bin to boot/rm_kernels/<name>/kernel.bin
+        for dirname, dirnames, filenames in os.walk('bin/pepins/rm_kernels'):
+          for subdirname in dirnames:
+            fs.write("mkdir %s/%s/pepins/rm_kernels/%s -p\n" % (mount_point, boot_directory, subdirname))
+            fs.write("cp bin/pepins/rm_kernels/%s/kernel.bin %s/%s/pepins/rm_kernels/%s\n" % (subdirname, mount_point, boot_directory, subdirname))
+            # Syslinux entry
+            fsc.write("label real_%s\n" % (subdirname))
+            fsc.write("menu label %s with tinyvisor\n" % (subdirname))
+            fsc.write("kernel mboot.c32\n")
+            fsc.write("append %s/%s/loader/loader.bin --- %s/%s/vmm/vmm.bin --- %s/%s/pepins/rm_kernels/%s/kernel.bin\n\n" % (mount_point, boot_directory, mount_point, boot_directory, mount_point, boot_directory, subdirname))
+
+        # Copy the syslinux configuration file
+        fs.write("cp %s %s/%s\n" % (self.files["config"] + ".syslinux.cfg", mount_point, config_file))
 
         # Umount the key
-        fs.write("umount %s %s\n" % (device, mount_point))
+        fs.write("umount %s\n" % (mount_point))
 
         fs.close()
         fc.close()
+        fsc.close()
 
 ##
 ## Menu
