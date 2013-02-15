@@ -11,12 +11,18 @@ class TinyConfig(Config):
 
   def write(self):
     try:
-      self.__write_old()
+      self.__write()
     except IOError as e:
       print "failed to write config" + e.strerror
       sys.exit(1)
     
   def __write(self):
+    # Open files
+    fs = open(self.files["config"] + ".sh","w")
+    # Top syslinux generated configuration file
+    fsc = open(self.files["config"] + ".syslinux.cfg","w")
+    
+    # Copy top syslinux file in syslinux config
     d = {}
     d["device"] = self.get("CONFIG_USB_DEVICE")
     d["mount_point"] = self.get("CONFIG_USB_MOUNT_POINT")
@@ -44,9 +50,10 @@ class TinyConfig(Config):
         rm_kernels.append((kernel, kernel_bin))
     d["rm_kernels"] = rm_kernels
 
-    print d
-
-    print render("tools/scriptshell.tpl", d)
+    fs.write("%s" % render("tools/scriptshell.tpl", d))
+    
+    fs.close()
+    fsc.close()
 
   def __write_old(self):
     # Call config write

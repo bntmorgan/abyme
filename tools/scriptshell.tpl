@@ -1,2 +1,2 @@
 #!bin/bash
-# Generated with ${config_file}$
+# Generated with $[config_file]$
