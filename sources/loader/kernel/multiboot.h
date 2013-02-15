@@ -90,6 +90,8 @@ void multiboot_print_info(void);
 
 uint32_t multiboot_get_module_start(uint8_t index);
 
+uint32_t multiboot_get_module_end(uint8_t index);
+
 multiboot_info_t *multiboot_get_info(void);
 
 #endif

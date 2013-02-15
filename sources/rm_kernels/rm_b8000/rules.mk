@@ -2,7 +2,7 @@ sp              := $(sp).x
 dirstack_$(sp)  := $(d)
 d               := $(dir)
 
-KERNEL			:= $(call SRC_2_BIN, $(d)/kernel.elf16)
+KERNEL			:= $(call SRC_2_BIN, $(d)/kernel.bin)
 KERNELS			+= $(KERNEL)
 OBJS_16_$(d)		:= $(call SRC_2_OBJ, $(d)/kernel.o)
 OBJECTS			+= $(OBJS_16_$(d))

@@ -74,12 +74,13 @@ usb:
 	sh config/usb.conf.sh
 
 floppy.img:
-	$(eval IMG := $(shell echo binary/floppy.img))
+	$(eval IMG := $(shell echo config/floppy.img))
 	$(eval DEV := $(shell losetup -f))
 	dd if=/dev/zero of=$(IMG) bs=1024 count=1440
 	losetup $(DEV) $(IMG)
 	mkfs $(DEV)
 	python tools/config.py config/floppy.img.conf
+	echo toto
 	sh config/floppy.img.conf.sh
 	losetup -d $(DEV)
 
