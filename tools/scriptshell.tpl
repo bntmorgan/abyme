@@ -23,7 +23,7 @@ cp binary/loader/loader.elf32 $[mount_point]$/$[boot_directory]$/loader
 # Create vmm folder
 mkdir $[mount_point]$/$[boot_directory]$/vmm -p
 # Copy the vmm
-cp binary/loader/loader.elf32 $[mount_point]$/$[boot_directory]$/vmm
+cp binary/vmm/vmm.elf32 $[mount_point]$/$[boot_directory]$/vmm
 
 # List and copy files from bin/pm_kernels/<name>/kernel.bin to boot/pm_kernels/<name>/kernel.bin
 ${for k in pm_kernels :}$

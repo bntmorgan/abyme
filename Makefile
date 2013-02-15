@@ -71,7 +71,7 @@ clean:
 
 usb:
 	python tools/config.py config/usb.conf
-	sh config/usb.conf.sh
+	bash config/usb.conf.sh
 
 floppy.img:
 	$(eval IMG := $(shell echo config/floppy.img))
@@ -81,7 +81,7 @@ floppy.img:
 	mkfs $(DEV)
 	python tools/config.py config/floppy.img.conf
 	echo toto
-	sh config/floppy.img.conf.sh
+	bash config/floppy.img.conf.sh
 	losetup -d $(DEV)
 
 bochs.floppy.img: floppy.img
