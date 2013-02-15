@@ -37,6 +37,7 @@ class Template(object):
               tokens.append('%semit("%s")' % (' ' * depth, subpart))
             else:
               tokens.append('%semit(%s)' % (' ' * depth, subpart))
+      tokens.append('emit("\\n")')
     tokens.append("")
     self.__code = compile('\n'.join(tokens), '<template %r>' % template[:20], 'exec')
 
