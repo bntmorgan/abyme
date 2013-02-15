@@ -53,7 +53,8 @@ void vmm_vmcs_fill_guest_state_fields(void) {
   cpu_vmwrite(GUEST_DR7, 0x00000400);
   cpu_vmwrite(GUEST_RSP, 0);
   //cpu_vmwrite(GUEST_RIP, 0x0000FFF0);
-  cpu_vmwrite(GUEST_RIP, 0x7C00);
+  //cpu_vmwrite(GUEST_RIP, 0x7C00);
+  cpu_vmwrite(GUEST_RIP, 0x700);
   cpu_vmwrite(GUEST_RFLAGS, 0x00000002);
 
   //cpu_vmwrite(GUEST_CS_SELECTOR, 0xF000);

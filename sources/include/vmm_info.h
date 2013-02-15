@@ -67,6 +67,8 @@ typedef struct {
   uint32_t vmm_physical_start;
   uint32_t vmm_physical_end;
   uint32_t vmm_stack;
+  uint32_t rm_kernel_start;
+  uint32_t rm_kernel_size;
 } vmm_info_t;
 
 #endif

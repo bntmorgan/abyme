@@ -39,8 +39,8 @@ void dump_bios_ivt() {
 }
 
 void kernel_main(vmm_info_t *_vmm_info) {
-  //uint8_t *dst;
-  //uint32_t i;
+  uint8_t *dst;
+  uint32_t i;
   vmm_info = _vmm_info;
   screen_clear();
   dump_bios_ivt();
@@ -60,6 +60,15 @@ void kernel_main(vmm_info_t *_vmm_info) {
 //  *((uint8_t*) (254 * 4 + 2)) = 0xcd; /* INT 0x19 (2 bytes) */
 //  *((uint8_t*) (254 * 4 + 3)) = 0x19;
 
+  /* TODO: create a variable, set to 7c00 by default and update this value according to
+     the parameter provided by syslinux. Change also vmm_vmcs:RIP !!
+   */
+  dst = (uint8_t *) 0x7C00;
+  dst = (uint8_t *) 0x700;
+INFO("from %x to %x\n", vmm_info->rm_kernel_start, (uint32_t) (uint64_t) dst);
+  for (i = 0; i < vmm_info->rm_kernel_size; i++) {
+    dst[i] = ((uint8_t *) (uint64_t) vmm_info->rm_kernel_start)[i];
+  }
   /*dst = (uint8_t *) 0x7C00;
   for (i = 0; i < &pepin_end - &pepin_start + 1; i++) {
     dst[i] = ((uint8_t *) (&pepin_start))[i];

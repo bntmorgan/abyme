@@ -32,15 +32,28 @@ void kernel_vmm_allocation(void) {
   uint32_t vmm_size = (uint32_t) elf64_get_size(vmm_header);
   uint32_t vmm_algn = (uint32_t) elf64_get_alignment(vmm_header);
   uint32_t padding = 4096 - (vmm_size % 4096);
-  uint32_t size = vmm_size + padding + sizeof(vmm_info_t) + VMM_STACK_SIZE;
+  uint32_t rm_kernel_start = multiboot_get_module_start(1);
+  uint32_t rm_kernel_end = multiboot_get_module_end(1);
+  uint32_t rm_kernel_size = rm_kernel_end - rm_kernel_start + 1;
+  uint32_t size = vmm_size + padding + sizeof(vmm_info_t) + VMM_STACK_SIZE + rm_kernel_size;
+  uint32_t i;
 
   vmm_physical_start = pmem_get_aligned_memory_at_end_of_free_area(size, vmm_algn, 0x200000);
   vmm_physical_end = vmm_physical_start + size;
   vmm_entry = vmm_physical_start + elf64_get_entry(vmm_header);
   vmm_info = (vmm_info_t *) (vmm_physical_start + vmm_size + padding);
+  uint32_t rm_kernel_copy_start = vmm_physical_start + vmm_size + padding + sizeof(vmm_info_t) + VMM_STACK_SIZE;
 
+INFO("where: %x\n", vmm_physical_start);
   elf64_load_relocatable_segment(vmm_header, (void *) vmm_physical_start);
 
+  // TODO: memcpy!!!
+  for (i = 0; i < rm_kernel_size; i++) {
+    ((uint8_t *) rm_kernel_copy_start)[i] = ((uint8_t *) rm_kernel_start)[i];
+  }
+
+  vmm_info->rm_kernel_start = rm_kernel_copy_start;
+  vmm_info->rm_kernel_size = rm_kernel_size;
   vmm_info->vmm_physical_start = vmm_physical_start;
   vmm_info->vmm_physical_end = vmm_physical_end;
   vmm_info->vmm_stack = vmm_physical_start + vmm_size + padding + sizeof(vmm_info_t);

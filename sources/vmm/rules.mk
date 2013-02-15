@@ -15,7 +15,7 @@ $(OBJS_32_$(d)):	CC_FLAGS_KERNEL	:= -I$(d) -I$(d)/include -Wall -W -pipe -nostdl
 					   -nostdinc -ffreestanding -fms-extensions -m64  \
 					   -mno-red-zone -mcmodel=small -fpie -std=c99    \
 					   -D__X86_64__
-$(KERNEL):		LD_FLAGS_KERNEL	:= $(LD_FLAGS_32)
+$(KERNEL):		LD_FLAGS_KERNEL	:= --warn-common --no-check-sections -n -melf_x86_64 -pie
 $(KERNEL):		LD_OBJECTS	:= $(OBJS_32_$(d))
 $(KERNEL):		LD_SCRIPT	:= $(d)/linker.ld
 $(KERNEL):		$(OBJS_32_$(d))
