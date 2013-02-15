@@ -88,7 +88,7 @@ void multiboot_setup(uint32_t magic, uint32_t *address);
 
 void multiboot_print_info(void);
 
-uint32_t multiboot_get_module_start(void);
+uint32_t multiboot_get_module_start(uint8_t index);
 
 multiboot_info_t *multiboot_get_info(void);
 

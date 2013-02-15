@@ -68,3 +68,20 @@ info:
 
 clean:
 	rm -rf $(KERNELS) $(OBJECTS)
+
+usb:
+	python tools/config.py config/usb.conf
+	sh config/usb.conf.sh
+
+floppy.img:
+	$(eval IMG := $(shell echo binary/floppy.img))
+	$(eval DEV := $(shell losetup -f))
+	dd if=/dev/zero of=$(IMG) bs=1024 count=1440
+	losetup $(DEV) $(IMG)
+	mkfs $(DEV)
+	python tools/config.py config/floppy.img.conf
+	sh config/floppy.img.conf.sh
+	losetup -d $(DEV)
+
+bochs.floppy.img: floppy.img
+	bochs -f config/floppy.img.bochsrc
