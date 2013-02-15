@@ -1,6 +1,7 @@
-#!bin/bash
+#!/bin/bash
 # Generated with $[config]$
 mount $[device]$ $[mount_point]$
+if (($? == 0)); then 
 
 # Create boot folder
 mkdir $[mount_point]$/$[boot_directory]$ -p
@@ -41,3 +42,5 @@ cp $[syslinux_config]$ $[mount_point]$/$[config_file]$
 
 # Umount the key
 umount $[mount_point]$
+
+fi
