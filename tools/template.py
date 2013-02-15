@@ -23,6 +23,8 @@ class Template(object):
     tokens = []
     for line in template.split("\n"):
       line = line.strip()
+      if line == '':
+        continue
       for i, part in enumerate(pydelimiters.split(line)):
         if i % 2 == 1 and len(part) > 0:
           if any([part.startswith(e) for e in ["#end", "elif ", "else:"]]):
@@ -37,8 +39,7 @@ class Template(object):
               tokens.append('%semit("%s")' % (' ' * depth, subpart))
             else:
               tokens.append('%semit(%s)' % (' ' * depth, subpart))
-      tokens.append('emit("\\n")')
-    tokens.append("")
+      tokens.append('%semit("\\n")' % (' ' * depth))
     self.__code = compile('\n'.join(tokens), '<template %r>' % template[:20], 'exec')
 
   def apply(self, namespace):

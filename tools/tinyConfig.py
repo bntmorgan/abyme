@@ -18,9 +18,10 @@ class TinyConfig(Config):
     
   def __write(self):
     # Open files
-    fs = open(self.files["config"] + ".sh","w")
+    fs = open("%s.sh" % (self.files["config"]),"w")
     # Top syslinux generated configuration file
-    fsc = open(self.files["config"] + ".syslinux.cfg","w")
+    syslinux_config = "%s.syslinux.cfg" % (self.files["config"])
+    fsc = open(syslinux_config,"w")
     
     # Copy top syslinux file in syslinux config
     d = {}
@@ -31,7 +32,8 @@ class TinyConfig(Config):
     d["config_file"] = self.get("CONFIG_USB_SYSLINUX_CONFIG_FILE")
     bins = self.get("CONFIG_USB_SYSLINUX_BINS")
     d["bs"] = bins.rsplit(",")
-    d["config_file"] = self.files['config']
+    d["config"] = self.files['config']
+    d["syslinux_config"] = syslinux_config
     
     # List and copy files from bin/pm_kernels/<name>/kernel.bin to boot/pm_kernels/<name>/kernel.bin
     pm_kernels = []
@@ -51,6 +53,7 @@ class TinyConfig(Config):
     d["rm_kernels"] = rm_kernels
 
     fs.write("%s" % render("tools/scriptshell.tpl", d))
+    fsc.write("%s" % render("tools/syslinux.cfg.tpl", d))
     
     fs.close()
     fsc.close()
