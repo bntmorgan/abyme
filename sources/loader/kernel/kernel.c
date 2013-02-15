@@ -28,7 +28,7 @@ uint32_t vmm_physical_start;
 uint32_t vmm_physical_end;
 
 void kernel_vmm_allocation(void) {
-  void *vmm_header = (void *) multiboot_get_module_start();
+  void *vmm_header = (void *) multiboot_get_module_start(0);
   uint32_t vmm_size = (uint32_t) elf64_get_size(vmm_header);
   uint32_t vmm_algn = (uint32_t) elf64_get_alignment(vmm_header);
   uint32_t padding = 4096 - (vmm_size % 4096);
