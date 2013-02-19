@@ -1,11 +1,11 @@
 #include "types.h"
 
 __asm__(".code16gcc\n");
-__asm__("mov $0x0, %ax	;\n"
+__asm__("mov $0x00, %ax	;\n"
 	"mov %ax, %ds		;\n"
 	"mov %ax, %ss		;\n"
-	"mov $0x900, %sp;\n"
-	"jmpl $0x70, $main	;\n");
+	"mov $0x1000, %sp;\n"
+	"jmpl $0x0, $main	;\n");
 
 #define __NOINLINE __attribute__((noinline))
 #define __REGPARM  __attribute__((regparm(3)))
@@ -71,7 +71,7 @@ void itoa(int8_t *dst, uint8_t base, int32_t value) {
 }
 
 int __NOINLINE __REGPARM read_first_sector(uint8_t *sector) {
-  // Dap structure
+/*  // Dap structure
   dap d;
   d.size = 0x10;
   d.unused = 0x0;
@@ -82,11 +82,14 @@ int __NOINLINE __REGPARM read_first_sector(uint8_t *sector) {
   uint16_t ret = 0; 
   __asm__ __volatile__ ("mov %0, %%esi" : : "a"((uint16_t*)&d));
   __asm__ __volatile__ ("int $0x13" : "=cf" (c), "=a" (ret) : "a" (0x42), "d" (0x80));
+
   if (c) {
     return ret;
   } else {
     return 0;
   }
+*/
+return 0;
 }
 
 int __NORETURN main(void) {
@@ -101,7 +104,7 @@ int __NORETURN main(void) {
     char buf[11];
     for (i = 0; i < 128; i++) {
       // Index
-      print("valeur ");
+      //print("valeur ");
       itoa(buf, 16, i);
       buf[8] = ' ';
       buf[9] = '\0';

@@ -5,9 +5,8 @@ OUTPUT_ARCH(i386)
 */
 SECTIONS
 {
-    . = 0x00;
-    /*AT(0x700)*/
-    .text :
+    . = 0x700;
+    .text : AT(0x700)
     {
         _text = .;
         *(.text);

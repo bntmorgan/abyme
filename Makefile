@@ -8,6 +8,7 @@ LD_FLAGS_32	= -melf_i386 -static -nostdlib --nmagic
 OBJDUMP_FLAGS_16	= -mi8086 -Maddr16,data16
 
 .SUFFIXES: .elf32 .elf16 .bin .bytes
+.SECONDARY:
 
 # see objdump -i
 # see ld -melf_i386 --verbose
