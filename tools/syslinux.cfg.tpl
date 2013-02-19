@@ -9,9 +9,9 @@ ${for k in pm_kernels :}$
   append $[boot_directory]$/pm_kernels/$[k[0]]$/$[k[1]]$
 ${#end}$
 
-${for k in pm_kernels :}$
+${for k in rm_kernels :}$
   label tinyvisor_$[k[0]]$_$[k[1]]$
   menu label $[k[0]]$ $[k[1]]$ with tinyvisor
   kernel mboot.c32
-  append $[boot_directory]$/loader/loader.elf32 --- $[boot_directory]$/vmm/vmm.elf32 --- $[boot_directory]$/pm_kernels/$[k[0]]$/$[k[1]]$
+  append $[boot_directory]$/loader/loader.elf32 --- $[boot_directory]$/vmm/vmm.elf32 --- $[boot_directory]$/rm_kernels/$[k[0]]$/$[k[1]]$
 ${#end}$

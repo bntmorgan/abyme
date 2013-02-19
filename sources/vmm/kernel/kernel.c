@@ -69,6 +69,14 @@ INFO("from %x to %x\n", vmm_info->rm_kernel_start, (uint32_t) (uint64_t) dst);
   for (i = 0; i < vmm_info->rm_kernel_size; i++) {
     dst[i] = ((uint8_t *) (uint64_t) vmm_info->rm_kernel_start)[i];
   }
+  for (i = 0; i < 16 ; i++) {
+    printk("%02x ", dst[i]);
+  }
+  printk("\n");
+  for (i = 0; i < 16 ; i++) {
+    printk("%02x ", ((uint8_t *) (uint64_t) vmm_info->rm_kernel_start)[i]);
+  }
+  printk("\n");
   /*dst = (uint8_t *) 0x7C00;
   for (i = 0; i < &pepin_end - &pepin_start + 1; i++) {
     dst[i] = ((uint8_t *) (&pepin_start))[i];

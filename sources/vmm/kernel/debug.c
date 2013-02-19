@@ -165,8 +165,12 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   printk("h : help\n"); \
 }
 
+#define DEBUG_CURRENT_STATE_INDEX (guest_states_index % 2)
+
+#define DEBUG_PREVIOUS_STATE_INDEX (guest_states_index % 2 + 1)
+
 #define DEBUG_PRINT_PROMPT {\
-  printk("debug@%x$", guest_states[0].rip); \
+  printk("debug@%x$", guest_states[DEBUG_CURRENT_STATE_INDEX].rip); \
 }
 
 #define DEBUG_HANDLE_BREAKPOINT_PRINT {\
@@ -192,12 +196,12 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
 
 #define DEBUG_HANDLE_STATE_PRINT {\
   printk("\n"); \
-  debug_print_guest_state(guest_states, 0, 21); \
+  debug_print_guest_state(guest_states + DEBUG_CURRENT_STATE_INDEX, 0, 21); \
 }
 
 #define DEBUG_HANDLE_LAST_STATE_PRINT {\
   printk("\n"); \
-  debug_print_guest_state(guest_states + 1, 0, 21); \
+  debug_print_guest_state(guest_states + DEBUG_PREVIOUS_STATE_INDEX, 0, 21); \
 }
 
 #define DEBUG_HANDLE_STATE_DIFF {\
@@ -209,7 +213,7 @@ void debug(int reason) {
   if (reason != EXIT_REASON_MONITOR_TRAP_FLAG) {
     return;
   }
-  if (!step && !debug_breakpoint_break(guest_states[0].rip)) {
+  if (!step && !debug_breakpoint_break(guest_states[DEBUG_CURRENT_STATE_INDEX].rip)) {
     return;
   }
   char c;

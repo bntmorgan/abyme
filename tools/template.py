@@ -40,6 +40,7 @@ class Template(object):
             else:
               tokens.append('%semit(%s)' % (' ' * depth, subpart))
       tokens.append('%semit("\\n")' % (' ' * depth))
+      #print '\n'.join(tokens)
     self.__code = compile('\n'.join(tokens), '<template %r>' % template[:20], 'exec')
 
   def apply(self, namespace):

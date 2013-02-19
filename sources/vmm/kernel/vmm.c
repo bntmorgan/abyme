@@ -133,7 +133,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   INFO("cr0 = 0x%x    cr3 = 0x%x\n", cr0, cr3);
   INFO("cr4 = 0x%x    \n", cr4);*/
 
-  //debug(EXIT_REASON_MONITOR_TRAP_FLAG);
+  debug(exit_reason);
 
   switch (exit_reason) {
 #if 0
@@ -403,7 +403,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
     }
 #endif
     default:
-      INFO("unhandled reason: %d\n", exit_reason);
+      //INFO("unhandled reason: %d\n", exit_reason);
       BREAKPOINT();
   }
 }
