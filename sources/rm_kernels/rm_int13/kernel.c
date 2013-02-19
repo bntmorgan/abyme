@@ -11,11 +11,11 @@ typedef struct _dap {
   uint8_t size; /* Size of DAP = 16, 0x10 bytes */
   uint8_t unused; /* Should be zero */
   uint16_t nb_sectors_to_read; /* some BIOSes limit it to 127 */
-  uint16_t *buffer_low; /* segment:offset pointer to the memory buffer to which sectors 
+  uint16_t buffer_low; /* segment:offset pointer to the memory buffer to which sectors 
                       will be transferred (note that x86 is little-endian: if declaring 
                       the segment and offset separately, the offset must be 
                       declared before the segment) */
-  uint16_t *buffer_high;
+  uint16_t buffer_high;
   uint64_t offset; /* The segment offset where to start the reading */
 } __attribute__((packed)) dap;
 
@@ -72,12 +72,16 @@ int __NOINLINE __REGPARM read_first_sector(uint8_t *sector) {
   d.size = 0x10;
   d.unused = 0x0;
   d.nb_sectors_to_read = 0x1;
-  d.buffer_low = (uint16_t*)0x0; // Segment 0x0
-  d.buffer_high = (uint16_t*)&sector; // Offset address of sector in the stack
+  d.buffer_low = 0x0; // Segment 0x0
+  d.buffer_high = (uint16_t) (uint32_t)sector; // Offset address of sector in the stack
+  d.offset = 0;
   uint8_t c = 0;
   uint16_t ret = 0; 
   __asm__ __volatile__ ("mov %0, %%esi" : : "a"((uint16_t*)&d));
-  __asm__ __volatile__ ("int $0x13" : "=cf" (c), "=a" (ret) : "a" (0x42), "d" (0x80));
+  __asm__ __volatile__ ("xchg %bx, %bx");
+  __asm__ __volatile__ ("int $0x13" : "=cc" (c), "=a" (ret) : "a" (0x4200), "d" (0x80));
+    
+  print((char *)&d);
 
   if (c) {
     return ret;
