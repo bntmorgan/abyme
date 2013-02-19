@@ -1,4 +1,5 @@
-__asm__(".code16gcc\n");
+#include "seg.h"
+
 __asm__ ("jmpl $0, $main\n");
 
 #define __NOINLINE __attribute__((noinline))

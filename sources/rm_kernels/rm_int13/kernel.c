@@ -1,11 +1,7 @@
 #include "types.h"
+#include "seg.h"
 
-__asm__(".code16gcc\n");
-__asm__("mov $0x00, %ax	;\n"
-	"mov %ax, %ds		;\n"
-	"mov %ax, %ss		;\n"
-	"mov $0x1000, %sp;\n"
-	"jmpl $0x0, $main	;\n");
+__asm__("jmpl $0x0, $main	;\n");
 
 #define __NOINLINE __attribute__((noinline))
 #define __REGPARM  __attribute__((regparm(3)))
@@ -71,7 +67,7 @@ void itoa(int8_t *dst, uint8_t base, int32_t value) {
 }
 
 int __NOINLINE __REGPARM read_first_sector(uint8_t *sector) {
-/*  // Dap structure
+  // Dap structure
   dap d;
   d.size = 0x10;
   d.unused = 0x0;
@@ -88,14 +84,14 @@ int __NOINLINE __REGPARM read_first_sector(uint8_t *sector) {
   } else {
     return 0;
   }
-*/
-return 0;
 }
+
+//#define DEBUG
 
 int __NORETURN main(void) {
   // Sector read
   print("bonjour\n");
-  uint8_t *sector = (uint8_t*)0x902; // The sector data
+  uint8_t sector[512]; // The sector data
   if (read_first_sector(sector)) {
     print("FAILED\r\n");
   } else {
@@ -104,17 +100,26 @@ int __NORETURN main(void) {
     char buf[11];
     for (i = 0; i < 128; i++) {
       // Index
-      //print("valeur ");
+#ifdef DEBUG
+      print("sector[");
       itoa(buf, 16, i);
       buf[8] = ' ';
       buf[9] = '\0';
       print(buf);
+      print("] = ");
+#endif
       // 4 Octets du secteur
       itoa(buf, 16, ((uint32_t *)sector)[i]);
       buf[8] = '\r';
       buf[9] = '\n';
       buf[10] = '\0';
       print(buf);
+#ifdef DEBUG
+      print("\r\n");
+#endif
+#ifndef DEBUG
+      print(", ");
+#endif
     }
   }
   print("end\r\n:))");
