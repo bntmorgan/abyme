@@ -36,12 +36,12 @@ build/%.o: sources/%.c
 binary/%.elf32:
 	@echo "  [LD]    $< -> $@"
 	@mkdir -p $(dir $@)
-	@$(LD) -T$(LD_SCRIPT) $(LD_FLAGS_KERNEL) $(LD_OBJECTS) -o $@
+	$(LD) -T$(LD_SCRIPT) $(LD_FLAGS_KERNEL) $(LD_OBJECTS) -o $@
 
 binary/%.elf16:
 	@echo "  [LD]    $< -> $@"
 	@mkdir -p $(dir $@)
-	@$(LD) -T$(LD_SCRIPT) $(LD_FLAGS_KERNEL) $(LD_OBJECTS) -o $@
+	$(LD) -T$(LD_SCRIPT) $(LD_FLAGS_KERNEL) $(LD_OBJECTS) -o $@
 
 %.bytes: %.bin
 	@echo "  [BYTES] $< -> $@"
@@ -70,7 +70,6 @@ clean:
 	rm -rf $(KERNELS) $(OBJECTS)
 
 usb:
-	python tools/config.py config/usb.conf
 	bash config/usb.conf.sh
 
 floppy.img:
@@ -79,10 +78,10 @@ floppy.img:
 	dd if=/dev/zero of=$(IMG) bs=1024 count=1440
 	losetup $(DEV) $(IMG)
 	mkfs $(DEV)
-	python tools/config.py config/floppy.img.conf
+	python tools/tinyConfig.py config/floppy.img.conf
 	echo toto
 	bash config/floppy.img.conf.sh
 	losetup -d $(DEV)
 
-bochs.floppy.img: floppy.img
+bochs.floppy.img:
 	bochs -f config/floppy.img.bochsrc
