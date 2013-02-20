@@ -1,6 +1,8 @@
 .code16
 .text
 
+.extern main
+
 loader:
   xor    %ax, %ax
   mov    %ax, %ds
@@ -8,13 +10,16 @@ loader:
   mov    $0x9c00, %sp
   cli    
   push   %ds
-  lgdt   gtdr
+  lgdt   gdtr
   mov    %cr0, %eax
   or     $0x1, %al
   mov    %eax, %cr0
   mov    $0x10, %bx
   mov    %bx, %ds
-  jmpl   $0x8, $main 
+  jmpl   $0x8, $test
+
+test: 
+  jmp main
 
 /*
  * Descriptors.

@@ -6,9 +6,11 @@
 
 /* BIOS interrupts must be done with inline assembly */
 void __NOINLINE __REGPARM print(const char *s) {
+  static uint8_t i = 0;
   while (*s) {
-    __asm__ __volatile__ ("int $0x10" : : "a"(0x0E00 | *s), "b"(7));
+    *((uint8_t *)(0xb8000 +  2 * i)) = *s;
     s++;
+    i++;
   }
 }
 
