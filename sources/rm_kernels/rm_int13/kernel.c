@@ -72,8 +72,8 @@ int __NOINLINE __REGPARM read_first_sector(uint8_t *sector) {
   d.size = 0x10;
   d.unused = 0x0;
   d.nb_sectors_to_read = 0x1;
-  d.buffer_low = 0x0; // Segment 0x0
-  d.buffer_high = (uint16_t) (uint32_t)sector; // Offset address of sector in the stack
+  d.buffer_high = 0x0; // Segment 0x0
+  d.buffer_low = (uint16_t) (uint32_t)sector; // Offset address of sector in the stack
   d.offset = 0;
   uint8_t c = 0;
   uint16_t ret = 0; 
@@ -102,8 +102,8 @@ int __NORETURN main(void) {
     print("SUCCESS\r\n");
     uint32_t i;
     char buf[11];
-    for (i = 0; i < 128; i++) {
-      // Index
+    for (i = 0; i < 0x10; i++) {
+    // Index
 #ifdef DEBUG
       print("sector[");
       itoa(buf, 16, i);
