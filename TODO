@@ -5,6 +5,9 @@ Vmm doit avoir un parametre (fourni par syslinux) indiquant ou charger le rm_ker
   charge en 7c00 ! => change en dur en 700 partout (vmm_vmcs, vmm/kernel)
 Modifier les rules.mk pour que les .bytes n'apparaissent pas dans binary
 Creer une clé grub 2
+Verifier si bochs supporte le debug => modifier vmm_vmcs le temps des tests ?
+Alleger seg.h si besoins (pas besoin d'initialiser a 0xffff ds, es, etc.)
+
 
 Résultats :
 
