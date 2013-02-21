@@ -79,7 +79,7 @@ floppy.img:
 	dd if=/dev/zero of=$(IMG) bs=1024 count=1440
 	losetup $(DEV) $(IMG)
 	mkfs $(DEV)
-	python tools/tinyConfig.py config/floppy.img.conf
+	#python tools/tinyConfig.py config/floppy.img.conf
 	echo toto
 	bash config/floppy.img.conf.sh
 	losetup -d $(DEV)

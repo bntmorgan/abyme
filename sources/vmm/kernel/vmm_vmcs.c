@@ -3,6 +3,7 @@
 #include "vmem.h"
 
 #include "string.h"
+#include "stdio.h"
 
 #include "hardware/cpu.h"
 #include "hardware/msr.h"
@@ -97,6 +98,7 @@ void vmm_vmcs_fill_guest_state_fields(void) {
   cpu_vmwrite(GUEST_IDTR_BASE, 0);
   cpu_vmwrite(GUEST_IDTR_LIMIT, 0xFFFF);
 
+  /* TODO Sous bochs, cette fonctionnalite n'est pas supportee dans les VMCS ... */
   cpu_vmwrite(GUEST_IA32_DEBUGCTL, msr_read32(MSR_ADDRESS_IA32_DEBUGCTL));
   cpu_vmwrite(GUEST_IA32_DEBUGCTL_HIGH, msr_read64(MSR_ADDRESS_IA32_DEBUGCTL) >> 32);
   cpu_vmwrite(GUEST_SYSENTER_CS, msr_read32(MSR_ADDRESS_IA32_SYSENTER_CS));

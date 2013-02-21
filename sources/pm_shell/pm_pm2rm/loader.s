@@ -40,6 +40,12 @@ loader:
     rep movsb
 
     lgdt gdtr
+    mov $0x20, %ax
+    mov %ax, %ds
+    mov %ax, %es
+    mov %ax, %fs
+    mov %ax, %gs
+    mov %ax, %ss
     jmpl $0x18, $0x600
 
 .code16
