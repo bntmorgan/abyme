@@ -8,16 +8,19 @@
 #define DEBUG_SCANCODES_SIZE 0xff
 #define DEBUG_INPUT_SIZE 0x20
 
+#define DEBUG_VMM_ENTRY_POINT 0x700
+
 uint8_t waitkey();
 char getchar();
 void debug_breakpoint_add(uint64_t address);
 void debug_breakpoint_del(int index);
 void debug_breakpoint_print();
-void debug(int reason);
+void debug(uint32_t reason, uint32_t exit_instruction_length);
 void getstring(char *input, unsigned int size);
 unsigned int strlen(char *c);
 uint64_t atoi_hexa(char *s);
 int debug_breakpoint_break(uint64_t rip);
+void debug_instruction_print(uint64_t rip, uint32_t length);
 
 #define DEBUG_GUEST_STATE \
   DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_VMCS, cr0, GUEST_CR0) \
@@ -62,5 +65,11 @@ extern struct guest_state guest_states[NB_GUEST_STATES];
 extern uint32_t guest_states_index;
 void debug_print_guest_state(struct guest_state *state, uint32_t field_index_from, uint32_t field_index_to);
 void debug_save_guest_state(struct guest_state *state, gpr64_t *guest_gpr);
+void debug_install();
+
+struct breakpoint {
+  uint64_t address;
+  uint32_t code;
+};
 
 #endif

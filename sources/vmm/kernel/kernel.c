@@ -9,6 +9,7 @@
 #include "vmm_info.h"
 #include "vmm_setup.h"
 #include "smp.h"
+#include "debug.h"
 
 /*
  * Used to identify the size used of vmm (see the linker script).
@@ -65,7 +66,7 @@ void kernel_main(vmm_info_t *_vmm_info) {
    */
   dst = (uint8_t *) 0x7C00;
   dst = (uint8_t *) 0x700;
-INFO("from %x to %x\n", vmm_info->rm_kernel_start, (uint32_t) (uint64_t) dst);
+  INFO("from %x to %x\n", vmm_info->rm_kernel_start, (uint32_t) (uint64_t) dst);
   for (i = 0; i < vmm_info->rm_kernel_size; i++) {
     dst[i] = ((uint8_t *) (uint64_t) vmm_info->rm_kernel_start)[i];
   }
@@ -93,6 +94,10 @@ INFO("from %x to %x\n", vmm_info->rm_kernel_start, (uint32_t) (uint64_t) dst);
    * Enables core/cpu.
    */
   //smp_setup();
+
+  /* Enables the debugger */
+  INFO("INIT THE DEBUGGER AT 0x700\n");
+  debug_install();
 
   vmm_read_cmos();
   vmm_setup();
