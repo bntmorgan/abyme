@@ -10,6 +10,7 @@ class TinyConfig(Config):
     Config.__init__(self, fname)
 
   def write(self):
+    Config.write(self)
     try:
       self.__write()
     except IOError as e:
