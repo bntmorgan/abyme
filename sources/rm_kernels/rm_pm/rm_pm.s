@@ -1,8 +1,6 @@
-.code16
-.text
-
 .extern main
 
+.code16
 loader:
   xor    %ax, %ax
   mov    %ax, %ds
@@ -18,7 +16,9 @@ loader:
   mov    %bx, %ds
   jmpl   $0x8, $test
 
+.code32
 test: 
+  xchg %bx, %bx
   jmp main
 
 /*

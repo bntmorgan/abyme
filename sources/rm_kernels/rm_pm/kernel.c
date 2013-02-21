@@ -1,5 +1,7 @@
 #include "types.h"
 
+__asm__(".code32");
+
 #define __NOINLINE __attribute__((noinline))
 #define __REGPARM  __attribute__((regparm(3)))
 #define __NORETURN __attribute__((noreturn))
