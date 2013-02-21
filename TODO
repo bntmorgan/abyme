@@ -1,5 +1,24 @@
 Essayer de booter ramooflax : ko (avec Systlinux)
-Ecrire et exécuter un pépin qui revient en real mode après Syslinux :
+Ecrire et exécuter un pépin qui revient en real mode après Syslinux : ok 
 Vmm doit avoir un parametre (fourni par syslinux) indiquant ou charger le rm_kernel.
   C'est important car, pour l'instant, le rm_kernel est chargé en 700 mais il etait compile pour etre
   charge en 7c00 ! => change en dur en 700 partout (vmm_vmcs, vmm/kernel)
+Modifier les rules.mk pour que les .bytes n'apparaissent pas dans binary
+Creer une clé grub 2
+
+Résultats :
+
+Syslinux :
+  Bochs :
+    Sans tinyvisor :
+      int10 ok
+      int13 ok
+      int19 ko
+      b8000 ok
+      rm_pm ok
+    Avec tinyvisor :
+      int10 ok
+      int13 ok
+      int19 ok
+      b8000 ok
+      rm_pm ok
