@@ -2,7 +2,7 @@
 #include "stdio.h"
 #include "vmm.h"
 
-uint64_t breakpoints[DEBUG_BREAKPOINTS_SIZE];
+struct breakpoint breakpoints[DEBUG_BREAKPOINTS_SIZE];
 int bsize;
 int step = 1;
 char input[DEBUG_INPUT_SIZE];
@@ -160,6 +160,7 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   printk("v : print the current state\n"); \
   printk("w : print the last state\n"); \
   printk("x : print the changes\n"); \
+  printk("i : print current instruction (mem[rip])\n"); \
   printk("c : continue execution\n"); \
   printk("s : step by step\n"); \
   printk("h : help\n"); \
@@ -170,12 +171,17 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
 #define DEBUG_PREVIOUS_STATE_INDEX (guest_states_index % 2 + 1)
 
 #define DEBUG_PRINT_PROMPT {\
-  printk("debug@%x$", guest_states[DEBUG_CURRENT_STATE_INDEX].rip); \
+  printk("debug@%x[%x]$", guest_states[DEBUG_CURRENT_STATE_INDEX].rip, reason); \
 }
 
 #define DEBUG_HANDLE_BREAKPOINT_PRINT {\
   printk("\n"); \
   debug_breakpoint_print(); \
+}
+
+#define DEBUG_HANDLE_INSTRUCTION_PRINT {\
+  printk("\n"); \
+  debug_instruction_print(guest_states[DEBUG_CURRENT_STATE_INDEX].rip, exit_instruction_length); \
 }
 
 #define DEBUG_HANDLE_BREAKPOINT_ADD {\
@@ -209,11 +215,9 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   debug_print_guest_state_diff(guest_states, guest_states + 1); \
 }
 
-void debug(int reason) {
-  if (reason != EXIT_REASON_MONITOR_TRAP_FLAG) {
-    return;
-  }
-  if (!step && !debug_breakpoint_break(guest_states[DEBUG_CURRENT_STATE_INDEX].rip)) {
+void debug(uint32_t reason, uint32_t exit_instruction_length) {
+  int bp = debug_breakpoint_break(guest_states[DEBUG_CURRENT_STATE_INDEX].rip);
+  if (!step && (bp != -1)) {
     return;
   }
   char c;
@@ -240,6 +244,9 @@ void debug(int reason) {
       case 'x':
         DEBUG_HANDLE_STATE_DIFF
         break; 
+      case 'i':
+        DEBUG_HANDLE_INSTRUCTION_PRINT
+        break; 
       case 'c':
         run = 0;
         step = 0;
@@ -254,18 +261,48 @@ void debug(int reason) {
     }
     printk("\n");
   }
+  debug_breakpoint_del(bp);
+}
+
+void debug_install() {
+  debug_breakpoint_add(DEBUG_VMM_ENTRY_POINT);
+}
+
+void debug_instruction_print(uint64_t rip, uint32_t length) {
+  uint32_t i;
+  printk("Last instruction\n");
+  for (i = 0; i < length; i++) {
+    printk("%02x", *((uint8_t *)rip + i));
+  }
+  printk("\n");
 }
 
 void debug_breakpoint_add(uint64_t address) {
   if (bsize < DEBUG_BREAKPOINTS_SIZE) {
-    breakpoints[bsize] = address;
+    // Backup the code
+    *((uint8_t *)&breakpoints[bsize].code + 0) = *((uint8_t *)address + 0);
+    *((uint8_t *)&breakpoints[bsize].code + 1) = *((uint8_t *)address + 1);
+    *((uint8_t *)&breakpoints[bsize].code + 2) = *((uint8_t *)address + 2);
+    // Put the vmcall
+    *((uint8_t *)address + 0) = 0x0f; // vmcall
+    *((uint8_t *)address + 1) = 0x01;
+    *((uint8_t *)address + 2) = 0xc1;
+    breakpoints[bsize].address = address;
     bsize++;
   }
 }
 
 void debug_breakpoint_del(int index) {
   if (bsize > 0 && index >= 1 && index <= bsize) {
-    breakpoints[index - 1] = breakpoints[bsize - 1];
+    // Restore the code
+    *((uint8_t *)breakpoints[bsize].address + 0) = *((uint8_t *)&breakpoints[bsize].code + 0);
+    *((uint8_t *)breakpoints[bsize].address + 1) = *((uint8_t *)&breakpoints[bsize].code + 1);
+    *((uint8_t *)breakpoints[bsize].address + 2) = *((uint8_t *)&breakpoints[bsize].code + 2);
+    // Exchange the breakpoint
+    if (bsize > 1) {
+      breakpoints[index - 1].address = breakpoints[bsize - 1].address;
+      breakpoints[index - 1].code = breakpoints[bsize - 1].code;
+    }
     bsize--;
   }
 }
@@ -274,19 +311,18 @@ void debug_breakpoint_print() {
   int i;
   printk("Breakpoints :\n");
   for (i = 0; i < bsize; ++i) {
-    printk("%x : %x\n", i + 1, breakpoints[i]);
+    printk("%x : %x\n", i + 1, breakpoints[i].address);
   }
 }
 
 int debug_breakpoint_break(uint64_t rip) {
-  int i, b = 0;
+  int i;
   for (i = 0; i < bsize; ++i) {
-    if (rip == breakpoints[i]) {
-      b = 1;
-      break;
+    if (rip == breakpoints[i].address) {
+      return i;
     }
   }
-  return b;
+  return -1;
 }
 
 /** 
