@@ -37,12 +37,12 @@ build/%.o: sources/%.c
 binary/%.elf32:
 	@echo "  [LD]    $< -> $@"
 	@mkdir -p $(dir $@)
-	$(LD) -T$(LD_SCRIPT) $(LD_FLAGS_KERNEL) $(LD_OBJECTS) -o $@
+	@$(LD) -T$(LD_SCRIPT) $(LD_FLAGS_KERNEL) $(LD_OBJECTS) -o $@
 
 binary/%.elf16:
 	@echo "  [LD]    $< -> $@"
 	@mkdir -p $(dir $@)
-	$(LD) -T$(LD_SCRIPT) $(LD_FLAGS_KERNEL) $(LD_OBJECTS) -o $@
+	@$(LD) -T$(LD_SCRIPT) $(LD_FLAGS_KERNEL) $(LD_OBJECTS) -o $@
 
 %.bytes: %.bin
 	@echo "  [BYTES] $< -> $@"

@@ -97,10 +97,10 @@ void kernel_main(vmm_info_t *_vmm_info) {
 
   /* Enables the debugger */
   INFO("INIT THE DEBUGGER AT 0x700\n");
-  debug_install();
 
   vmm_read_cmos();
   vmm_setup();
   vmm_ept_setup(&vmm_info->ept_info, vmm_info->vmm_physical_start, vmm_info->vmm_physical_end - vmm_info->vmm_physical_start + 1);
+  debug_install();
   vmm_vm_setup_and_launch();
 }

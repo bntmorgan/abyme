@@ -161,6 +161,7 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   printk("w : print the last state\n"); \
   printk("x : print the changes\n"); \
   printk("i : print current instruction (mem[rip])\n"); \
+  printk("m : dump memory\n"); \
   printk("c : continue execution\n"); \
   printk("s : step by step\n"); \
   printk("h : help\n"); \
@@ -181,7 +182,7 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
 
 #define DEBUG_HANDLE_INSTRUCTION_PRINT {\
   printk("\n"); \
-  debug_instruction_print(guest_states[DEBUG_CURRENT_STATE_INDEX].rip, exit_instruction_length); \
+  debug_instruction_print(guest_states[DEBUG_CURRENT_STATE_INDEX].rip, 16); \
 }
 
 #define DEBUG_HANDLE_BREAKPOINT_ADD {\
@@ -190,6 +191,18 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   printk("\n"); \
   uint64_t addr = atoi_hexa(input); \
   debug_breakpoint_add(addr); \
+}
+
+#define DEBUG_HANDLE_DUMP {\
+  printk("\naddress ? "); \
+  getstring(input, DEBUG_INPUT_SIZE); \
+  printk("\n"); \
+  uint64_t addr = atoi_hexa(input); \
+  printk("\nsize ? "); \
+  getstring(input, DEBUG_INPUT_SIZE); \
+  printk("\n"); \
+  uint64_t size = atoi_hexa(input); \
+  debug_dump(addr, size); \
 }
 
 #define DEBUG_HANDLE_BREAKPOINT_DEL {\
@@ -215,11 +228,14 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   debug_print_guest_state_diff(guest_states, guest_states + 1); \
 }
 
-void debug(uint32_t reason, uint32_t exit_instruction_length) {
+int debug(uint32_t reason) {
   int bp = debug_breakpoint_break(guest_states[DEBUG_CURRENT_STATE_INDEX].rip);
+  printk("BP %x\n", bp);
   if (!step && (bp != -1)) {
-    return;
+    return 0;
   }
+  INFO("Index %x\n", bp);
+  debug_breakpoint_del(bp);
   char c;
   int run = -1;
   while(run) {
@@ -247,6 +263,9 @@ void debug(uint32_t reason, uint32_t exit_instruction_length) {
       case 'i':
         DEBUG_HANDLE_INSTRUCTION_PRINT
         break; 
+      case 'm':
+        DEBUG_HANDLE_DUMP
+        break; 
       case 'c':
         run = 0;
         step = 0;
@@ -261,7 +280,7 @@ void debug(uint32_t reason, uint32_t exit_instruction_length) {
     }
     printk("\n");
   }
-  debug_breakpoint_del(bp);
+  return 1;
 }
 
 void debug_install() {
@@ -269,39 +288,61 @@ void debug_install() {
 }
 
 void debug_instruction_print(uint64_t rip, uint32_t length) {
-  uint32_t i;
   printk("Last instruction\n");
-  for (i = 0; i < length; i++) {
-    printk("%02x", *((uint8_t *)rip + i));
+  debug_dump(rip, length);
+}
+
+#define DEBUG_DUMP_COLUMNS 6
+
+void debug_dump(uint64_t addr, uint64_t size) {
+  uint32_t i = 0, j;
+  while (i < size) {
+    printk("%016x ", addr + i);
+    for (j = 0; j < DEBUG_DUMP_COLUMNS; j++) {
+      printk("%08x", *((uint32_t *)addr + i));
+      if (i != DEBUG_DUMP_COLUMNS - 1) {
+        printk(" ");
+      }
+      i += 4;
+      if (i >= size) {
+        break;
+      }
+    }
+    printk("\n");
   }
-  printk("\n");
 }
 
 void debug_breakpoint_add(uint64_t address) {
   if (bsize < DEBUG_BREAKPOINTS_SIZE) {
     // Backup the code
-    *((uint8_t *)&breakpoints[bsize].code + 0) = *((uint8_t *)address + 0);
-    *((uint8_t *)&breakpoints[bsize].code + 1) = *((uint8_t *)address + 1);
-    *((uint8_t *)&breakpoints[bsize].code + 2) = *((uint8_t *)address + 2);
+    INFO("Save %02x %02x %02x\n", *((uint8_t *)address + 0), *((uint8_t *)address + 1), *((uint8_t *)address + 2));
+    breakpoints[bsize].code[0] = *((uint8_t *)address + 0);
+    breakpoints[bsize].code[1] = *((uint8_t *)address + 1);
+    breakpoints[bsize].code[2] = *((uint8_t *)address + 2);
     // Put the vmcall
     *((uint8_t *)address + 0) = 0x0f; // vmcall
     *((uint8_t *)address + 1) = 0x01;
     *((uint8_t *)address + 2) = 0xc1;
+    INFO("Set vmcall %02x %02x %02x\n", *((uint8_t *)address + 0), *((uint8_t *)address + 1), *((uint8_t *)address + 2));
     breakpoints[bsize].address = address;
     bsize++;
   }
 }
 
 void debug_breakpoint_del(int index) {
-  if (bsize > 0 && index >= 1 && index <= bsize) {
+  if (index >= 0 && index < bsize) {
     // Restore the code
-    *((uint8_t *)breakpoints[bsize].address + 0) = *((uint8_t *)&breakpoints[bsize].code + 0);
-    *((uint8_t *)breakpoints[bsize].address + 1) = *((uint8_t *)&breakpoints[bsize].code + 1);
-    *((uint8_t *)breakpoints[bsize].address + 2) = *((uint8_t *)&breakpoints[bsize].code + 2);
+    INFO("Before restore %02x %02x %02x\n", *((uint8_t *)breakpoints[index].address + 0), *((uint8_t *)breakpoints[index].address + 1), *((uint8_t *)breakpoints[index].address + 2));
+    *((uint8_t *)breakpoints[index].address + 0) = breakpoints[index].code[0];
+    *((uint8_t *)breakpoints[index].address + 1) = breakpoints[index].code[1];
+    *((uint8_t *)breakpoints[index].address + 2) = breakpoints[index].code[2];
+    INFO("After restore %02x %02x %02x\n", *((uint8_t *)breakpoints[index].address + 0), *((uint8_t *)breakpoints[index].address + 1), *((uint8_t *)breakpoints[index].address + 2));
     // Exchange the breakpoint
     if (bsize > 1) {
-      breakpoints[index - 1].address = breakpoints[bsize - 1].address;
-      breakpoints[index - 1].code = breakpoints[bsize - 1].code;
+      breakpoints[index].address = breakpoints[bsize - 1].address;
+      breakpoints[index].code[0] = breakpoints[bsize - 1].code[0];
+      breakpoints[index].code[1] = breakpoints[bsize - 1].code[1];
+      breakpoints[index].code[2] = breakpoints[bsize - 1].code[2];
     }
     bsize--;
   }
@@ -311,7 +352,8 @@ void debug_breakpoint_print() {
   int i;
   printk("Breakpoints :\n");
   for (i = 0; i < bsize; ++i) {
-    printk("%x : %x\n", i + 1, breakpoints[i].address);
+    printk("%x : %x\n", i, breakpoints[i].address);
+    printk("   : %x\n", *((uint32_t *)breakpoints[i].code)); // XXX moisi
   }
 }
 

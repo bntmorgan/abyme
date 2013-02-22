@@ -16,12 +16,25 @@ Syslinux :
     Sans tinyvisor :
       int10 ok
       int13 ok
-      int19 ko
+      int19 ok
       b8000 ok
       rm_pm ok
     Avec tinyvisor :
       int10 ok
       int13 ok
       int19 ok
+      b8000 ok
+      rm_pm ok
+  Portable:
+    Sans tinyvisor :
+      int10 ok
+      int13 ok 
+      int19 ko 
+      b8000 ok
+      rm_pm ok
+    Avec tinyvisor :
+      int10 ok 
+      int13 ko 
+      int19 ko
       b8000 ok
       rm_pm ok

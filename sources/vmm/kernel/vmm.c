@@ -90,7 +90,9 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   guest_states_index = (guest_states_index + 1) % NB_GUEST_STATES;
   debug_save_guest_state(&guest_states[guest_states_index], &guest_gpr);
 
-  debug(exit_reason, exit_instruction_length);
+  if(debug(exit_reason)) {
+    return;
+  }
   
   // Due to monitor trap
   if (exit_reason != EXIT_REASON_MONITOR_TRAP_FLAG) {

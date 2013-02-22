@@ -15,12 +15,13 @@ char getchar();
 void debug_breakpoint_add(uint64_t address);
 void debug_breakpoint_del(int index);
 void debug_breakpoint_print();
-void debug(uint32_t reason, uint32_t exit_instruction_length);
+int debug(uint32_t reason);
 void getstring(char *input, unsigned int size);
 unsigned int strlen(char *c);
 uint64_t atoi_hexa(char *s);
 int debug_breakpoint_break(uint64_t rip);
 void debug_instruction_print(uint64_t rip, uint32_t length);
+void debug_dump(uint64_t addr, uint64_t size);
 
 #define DEBUG_GUEST_STATE \
   DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_VMCS, cr0, GUEST_CR0) \
@@ -69,7 +70,7 @@ void debug_install();
 
 struct breakpoint {
   uint64_t address;
-  uint32_t code;
+  uint8_t code[3];
 };
 
 #endif
