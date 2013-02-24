@@ -1,3 +1,7 @@
+Essayer de changer EPT : empecher l'acces au dela de 1Mo par le bios et executer l'int13.
+ -> a chaque erreur, analyser la raison : on pourra voir si il y a un acces au MMCONFIG (mapping pcie)
+    -> si il y a acces a MMCONFIG, on pourra voir si EPT est configure correctement pour le type de
+       memoire associe a cet espace (cf. MTRR)
 Essayer de booter ramooflax : ko (avec Systlinux)
 Ecrire et exécuter un pépin qui revient en real mode après Syslinux : ok 
 Vmm doit avoir un parametre (fourni par syslinux) indiquant ou charger le rm_kernel.
