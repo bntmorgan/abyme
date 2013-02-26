@@ -68,7 +68,8 @@ bootstrap_start:
     mov %ax, %fs
     mov %ax, %gs
     mov %ax, %ss
-    mov $0x600, %sp
+    // Set our stack
+    mov $0x2000, %sp
     jmpl $0x0, $0x700
 bootstrap_end:
 
@@ -89,31 +90,33 @@ kernel_start:
     mov $0xb800, %ax
     mov %ax, %ds
     // Printing some chars LULZ
-    movb $'s', 0x140
-    movb $'u', 0x142
-    movb $'i', 0x144
-    movb $'c', 0x146
-    movb $'i', 0x148
-    movb $'d', 0x14a
-    movb $'e', 0x14c
+    movb $'s', 0xa0
+    movb $'u', 0xa2
+    movb $'i', 0xa4
+    movb $'c', 0xa6
+    movb $'i', 0xa8
+    movb $'d', 0xaa
+    movb $'e', 0xac
+    // Save %ds
+    push %ds
+    mov $0x00, %ax
+    mov %ax, %ds
     call int13
-    movb $'o', 0xa0
-    movb $'k', 0xa2
+    // Get the last %ds
+    pop %ds
+    movb $'o', 0x140
+    movb $'k', 0x142
 lulz:
     jmp lulz
 int13:
-  // Set hour %cs
-  push %ds
-  mov $0x00, %ax
-  mov %ax, %ds
   // Stack frame
   push %bp
   mov %sp, %bp
   // Sector
-  sub 512, %sp
+  sub $512, %sp
   mov %sp, %ax
   // Dap
-  sub 0x10, %sp
+  sub $0x10, %sp
   mov %sp, %bx
   // dap.size
   movb $0x10, 0x0(%bx)
@@ -129,14 +132,16 @@ int13:
   movl $0x00000000, 0x0c(%bx)
   // dap.offset (64 bits)
   movl $0x00000000, 0x10(%bx)
+  // The int13 DAP parameters
+  mov %bx, %si
+  mov $0x4200, %ax
+  mov $0x80, %dx
   // int 13 dude
   xchg %bx, %bx
   int $0x13
   xchg %bx, %bx
   // Destroy the stack frame
   leave
-  // Get the last %ds
-  pop %ds
   ret
 kernel_end:
 
