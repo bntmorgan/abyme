@@ -40,6 +40,8 @@ ${#end}$
 # Copy the syslinux configuration file
 cp $[syslinux_config]$ $[mount_point]$/$[config_file]$
 
+cp tools/writemem.c32 $[mount_point]$/$[boot_directory]$
+
 # Umount the key
 umount $[mount_point]$
 

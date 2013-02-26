@@ -165,6 +165,10 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   printk("c : continue execution\n"); \
   printk("s : step by step\n"); \
   printk("h : help\n"); \
+  printk("r : read mem\n"); \
+  printk("w : write mem\n"); \
+  printk("o : set I/O\n"); \
+  printk("n : unset I/O\n"); \
 }
 
 #define DEBUG_CURRENT_STATE_INDEX (guest_states_index % 2)
@@ -228,14 +232,14 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   debug_print_guest_state_diff(guest_states, guest_states + 1); \
 }
 
-int debug(uint32_t reason) {
+int debug(uint32_t reason, int force) {
   int bp = debug_breakpoint_break(guest_states[DEBUG_CURRENT_STATE_INDEX].rip);
-  printk("BP %x\n", bp);
-  if (!step && (bp != -1)) {
+  if (!step && bp == -1 && !force) {
     return 0;
   }
-  INFO("Index %x\n", bp);
-  debug_breakpoint_del(bp);
+  if (force == 0) {
+    debug_breakpoint_del(bp);
+  }
   char c;
   int run = -1;
   while(run) {
@@ -254,7 +258,7 @@ int debug(uint32_t reason) {
       case 'v':
         DEBUG_HANDLE_STATE_PRINT
         break; 
-      case 'w':
+      case 'l':
         DEBUG_HANDLE_LAST_STATE_PRINT
         break; 
       case 'x':
@@ -274,6 +278,41 @@ int debug(uint32_t reason) {
         run = 0;
         step = 1;
         break; 
+      case 'o': {
+        printk("\nsetting inconditional I/O ? ");
+        uint32_t procbased_ctls = cpu_vmread(CPU_BASED_VM_EXEC_CONTROL);
+        procbased_ctls |= (uint32_t)UNCOND_IO_EXITING; 
+        cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
+        break; 
+                }
+      case 'n': {
+        printk("\nunsetting inconditional I/O ? ");
+        uint32_t procbased_ctls = cpu_vmread(CPU_BASED_VM_EXEC_CONTROL);
+        procbased_ctls &= ~((uint32_t)UNCOND_IO_EXITING); 
+        cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
+        break; 
+                }
+      case 'w': {
+        printk("\naddress ? "); \
+        getstring(input, DEBUG_INPUT_SIZE); \
+        printk("\n"); \
+        uint64_t addr = atoi_hexa(input); \
+        printk("\nvalue ? "); \
+        getstring(input, DEBUG_INPUT_SIZE); \
+        printk("\n"); \
+        uint8_t value = (uint8_t)atoi_hexa(input); \
+        printk("Writing %x in %x\n", value, addr);
+        *((uint8_t *)addr) = value;
+        break; 
+                }
+      case 'r': {
+        printk("\naddress ? "); \
+        getstring(input, DEBUG_INPUT_SIZE); \
+        printk("\n"); \
+        uint64_t addr = atoi_hexa(input); \
+        printk("%02x\n", *((uint8_t *)addr));
+        break; 
+                }
       case 'h':
       default:
         DEBUG_PRINT_USAGE
@@ -299,7 +338,7 @@ void debug_dump(uint64_t addr, uint64_t size) {
   while (i < size) {
     printk("%016x ", addr + i);
     for (j = 0; j < DEBUG_DUMP_COLUMNS; j++) {
-      printk("%08x", *((uint32_t *)addr + i));
+      printk("%08x", *((uint32_t *)(addr + i)));
       if (i != DEBUG_DUMP_COLUMNS - 1) {
         printk(" ");
       }

@@ -109,6 +109,11 @@ void kernel_main(uint32_t magic, uint32_t *address) {
   cpu_enable_pae();
   cpu_enable_long_mode();
   cpu_enable_paging();
+  // XXX Unprotecting the bios memory
+  *((uint8_t *)0xf8000080) = 0x30;
+  *((uint8_t *)0xf8000081) = 0x33;
+  *((uint8_t *)0xf8000082) = 0x33;
+  *((uint8_t *)0xf80f80d8) = 0x00;
   /*
    * edi contains the address of vmm_info structure.
    */

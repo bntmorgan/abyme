@@ -15,7 +15,7 @@ char getchar();
 void debug_breakpoint_add(uint64_t address);
 void debug_breakpoint_del(int index);
 void debug_breakpoint_print();
-int debug(uint32_t reason);
+int debug(uint32_t reason, int force);
 void getstring(char *input, unsigned int size);
 unsigned int strlen(char *c);
 uint64_t atoi_hexa(char *s);

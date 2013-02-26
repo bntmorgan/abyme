@@ -147,6 +147,7 @@ void vmm_vm_setup_and_launch() {
  * See [Intel_August_2012], volume 3, section 28.2.
  */
 void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t vmm_size) {
+  #if 0 // BAckup
   /*
    * Everything stands into the first 4GB, so we only need the first entry of PML4.
    */
@@ -165,6 +166,56 @@ void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t
     for (uint32_t j = 0; j < nb_pde; j++) {
       ept_info->PD_PDPT_PML40[i][j] = (((uint64_t) (i * nb_pde + j)) << 21) | (1 << 7) /* 2MB page */ | 0x7 /* R, W, X */;
     }
+  }
+
+  /*
+   * Mark vmm memory as non-readable, non-writable and non-executable
+   */
+  /*
+   * 1. Get the size of the vmm, including the padding between the start of the vmm
+   *    and the beginning of its first 2 MB page.
+   * 2. Get the address of the first 2 MB page of the vmm.
+   * 3. Count the number of 2 MB pages used for the vmm and adjust if the last one is
+   *    partially used.
+   */
+  vmm_size = vmm_size + (vmm_physical_start % 0x200000);
+  vmm_physical_start = vmm_physical_start - (vmm_physical_start % 0x200000);
+
+  uint64_t vmm_nb_pages_2MB = vmm_size / 0x200000;
+  if (vmm_size % 0x200000 > 0) {
+    vmm_nb_pages_2MB = vmm_nb_pages_2MB + 1;
+  }
+
+  for (uint64_t i = 0; i < vmm_nb_pages_2MB; i++) {
+    if ((vmm_physical_start >> 30) != (((vmm_physical_start >> 21) + i) >> 9)) {
+      ERROR("vmm pages don't belong to the same PDPT entry");
+    }
+
+    /* TODO: create separate readable pages for VMM data that can be read by the guest */
+    ept_info->PD_PDPT_PML40[vmm_physical_start >> 30][((vmm_physical_start >> 21) + i) & 0x1ff] =
+        ((uint64_t) (vmm_physical_start + (i << 21))) | (1 << 7) /* 2MB page */;
+  }
+#endif
+  
+  /*
+   * Everything stands into the first 4GB, so we only need the first entry of PML4.
+   */
+  ept_info->PML4[0] = VMEM_ADDR_VIRTUAL_TO_PHYSICAL((uint8_t*) ept_info->PDPT_PML40) | 0x07 /* R, W, X */;
+  for (uint32_t i = 1; i < sizeof(ept_info->PML4) / sizeof(ept_info->PML4[0]); i++) {
+    ept_info->PML4[i] = 0;
+  }
+
+  /*
+   * Automatically map all memory accessed with PDPT_PML40 in 2MB pages.
+   */
+  ept_info->PDPT_PML40[0] = ((uint64_t) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&ept_info->PD_PDPT_PML40[0][0])) | 0x7 /* R, W, X */;
+  for (uint32_t i = 1; i < sizeof(ept_info->PDPT_PML40) / sizeof(ept_info->PDPT_PML40[0]); i++) {
+    ept_info->PDPT_PML40[i] = 0;
+  }
+  
+  ept_info->PD_PDPT_PML40[0][0] = (((uint64_t) 0) << 21) | (1 << 7) /* 2MB page */ | 0x7 /* R, W, X */;
+  for (uint32_t j = 1; j < 512; j++) {
+    ept_info->PD_PDPT_PML40[0][j] = 0;
   }
 
   /*

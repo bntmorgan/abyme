@@ -12,6 +12,7 @@ Creer une clé grub 2
 Verifier si bochs supporte le debug => modifier vmm_vmcs le temps des tests ?
 Alleger seg.h si besoins (pas besoin d'initialiser a 0xffff ds, es, etc.)
 
+Positionner le bit 13 du CR4 à 0 dans la vm. Vérifier si ça a du sens.
 
 Résultats :
 

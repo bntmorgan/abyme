@@ -15,3 +15,9 @@ ${for k in rm_kernels :}$
   kernel mboot.c32
   append $[boot_directory]$/loader/loader.elf32 --- $[boot_directory]$/vmm/vmm.elf32 --- $[boot_directory]$/rm_kernels/$[k[0]]$/$[k[1]]$
 ${#end}$
+
+label write
+menu label Write into mem
+COM32 $[boot_directory]$/writemem.c32
+append f8000080 30 f80f80d8 00 f106c 00 -- hd1
+

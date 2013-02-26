@@ -90,12 +90,12 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   guest_states_index = (guest_states_index + 1) % NB_GUEST_STATES;
   debug_save_guest_state(&guest_states[guest_states_index], &guest_gpr);
 
-  if(debug(exit_reason)) {
+  if(debug(exit_reason, 0)) {
     return;
   }
   
   // Due to monitor trap
-  if (exit_reason != EXIT_REASON_MONITOR_TRAP_FLAG) {
+  if (exit_reason != EXIT_REASON_MONITOR_TRAP_FLAG && exit_reason != EXIT_REASON_IO_INSTRUCTION) {
     vmm_set_guest_rip(guest_gpr.rip, exit_instruction_length);
   }
 
@@ -367,7 +367,9 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
     }
 #endif
     default:
-      INFO("unhandled reason: %d\n", exit_reason);
+      INFO("unhandled reason[%x]: %x\n", exit_reason, guest_gpr.rip);
+      // XXX
+      debug(0, 1);
       BREAKPOINT();
   }
 }

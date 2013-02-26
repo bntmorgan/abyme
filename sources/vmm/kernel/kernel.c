@@ -95,12 +95,14 @@ void kernel_main(vmm_info_t *_vmm_info) {
    */
   //smp_setup();
 
-  /* Enables the debugger */
-  INFO("INIT THE DEBUGGER AT 0x700\n");
-
   vmm_read_cmos();
   vmm_setup();
   vmm_ept_setup(&vmm_info->ept_info, vmm_info->vmm_physical_start, vmm_info->vmm_physical_end - vmm_info->vmm_physical_start + 1);
+  /* Enables the debugger */
+  INFO("INIT THE DEBUGGER AT 0x700\n");
   debug_install();
+  printk("value %d\n", *((uint8_t *)0xf8000080));
+  printk("value %d\n", *((uint8_t *)0xf80f80d8));
+  printk("value %d\n", *((uint8_t *)0xf8000082));
   vmm_vm_setup_and_launch();
 }
