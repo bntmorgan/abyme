@@ -260,7 +260,7 @@ void vmm_create_vmxon_and_vmcs_regions(void) {
   msr_read(MSR_ADDRESS_IA32_VMX_BASIC, &eax, &edx);
   vmcs_revision_identifier = eax;
   number_bytes_regions = edx & 0x1fff;
-  INFO("MSR_ADDRESS_IA32_VMX_BASIC:\n");
+  INFO("MSR_ADDRESS_IA32_VMX_BASIC: eax : %08x edx : %08x\n", eax, edx);
   INFO("  vmxon region at %08x\n", (uint32_t) (uint64_t) &vmxon[0]);
   INFO("  vmcs0 region at %08x\n", (uint32_t) (uint64_t) &vmcs0[0]);
   INFO("  vmcs_revision_identifier=%08x, number_bytes_regions=%04x\n", vmcs_revision_identifier, number_bytes_regions);

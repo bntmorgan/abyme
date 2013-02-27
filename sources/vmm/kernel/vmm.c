@@ -95,7 +95,7 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
   }
   
   // Due to monitor trap
-  if (exit_reason != EXIT_REASON_MONITOR_TRAP_FLAG && exit_reason != EXIT_REASON_IO_INSTRUCTION) {
+  if (exit_reason != EXIT_REASON_MONITOR_TRAP_FLAG) {
     vmm_set_guest_rip(guest_gpr.rip, exit_instruction_length);
   }
 

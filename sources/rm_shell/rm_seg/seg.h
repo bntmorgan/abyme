@@ -11,4 +11,4 @@ __asm__("mov $0xffff, %ax	;\n"
 	"mov %ax, %fs		;\n"
 	"mov %ax, %gs		;\n"
 	"mov %ax, %ss		;\n"
-	"mov $0x1000, %sp;\n");
+	"mov $0x2000, %sp;\n");

@@ -107,7 +107,7 @@ void vmm_vmcs_fill_guest_state_fields(void) {
   cpu_vmwrite(GUEST_IA32_EFER, 0);
   cpu_vmwrite(GUEST_IA32_EFER_HIGH, 0);
   // GUEST_IA32_PERF_GLOBAL_CTRL{,_HIGH}, GUEST_IA32_PAT{,_HIGH},
-  // GUEST_SMBASE unused
+  //cpu_vmwrite(GUEST_SMBASE, 0x30000);
 
   // 24.4.2: Guest Non-Register State.
   cpu_vmwrite(GUEST_ACTIVITY_STATE, 0);
@@ -163,7 +163,7 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
 
   // 24.6.2: Processor-Based VM-Execution Controls
-  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS /*| MONITOR_TRAP_FLAG*/; // Monitor trap flag : Debug porpose
+  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS | USE_IO_BITMAPS/*| MONITOR_TRAP_FLAG*/; // Monitor trap flag : Debug porpose
   procbased_ctls = cpu_adjust32(procbased_ctls, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS);
   procbased_ctls &= ~(CR3_LOAD_EXITING | CR3_STORE_EXITING);
   cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
@@ -182,7 +182,9 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   //io_bitmap_a[0x70 / 8] = io_bitmap_a[0x70 / 8] | (1 << (0x70 % 8));
   //io_bitmap_a[0x71 / 8] = io_bitmap_a[0x71 / 8] | (1 << (0x71 % 8));
   // 0x20 = PORT_PIC1_CMD, used at the end of the POST, when the IVT has already been setup
-  io_bitmap_a[0x20 / 8] = io_bitmap_a[0x20 / 8] | (1 << (0x20 % 8));
+  //io_bitmap_a[0x20 / 8] = io_bitmap_a[0x20 / 8] | (1 << (0x20 % 8));
+  io_bitmap_a[0x2b / 8] = io_bitmap_a[0x2b / 8] | (1 << (0x2b % 8));
+  io_bitmap_a[0x81 / 8] = io_bitmap_a[0x81 / 8] | (1 << (0x81 % 8));
   cpu_vmwrite(IO_BITMAP_A, (uint32_t) (((uint64_t) &io_bitmap_a[0]) & 0xffffffff));
   cpu_vmwrite(IO_BITMAP_A_HIGH, (uint32_t) ((((uint64_t) &io_bitmap_a[0]) >> 32) & 0xffffffff));
   cpu_vmwrite(IO_BITMAP_B, (uint32_t) (((uint64_t) &io_bitmap_b[0]) & 0xffffffff));

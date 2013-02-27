@@ -1,0 +1,1 @@
+../../pm_shell/pm_bios_pm2rm/loader.s

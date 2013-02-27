@@ -38,7 +38,23 @@ loader:
     mov $(kernel_end), %ecx
     sub $(kernel_start), %ecx
     rep movsb
+    
+    /* unprotect the BIOS memory */
+    // XXX Unprotecting the bios memory
+    // Copying the BIOS flash in ram
+    // See Intel 3rd generation core PAM0-PAM6
+    movb $0x30, 0xf8000080
+    movb $0x30, 0xf8000081
+    movb $0x33, 0xf8000082
+    movb $0x00, 0xf80f80d8
 
+    // Own the handler
+    cld
+    mov $bioshang_start, %esi
+    mov $0xf80c1, %edi
+    mov $(bioshang_end - bioshang_start), %ecx
+    rep movsb
+    
     lgdt gdtr
     mov $0x20, %ax
     mov %ax, %ds
@@ -47,6 +63,17 @@ loader:
     mov %ax, %gs
     mov %ax, %ss
     jmpl $0x18, $0x600
+
+.code16
+bioshang_start:
+  mov $0xb800, %ax
+  mov %ax, %ds
+  movw $0x764, 0x0
+  movw $0x765, 0x2
+  movw $0x766, 0x4
+here:
+  jmp here
+bioshang_end:
 
 .code16
 bootstrap_start:

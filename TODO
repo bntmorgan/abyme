@@ -14,6 +14,8 @@ Alleger seg.h si besoins (pas besoin d'initialiser a 0xffff ds, es, etc.)
 
 Positionner le bit 13 du CR4 à 0 dans la vm. Vérifier si ça a du sens.
 
+Analyse fine des valeur du controlleur mémoire
+
 Résultats :
 
 Syslinux :

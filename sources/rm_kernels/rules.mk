@@ -12,6 +12,8 @@ dir		:= $(d)/rm_int19
 include		$(dir)/rules.mk
 dir		:= $(d)/rm_b8000
 include		$(dir)/rules.mk
+dir		:= $(d)/rm_smm
+include		$(dir)/rules.mk
 
 d		:= $(dirstack_$(sp))
 sp		:= $(basename $(sp))

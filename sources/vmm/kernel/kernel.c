@@ -39,6 +39,18 @@ void dump_bios_ivt() {
   }*/
 }
 
+void write_bioshang(uint64_t addr_goal) {
+  uint64_t i;
+  extern uint64_t bioshang_start;
+  extern uint64_t bioshang_end;
+  uint64_t length = (uint64_t)(((uint8_t *)&bioshang_end) - ((uint8_t *)&bioshang_start));
+  uint8_t *start = (uint8_t *)&bioshang_start;
+  for (i = 0; i < length + 1; i++) {
+    printk(" %x %x %x\n", addr_goal + i, start + i, *(start + i));
+    *((uint8_t*)(addr_goal + i)) = *(start + i);
+  }
+}
+
 void kernel_main(vmm_info_t *_vmm_info) {
   uint8_t *dst;
   uint32_t i;
@@ -101,8 +113,12 @@ void kernel_main(vmm_info_t *_vmm_info) {
   /* Enables the debugger */
   INFO("INIT THE DEBUGGER AT 0x700\n");
   debug_install();
-  printk("value %d\n", *((uint8_t *)0xf8000080));
-  printk("value %d\n", *((uint8_t *)0xf80f80d8));
-  printk("value %d\n", *((uint8_t *)0xf8000082));
+
+  /**
+   * XXX Overriding the int 13 handler
+   */
+  //write_bioshang(0xf80c6);
+
   vmm_vm_setup_and_launch();
 }
+
