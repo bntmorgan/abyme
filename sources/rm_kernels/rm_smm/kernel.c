@@ -75,33 +75,7 @@ void itoa(int8_t *dst, uint8_t base, int32_t value) {
 
 int __NORETURN main(void) {
   // Sector read
-  print("1\r\n");
-  print("2\r\n");
-  print("3\r\n");
-  print("4\r\n");
-  print("5\r\n");
-  print("6\r\n");
-  print("7\r\n");
-  print("8\r\n");
-  print("9\r\n");
-  print("10\r\n");
-  print("11\r\n");
-  print("12\r\n");
-  print("13\r\n");
-  print("14\r\n");
-  print("15\r\n");
-  print("16\r\n");
-  print("17\r\n");
-  print("18\r\n");
-  print("19\r\n");
-  print("20\r\n");
-  print("21\r\n");
-  print("22\r\n");
-  print("23\r\n");
-  print("24\r\n");
-  print("25\r\n");
-  print("26\r\n");
-  print("27\r\n");
+  print("START LOL\r\n");
   while (1);
 }
 
