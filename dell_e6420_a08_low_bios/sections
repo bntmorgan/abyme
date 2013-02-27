@@ -1,0 +1,30 @@
+section	0x00000000:0x000001ff	DATA32
+		info	IVT du BIOS
+		info	The IVT at address 0x64 (i.e. value 0xf000e6f2)
+		info	is the interruption 0x19
+		info	This value equals 0xf0000 + 0xe6f2 = 0xfe6f2
+section	0x0000040e:0x0000040f	DATA32
+section	0x00091580:0x00091581	DATA32
+section	0x00091581:0x00091582	DATA32
+section	0x00091583:0x00091584	DATA32
+section	0x000fd8b8:0x000fd8d8	DATA32
+ 		info Handler int 13
+section	0x000f5f27:0x000f5f76	CODE16
+section	0x000f727d:0x000f7281	DATA32
+ 		info Handler int 19 (saut)
+section	0x000fe6f2:0x000fe6f4	CODE16
+ 		info Handler int 13
+section	0x000f6422:0x000f6700	CODE16
+ 		info Handler int 13
+section	0x000f71fb:0x000f7206	CODE16
+ 		info Handler int 19
+section	0x000f7206:0x000f7300	CODE16
+ 		info Handler int 19
+section	0x000f80bb:0x000f80f0	CODE16
+section	0x000f8407:0x000f8420	CODE16
+section	0x000fda97:0x000fdb71	CODE16
+section	0x000cf25e:0x000cf2e1	CODE16
+section	0x000cf230:0x000cf25d	CODE16
+section	0x000cea5e:0x000cead4	CODE16
+section	0x000cf2e2:0x000cf302	CODE16
+section	0x000ceb6c:0x000cf112	CODE16
