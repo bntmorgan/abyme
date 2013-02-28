@@ -2,6 +2,11 @@
 #include "stdio.h"
 #include "vmm.h"
 
+/**
+ * Unshared prototypes
+ */
+void dump_vmcs_fields_16_control();
+
 struct breakpoint breakpoints[DEBUG_BREAKPOINTS_SIZE];
 int bsize;
 int step = 1;
@@ -167,6 +172,7 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   printk("h : help\n"); \
   printk("r : read mem\n"); \
   printk("w : write mem\n"); \
+  printk("y : vmcs dump\n"); \
   printk("o : set I/O\n"); \
   printk("n : unset I/O\n"); \
 }
@@ -232,6 +238,56 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   debug_print_guest_state_diff(guest_states, guest_states + 1); \
 }
 
+#define DEBUG_HANDLE_SET_IO { \
+  printk("\nsetting inconditional I/O ? "); \
+  uint32_t procbased_ctls = cpu_vmread(CPU_BASED_VM_EXEC_CONTROL); \
+  procbased_ctls |= (uint32_t)UNCOND_IO_EXITING; \
+  cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls); \
+}
+
+#define DEBUG_HANDLE_UNSET_IO { \
+  printk("\nunsetting inconditional I/O ? "); \
+  uint32_t procbased_ctls = cpu_vmread(CPU_BASED_VM_EXEC_CONTROL); \
+  procbased_ctls &= ~((uint32_t)UNCOND_IO_EXITING); \
+  cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls); \
+}
+
+#define DEBUG_HANDLE_WRITE_MEM { \
+  printk("\naddress ? "); \
+  getstring(input, DEBUG_INPUT_SIZE); \
+  printk("\n"); \
+  uint64_t addr = atoi_hexa(input); \
+  printk("\nvalue ? "); \
+  getstring(input, DEBUG_INPUT_SIZE); \
+  printk("\n"); \
+  uint8_t value = (uint8_t)atoi_hexa(input); \
+  printk("Writing %x in %x\n", value, addr); \
+  *((uint8_t *)addr) = value; \
+}
+
+#define DEBUG_HANDLE_READ_MEM { \
+  printk("\naddress ? "); \
+  getstring(input, DEBUG_INPUT_SIZE); \
+  printk("\n"); \
+  uint64_t addr = atoi_hexa(input); \
+  printk("%02x\n", *((uint8_t *)addr)); \
+}
+
+#define DEBUG_HANDLE_DUMP_VMCS { \
+  printk("\nFields ? "); \
+  printk("\n0 : 16 bits control fields\n"); \
+  printk("\n1 : 16 bits guest state fields\n"); \
+  getstring(input, DEBUG_INPUT_SIZE); \
+  printk("\n"); \
+  uint8_t field = atoi_hexa(input); \
+  printk("Field %d\n", field); \
+  switch (field) { \
+    case 0: \
+      dump_vmcs_fields_16_control(); \
+      break; \
+  } \
+}
+
 int debug(uint32_t reason, int force) {
   int bp = debug_breakpoint_break(guest_states[DEBUG_CURRENT_STATE_INDEX].rip);
   if (!step && bp == -1 && !force) {
@@ -278,41 +334,21 @@ int debug(uint32_t reason, int force) {
         run = 0;
         step = 1;
         break; 
-      case 'o': {
-        printk("\nsetting inconditional I/O ? ");
-        uint32_t procbased_ctls = cpu_vmread(CPU_BASED_VM_EXEC_CONTROL);
-        procbased_ctls |= (uint32_t)UNCOND_IO_EXITING; 
-        cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
+      case 'o':
+        DEBUG_HANDLE_SET_IO
+        break;
+      case 'n':
+        DEBUG_HANDLE_UNSET_IO
         break; 
-                }
-      case 'n': {
-        printk("\nunsetting inconditional I/O ? ");
-        uint32_t procbased_ctls = cpu_vmread(CPU_BASED_VM_EXEC_CONTROL);
-        procbased_ctls &= ~((uint32_t)UNCOND_IO_EXITING); 
-        cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
+      case 'w':
+        DEBUG_HANDLE_WRITE_MEM
         break; 
-                }
-      case 'w': {
-        printk("\naddress ? "); \
-        getstring(input, DEBUG_INPUT_SIZE); \
-        printk("\n"); \
-        uint64_t addr = atoi_hexa(input); \
-        printk("\nvalue ? "); \
-        getstring(input, DEBUG_INPUT_SIZE); \
-        printk("\n"); \
-        uint8_t value = (uint8_t)atoi_hexa(input); \
-        printk("Writing %x in %x\n", value, addr);
-        *((uint8_t *)addr) = value;
-        break; 
-                }
-      case 'r': {
-        printk("\naddress ? "); \
-        getstring(input, DEBUG_INPUT_SIZE); \
-        printk("\n"); \
-        uint64_t addr = atoi_hexa(input); \
-        printk("%02x\n", *((uint8_t *)addr));
-        break; 
-                }
+      case 'r':
+        DEBUG_HANDLE_READ_MEM
+        break;
+      case 'y':
+        DEBUG_HANDLE_DUMP_VMCS
+        break;
       case 'h':
       default:
         DEBUG_PRINT_USAGE
@@ -473,4 +509,29 @@ void getstring(char *input, unsigned int size) {
     ++i;
   }
   input[i] = '\0';
+}
+
+/**
+ * Fields is the address of a 16 bits fields structure
+ */
+#define DUMP(fields, fds, fdss) { \
+  uint32_t i, j; \
+  uint32_t cycles = fdss / fds; \
+  for (i = 0; i < cycles; i++) { \
+    printk("%08x ", i * fds); \
+    for (j = 0; j < fds; j++) { \
+      printk("%02x", *((uint8_t*)fields + i * fds + (fds - j - 1))); \
+    } \
+    printk("\n"); \
+  }\
+}
+
+void dump_vmcs_fields_16_control() {
+  struct {
+    uint16_t virtual_processor_id;
+    uint16_t posted_interrupt_notification_vector;
+  } fields;
+  fields.virtual_processor_id = 0x10c;
+  fields.posted_interrupt_notification_vector = 0x20c;
+  DUMP(&fields, sizeof(uint16_t), sizeof(fields));
 }
