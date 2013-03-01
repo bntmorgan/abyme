@@ -1,0 +1,1 @@
+entry=44 base-address=f8000000 group=0 start-bus=0 end-bus=63 reserved=0
