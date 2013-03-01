@@ -5,7 +5,7 @@
 /**
  * Unshared prototypes
  */
-void dump_vmcs_fields_16_control();
+void dump_vmcs_fields(uint64_t offset, uint32_t fs, uint32_t count, uint32_t step);
 
 struct breakpoint breakpoints[DEBUG_BREAKPOINTS_SIZE];
 int bsize;
@@ -274,16 +274,73 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
 }
 
 #define DEBUG_HANDLE_DUMP_VMCS { \
-  printk("\nFields ? "); \
-  printk("\n0 : 16 bits control fields\n"); \
-  printk("\n1 : 16 bits guest state fields\n"); \
+  printk("\nFields ? \n"); \
+  printk("0 : 16 bits control fields\n"); \
+  printk("1 : 16 bits guest state fields\n"); \
+  printk("2 : 16 bits host state fields\n"); \
+  printk("3 : 64 bits control fields\n"); \
+  printk("4 : 64 bits read only data fields\n"); \
+  printk("5 : 64 bits guest state fields\n"); \
+  printk("6 : 64 bits host state fields\n"); \
+  printk("7 : 32 bits control fields\n"); \
+  printk("8 : 32 bits read only data fields\n"); \
+  printk("9 : 32 bits guest state fields\n"); \
+  printk("a : 32 bits host state fields\n"); \
+  printk("b : NW bits control fields\n"); \
+  printk("c : NW bits read only data fields\n"); \
+  printk("d : NW bits guest state fields\n"); \
+  printk("e : NW bits host state fields\n"); \
   getstring(input, DEBUG_INPUT_SIZE); \
   printk("\n"); \
   uint8_t field = atoi_hexa(input); \
   printk("Field %d\n", field); \
   switch (field) { \
     case 0: \
-      dump_vmcs_fields_16_control(); \
+      dump_vmcs_fields(0, 2, 2, 2); \
+      break; \
+    case 1: \
+      dump_vmcs_fields(0x800, 2, 9, 2); \
+      break; \
+    case 2: \
+      dump_vmcs_fields(0xc00, 2, 7, 2); \
+      break; \
+    case 3: \
+      dump_vmcs_fields(0x2000, 4, 7 * 2, 1); \
+      dump_vmcs_fields(0x2010, 4, 11 * 2, 1); \
+      break; \
+    case 4: \
+      dump_vmcs_fields(0x2400, 4, 1 * 2, 1); \
+      break; \
+    case 5: \
+      dump_vmcs_fields(0x2800, 4, 9 * 2, 1); \
+      break; \
+    case 6: \
+      dump_vmcs_fields(0x2c00, 4, 3 * 2, 1); \
+      break; \
+    case 7: \
+      dump_vmcs_fields(0x4000, 4, 18, 2); \
+      break; \
+    case 8: \
+      dump_vmcs_fields(0x4400, 4, 8, 2); \
+      break; \
+    case 9: \
+      dump_vmcs_fields(0x4800, 4, 22, 2); \
+      dump_vmcs_fields(0x482e, 4, 1, 2); \
+      break; \
+    case 10: \
+      dump_vmcs_fields(0x4c00, 4, 1, 2); \
+      break; \
+    case 11: \
+      dump_vmcs_fields(0x6000, 4, 8, 2); \
+      break; \
+    case 12: \
+      dump_vmcs_fields(0x6400, 4, 6, 2); \
+      break; \
+    case 13: \
+      dump_vmcs_fields(0x6800, 4, 20, 2); \
+      break; \
+    case 14: \
+      dump_vmcs_fields(0x6c00, 4, 12, 2); \
       break; \
   } \
 }
@@ -514,24 +571,44 @@ void getstring(char *input, unsigned int size) {
 /**
  * Fields is the address of a 16 bits fields structure
  */
-#define DUMP(fields, fds, fdss) { \
+#define DUMP(fields, fds, fdss, offset, step) { \
   uint32_t i, j; \
   uint32_t cycles = fdss / fds; \
   for (i = 0; i < cycles; i++) { \
-    printk("%08x ", i * fds); \
+    if (i % 4 == 0) { \
+      printk("%08x: ", i * step + offset); \
+    } \
     for (j = 0; j < fds; j++) { \
       printk("%02x", *((uint8_t*)fields + i * fds + (fds - j - 1))); \
     } \
-    printk("\n"); \
+    printk(" "); \
+    if (i % 4 == 3) { \
+      printk("\n"); \
+    } \
   }\
+  if (i % 4 != 3) { \
+    printk("\n"); \
+  } \
 }
 
-void dump_vmcs_fields_16_control() {
-  struct {
-    uint16_t virtual_processor_id;
-    uint16_t posted_interrupt_notification_vector;
-  } fields;
-  fields.virtual_processor_id = 0x10c;
-  fields.posted_interrupt_notification_vector = 0x20c;
-  DUMP(&fields, sizeof(uint16_t), sizeof(fields));
+#define MEMCPY(dst, src, size) { \
+  uint32_t ii; \
+  for (ii = 0; ii < size; ii++) { \
+    *((uint8_t*)dst + ii) = *((uint8_t*)src + ii); \
+  } \
+}
+
+void read_vmcs_fields(uint32_t offset, uint32_t fs, uint32_t count, uint32_t step, uint8_t *fields) {
+  uint32_t i, field, f = offset;
+  for (i = 0; i < count; i++) {
+    field = cpu_vmread(f);
+    MEMCPY(fields + (fs * i), (uint8_t*)&field, fs);
+    f += step;
+  }
+}
+
+void dump_vmcs_fields(uint64_t offset, uint32_t fs, uint32_t count, uint32_t step) {
+  uint8_t fields[4096];
+  read_vmcs_fields(offset, fs, count, step, (uint8_t *)&fields[0]);
+  DUMP(&fields, fs, count * fs, offset, step);
 }

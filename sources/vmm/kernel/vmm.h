@@ -8,6 +8,7 @@ extern vmm_info_t *vmm_info;
 /* VMCS Encodings */
 enum vmcs_field {
   VIRTUAL_PROCESSOR_ID            = 0x00000000,
+  POSTED_INT_NOTIF_VECTOR         = 0x00000002,
   GUEST_ES_SELECTOR               = 0x00000800,
   GUEST_CS_SELECTOR               = 0x00000802,
   GUEST_SS_SELECTOR               = 0x00000804,

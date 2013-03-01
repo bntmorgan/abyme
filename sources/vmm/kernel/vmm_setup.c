@@ -252,6 +252,12 @@ void vmm_create_vmxon_and_vmcs_regions(void) {
   uint32_t edx;
   INFO("read IA32_VMX_BASIC\n");
 
+  uint32_t i;
+  for (i = 0; i < 4096; i++) {
+    vmxon[i] = 0;
+    vmcs0[i] = 0;
+  }
+
   /*
    * We ignore bit 48 b because everything must stand into the first giga bytes
    * of memory.

@@ -45,3 +45,21 @@ Syslinux :
       int19 ko
       b8000 ok
       rm_pm ok
+
+Lecture des vmcs avant le passage en smm
+----------------------------------------
+
+- Guest Interrupt state : virtual interrupt delivery (supporté/activé) ?
+- VPID ?
+- MRS Biptmap ?
+- MRS count ? (voir ramooflax)
+- Vm function control dans 64 bits control fields
+- EPTP switching
+- VM_EXIT Controles 0x336fff
+- VM_ENTRY Controls 91ff
+- Secondary processor based execution controls 
+- LDTR et TR Acces rights respectivement, 82 et 83
+- Guest SMBASE (0x00)
+- Guest linear address 0x0 ? Pourquoi pas 0x700 ?
+- Guest CR0 0x30 ?
+- Guest CR4 0x2000 ? VMX actif
