@@ -361,6 +361,7 @@ Fonction ``0xfffffd8d``
     fffffe5f:	33 c0                	xor    %eax,%eax
 
 
+['python3.2 ./disasm-to-graph.py -o 0xffc00000 -s 0xfffffd8d -e fffffe61 -b 32 -f d.bios.rom', 'dot -Tpng -o 0xfffffd8d.png']
 .. image:: 0xfffffd8d.png
 
 **TODO**

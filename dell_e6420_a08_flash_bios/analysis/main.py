@@ -24,7 +24,7 @@ def process_image(context, section):
     command = shlex.split(command)
     process = subprocess.Popen(command, stdin=process_stdin, stdout=subprocess.PIPE)
     process_stdin = process.stdout
-  #print(commands)
+  print(commands)
   result = process.stdout.readlines()
   print(".. image:: %s.png" % (section["dest"]))
 

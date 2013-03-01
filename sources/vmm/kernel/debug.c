@@ -208,7 +208,7 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   getstring(input, DEBUG_INPUT_SIZE); \
   printk("\n"); \
   uint64_t addr = atoi_hexa(input); \
-  printk("\nsize ? "); \
+  printk("\n %X size ? ", addr); \
   getstring(input, DEBUG_INPUT_SIZE); \
   printk("\n"); \
   uint64_t size = atoi_hexa(input); \
@@ -515,12 +515,13 @@ uint8_t waitkey() {
   return k;
 }
 
-int pow(int number, unsigned int p) {
+//XXX uint64_t is very big
+uint64_t pow(uint64_t number, uint64_t p) {
   if (p == 0) {
     return 1;
   }
-  int n = number;
-  unsigned int i;
+  uint64_t n = number;
+  uint64_t i;
   for (i = 1; i < p; ++i) {
     n *= number;
   }
@@ -536,6 +537,7 @@ uint64_t atoi_hexa(char *s) {
     } else if(s[i] >= 'a' && s[i] <= 'f') {
       number += (s[i] - 'a' + 10) * pow(0x10, size - i - 1);
     }
+printk("c:%c %X\n", s[i], number);
   }
   return number;
 }
