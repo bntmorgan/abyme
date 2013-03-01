@@ -8,8 +8,8 @@ Le bios commence par sauter à une routine permettant de passer en mode protég�
 La GDT est en mode FLAT pour chacun de ses descripteurs de segments.
 A présent, le processeur est en mode protégé.
 
-Fonction principale du bios
----------------------------
+Fonction ``0xfffffe66``
+-----------------------
 :section	0xfffffe66:0xfffffe80	CODE32
 
 Le controlleur mémoire du processeur est initialisé. Il est configurable à travers l'espace
@@ -104,3 +104,13 @@ l'adresse ``*0xfffffe62 == 0xfffffea5``.
 ------------
 
 :section	0xfffffea5:0xffffff12	CODE32
+
+**TODO**
+
+Fonction ``0xfffffd8d``
+-----------------------
+:section	0xfffffd8d:0xfffffe61	CODE32
+
+:image	0xfffffd8d:0xfffffe61	GRAPH32	0xfffffd8d
+
+**TODO**
