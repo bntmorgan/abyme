@@ -18,6 +18,8 @@ struct {
   uint8_t high_msrs_write_bitmap[128];
 } __attribute__((packed)) msr_bitmaps __attribute__((aligned(0x1000)));
 
+uint8_t smram[1024 * 64] __attribute((aligned(0x1000)));
+
 void vmm_vmcs_fill_guest_state_fields(void) {
   /**
    * 24.4: Guest-state area.
@@ -117,6 +119,12 @@ void vmm_vmcs_fill_guest_state_fields(void) {
   cpu_vmwrite(VMCS_LINK_POINTER_HIGH, 0xFFFFFFFF);
   // GUEST_VMX_PREEMPT_TIMER_VAL, GUEST_PDPTR[0-3]{,_HIGH},
   // GUEST_INTERRUPT_STATUS unused
+  
+  //cpu_vmwrite(GUEST_SMBASE, (uint32_t)(uint64_t)&smram[0]); 
+  smram[0x8000] = 0x0f;
+  smram[0x8001] = 0xaa;
+
+  INFO("SMRAM %x\n", smram);
 }
 
 void vmm_vmcs_fill_host_state_fields(void) {

@@ -1,4 +1,4 @@
-.set STACKSIZE, 0x4000
+.set STACKSIZE, 0x10000
 .comm stack,STACKSIZE,32
 .text
 .globl start
