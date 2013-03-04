@@ -5,5 +5,6 @@
  * Checks if Dual monitor Treatment is available
  */
 int stm_check_dual_monitor();
+void stm_enable_monitor();
 
 #endif

@@ -5,6 +5,7 @@
 #include "hardware/msr.h"
 #include "vmem.h"
 #include "stdio.h"
+#include "stm.h"
 
 uint32_t vmcs_revision_identifier;
 uint32_t number_bytes_regions;
@@ -30,6 +31,20 @@ uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
  * See [Intel_August_2012], volume 3, section 31.5.
  */
 void vmm_setup() {
+  
+  /**
+   * Checking the dual monitor treatment
+   */
+  INFO("Checking the availability of dual monitor : ");
+  if (stm_check_dual_monitor()) {
+    printk("YES\n");
+    INFO("Enabling Dual Monitor\n");
+    stm_enable_monitor();
+  } else {
+    printk("NO\n");
+  }
+  __asm__ __volatile__("xchg %bx, %bx");
+
   /*
    * 1) Check VMX support in processor using CPUID. Done by the loader.
    * 2) TODO: Determine the VMX capabilities supported by the processor

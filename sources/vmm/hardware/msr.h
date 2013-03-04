@@ -5,6 +5,7 @@
 
 #define MSR_ADDRESS_IA32_EFER                       0xc0000080
 #define MSR_ADDRESS_IA32_APIC_BASE                  0x01b
+#define MSR_ADDRESS_IA32_SMM_MONITOR_CTL            0x09b
 #define MSR_ADDRESS_IA32_DEBUGCTL                   0x1d9
 #define MSR_ADDRESS_IA32_FEATURE_CONTROL_MSR        0x03a
 #define MSR_ADDRESS_IA32_SYSENTER_CS                0x174
