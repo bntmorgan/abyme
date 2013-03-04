@@ -6,7 +6,6 @@
 #include "pmem.h"
 #include "vmem.h"
 #include "vmm.h"
-#include "stm.h"
 #include "vmm_info.h"
 #include "vmm_setup.h"
 #include "smp.h"
@@ -120,17 +119,6 @@ void kernel_main(vmm_info_t *_vmm_info) {
    */
   //write_bioshang(0xf80c6);
   
-  /**
-   * Checking the dual monitor treatment
-   */
-  INFO("Checking the availability of dual monitor : ");
-  if (stm_check_dual_monitor()) {
-    printk("YES\n");
-  } else {
-    printk("NO\n");
-  }
-  __asm__ __volatile__("xchg %bx, %bx");
-
   vmm_vm_setup_and_launch();
 }
 
