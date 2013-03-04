@@ -1,4 +1,7 @@
 *.sw*
 binary
 build
-config
+config/*.img
+config/*.conf
+config/*.sh
+config/*.cfg

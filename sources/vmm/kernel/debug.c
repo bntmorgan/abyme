@@ -484,8 +484,8 @@ void debug_breakpoint_print() {
   int i;
   printk("Breakpoints :\n");
   for (i = 0; i < bsize; ++i) {
-    printk("%x : %x\n", i, breakpoints[i].address);
-    printk("   : %x\n", *((uint32_t *)breakpoints[i].code)); // XXX moisi
+    printk("%06x : %x\n", i, breakpoints[i].address);
+    printk("       : %x\n", *((uint32_t *)breakpoints[i].code)); // XXX moisi
   }
 }
 
