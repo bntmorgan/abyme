@@ -27,6 +27,19 @@ uint32_t vmm_entry;
 uint32_t vmm_physical_start;
 uint32_t vmm_physical_end;
 
+/**
+ * Unprotecting bios memory
+ * See intel Processor Configuration Registers
+ * manual
+ * PAM0 to PAM7
+ */
+void kernel_unprotect_bios() {
+  *((uint8_t *)0xf8000080) = 0x30;
+  *((uint8_t *)0xf8000081) = 0x33;
+  *((uint8_t *)0xf8000082) = 0x33;
+  *((uint8_t *)0xf80f80d8) = 0x00;
+}
+
 void kernel_vmm_allocation(void) {
   void *vmm_header = (void *) multiboot_get_module_start(0);
   uint32_t vmm_size = (uint32_t) elf64_get_size(vmm_header);
@@ -44,7 +57,7 @@ void kernel_vmm_allocation(void) {
   vmm_info = (vmm_info_t *) (vmm_physical_start + vmm_size + padding);
   uint32_t rm_kernel_copy_start = vmm_physical_start + vmm_size + padding + sizeof(vmm_info_t) + VMM_STACK_SIZE;
 
-INFO("where: %x\n", vmm_physical_start);
+  INFO("where: %x\n", vmm_physical_start);
   elf64_load_relocatable_segment(vmm_header, (void *) vmm_physical_start);
 
   // TODO: memcpy!!!
@@ -109,11 +122,14 @@ void kernel_main(uint32_t magic, uint32_t *address) {
   cpu_enable_pae();
   cpu_enable_long_mode();
   cpu_enable_paging();
-  // XXX Unprotecting the bios memory
-  *((uint8_t *)0xf8000080) = 0x30;
-  *((uint8_t *)0xf8000081) = 0x33;
-  *((uint8_t *)0xf8000082) = 0x33;
-  *((uint8_t *)0xf80f80d8) = 0x00;
+  multiboot_print_info();
+  
+  // Multiboot parameter to unprotect BIOS memory 
+  if (multiboot_check_module_argument(-1, "bios")) {
+    INFO("Unprotecting BIOS memory\n");
+    kernel_unprotect_bios();
+  } 
+
   /*
    * edi contains the address of vmm_info structure.
    */

@@ -36,15 +36,17 @@ void multiboot_setup(uint32_t magic, uint32_t *address) {
 }
 
 void multiboot_print_info(void) {
+  INFO("cmdline='%s'\n",
+      (uint8_t *) multiboot_info->cmdline);
   INFO("module start=%08x end=%08x cmdline='%s'\n",
       (uint32_t) multiboot_modules[0]->mod_start,
       (uint32_t) multiboot_modules[0]->mod_end,
       (uint8_t *) multiboot_modules[0]->cmdline);
   if (multiboot_modules[1] != 0) {
     INFO("module start=%08x end=%08x cmdline='%s'\n",
-        (uint32_t) multiboot_modules[0]->mod_start,
-        (uint32_t) multiboot_modules[0]->mod_end,
-        (uint8_t *) multiboot_modules[0]->cmdline);
+        (uint32_t) multiboot_modules[1]->mod_start,
+        (uint32_t) multiboot_modules[1]->mod_end,
+        (uint8_t *) multiboot_modules[1]->cmdline);
   }
 }
 
@@ -58,4 +60,61 @@ uint32_t multiboot_get_module_end(uint8_t index) {
 
 uint32_t multiboot_get_module_start(uint8_t index) {
   return multiboot_modules[index]->mod_start;
+}
+
+uint8_t multiboot_next_separator(char **str) {
+  uint8_t space = 0, escaped = 0;
+  while (**str != '\0' && space == 0) {
+    if (escaped == 0 && **str == ' ') {
+      space = 1;
+    } else if (**str == '\\' && escaped == 0) {
+      escaped = 1;
+    } else if (escaped == 1) {
+      escaped = 0;
+    }
+    (*str)++;
+  }
+  return space;
+}
+
+uint8_t multiboot_strcmp(char *a, char *b) {
+  if (*a == '\0') {
+    return -1;
+  }
+  if (*b == '\0') {
+    return 1;
+  }
+  while (*a != '\0' && *b != '\0') {
+    if (*a < *b) {
+      return -1;
+    }
+    if (*a > *b) {
+      return 1;
+    }
+    a++;
+    b++;
+  }
+  if (*a == '\0' && *b != '\0') {
+    return -1;
+  }
+  if (*b == '\0' && *a != '\0') {
+    return 1;
+  }
+  return 0;
+}
+
+uint8_t multiboot_check_module_argument(uint8_t index, char *arg) {
+  char *cmdline;
+  if (index == (uint8_t)-1) {
+    cmdline = (char*)multiboot_info->cmdline;
+  } else {
+    cmdline = (char*)multiboot_modules[index]->cmdline;
+  }
+  // Get the next argument
+  while (multiboot_next_separator(&cmdline)) {
+    if (multiboot_strcmp(cmdline, arg) == 0) {
+      return 1;
+    }
+  }
+  return 0;
 }

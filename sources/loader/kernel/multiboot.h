@@ -94,4 +94,6 @@ uint32_t multiboot_get_module_end(uint8_t index);
 
 multiboot_info_t *multiboot_get_info(void);
 
+uint8_t multiboot_check_module_argument(uint8_t index, char *arg);
+
 #endif
