@@ -153,7 +153,6 @@ void vmm_vm_setup_and_launch() {
  * See [Intel_August_2012], volume 3, section 28.2.
  */
 void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t vmm_size) {
-  #if 0 // BAckup
   /*
    * Everything stands into the first 4GB, so we only need the first entry of PML4.
    */
@@ -201,8 +200,8 @@ void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t
     ept_info->PD_PDPT_PML40[vmm_physical_start >> 30][((vmm_physical_start >> 21) + i) & 0x1ff] =
         ((uint64_t) (vmm_physical_start + (i << 21))) | (1 << 7) /* 2MB page */;
   }
-#endif
-  
+ 
+#if 0
   /*
    * Everything stands into the first 4GB, so we only need the first entry of PML4.
    */
@@ -251,6 +250,7 @@ void vmm_ept_setup(ept_info_t *ept_info, uintptr_t vmm_physical_start, uintptr_t
     ept_info->PD_PDPT_PML40[vmm_physical_start >> 30][((vmm_physical_start >> 21) + i) & 0x1ff] =
         ((uint64_t) (vmm_physical_start + (i << 21))) | (1 << 7) /* 2MB page */;
   }
+#endif
 }
 
 void vmm_create_vmxon_and_vmcs_regions(void) {

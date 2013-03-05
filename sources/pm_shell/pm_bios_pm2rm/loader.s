@@ -18,7 +18,7 @@ stack_top:
 .comm magic, 4                         # we will use this in kmain
 
 loader:
-    movl  $stack_top, %esp               # set up the stack, stacks grow downwards
+    movl  $stack_top, %esp              # set up the stack, stacks grow downwards
     movl  %eax, magic                   # Multiboot magic number
     movl  %ebx, mbd                     # Multiboot data structure
     cli
