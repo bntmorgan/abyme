@@ -1,0 +1,265 @@
+Passage en mode protégé
+-----------------------
+:section	0xfffffff0:0xfffffff4	CODE16
+:section	0xffffff40:0xffffff6a	CODE16
+:section	0xffffffb8:0xffffffbd	GDTR32
+:section	0xffffff70:0xffffffb7	GDT32
+
+Le bios commence par sauter à une routine permettant de passer en mode protégé.
+La GDT est en mode FLAT pour chacun de ses descripteurs de segments. A
+présent, le processeur est en mode protégé.
+
+Fonction ``0xfffffe66``
+-----------------------
+:section	0xfffffe66:0xfffffe81	CODE32
+
+Le controlleur mémoire du processeur est initialisé. Il est configurable à
+travers l'espace PCI en utilisant les I/O. Son identifiant est : ``B0:D0:F0``.
+Pour obtenir cette identifiant, il suffit d'appliquer les formules suivantes :
+::
+
+  address = 0x80000060
+  B =  (address - 0x80000000) >> 16
+  D = ((address - 0x80000000) >> 11) & 31
+  F = ((address - 0x80000000) >>  8) & 7
+  R =  (address - 0x80000000)        & 255
+
+Dans son espace de configuration, le registre ``0x60`` correspond au
+``PCIEXBAR``. L'espace MMIO est donc configuré pour être adressé en
+``0xf8000000``. Le bit de poid faible de ``0xf8000001`` indique que l'espace
+MMIO est activé. Le ``0x4`` utilisé à l'adresse ``0xfffffe74`` signifie que
+seulement ``64Mo`` seront adressables, ce qui est cohérent avec les composants
+dans le portable et ce qui évite le gaspillage de mémoire. Le pseudo-code est
+le suivant :
+::
+
+  io(0xcf8) = 0x80000060
+  io(0xcfc) = 0x4
+  io(0xcfc) = io(0xcfc) | 0xf8000001
+
+Ces informantions sont disponibles dans le document :
+
+  Mobile 3rd Generation Intel CoreTM Processor Family, Mobile Intel
+  Pentium Processor Family, and Mobile Intel Celeron Processor Family
+
+------------
+
+:section	0xfffffe81:0xfffffe94	CODE32
+
+Le registre ``0xf80f80f0`` correspond au composant ``B0:D31:F0``. Les formules
+précédentes, pour le PIO, ne s'appliquent pas ici. Pour obtenir l'identifiant,
+il suffit alors d'appliquer les formules suivantes :
+::
+
+  address = 0xf80f80f0
+  PCIEXBAR = 0xf8000000
+  R = address % 4096
+  F = ((address - PCIEXBAR) / 4096) % 8
+  D = ((address - PCIEXBAR) / (4096 * 8)) % 32
+  B = ((address - PCIEXBAR) / (4096 * 8 * 32))
+
+Ce composant correspond à l'interface avec le bus LPC (*LPC Interface Bridge
+Registers*). Le registre ``0xf0`` est l'adresse du RCBA (*Root Complex Base
+Address*). Cette zone contient les registres de configuration du chipset. Elle
+est à présent accessible à l'adresse ``0xfed1c000``. L'offset ``0xfed1f410 -
+0xfed1c000`` correspond au registre ``0x3410`` de cette zone, le GCS (*General
+Control and Status*). En masquant ce registre avec ``0xfffffffb``, le bios
+positionne à ``0`` le bit RPR :
+
+**TODO : mieux comprendre ce bit**
+
+  Reserved Page Route (RPR) — R/W. Determines where to send the reserved page
+  registers. These addresses are sent to PCI or LPC for the purpose of generating POST
+  codes. The I/O addresses modified by this field are: 80h, 84h, 85h, 86h, 88h, 8Ch,
+  8Dh, and 8Eh.
+
+  0 = Writes will be forwarded to LPC, shadowed within the PCH, and reads will be
+  returned from the internal shadow
+
+  1 = Writes will be forwarded to PCI, shadowed within the PCH, and reads will be
+  returned from the internal shadow.
+
+  NOTE: if some writes are done to LPC/PCI to these I/O ranges, and then this bit is
+  flipped, such that writes will now go to the other interface, the reads will not
+  return what was last written. Shadowing is performed on each interface.
+  The aliases for these registers, at 90h, 94h, 95h, 96h, 98h, 9Ch, 9Dh, and 9Eh, are
+  always decoded to LPC.
+
+Ces informantions sont disponibles dans le document :
+
+  Intel 6 Series Chipset and Intel C200 Series Chipset
+
+------------
+
+:section	0xfffffe94:0xfffffe9b	CODE32
+
+Le port ``0x80`` semble être utilisé comment port de diagnostic :
+
+  I/O port 0x80 is traditionally used for POST Codes. (POST = Power On Self Test)
+
+------------
+
+:section	0xfffffe62:0xfffffe65	DATA32
+:section	0xfffffe9b:0xfffffea5	CODE32
+
+Les instructions aux adresses ``0xfffffe9b`` et ``0xfffffea0`` correspondent à
+un ``call``. Par contre, au lieu de laisser le processeur empiler l'adresse de
+retour, cette dernière est définie statiquement à l'adresse ``0xfffffe62``.
+Après l'exécution de la routine à l'adresse ``0xfffffd8d`` l'exécution se
+poursuit à l'adresse ``*0xfffffe62 == 0xfffffea5``.
+
+------------
+
+:section	0xfffffea5:0xffffff13	CODE32
+
+:section	0xfffffea5:0xffffff13	PCODE32
+
+En fonction du retour de la fonction ``0xfffffd8d``, le bios met à jour
+le microcode du processeur. A priori, le mode SMM n'est pas encore configuré.
+Donc, il semblerait que les accès aux ports ``0xb2``/``0x84`` permettent de
+detecter si c'est le cas. Sinon, le mode SMM intercepte et modifie la valeur
+de ``eax``. Si le mode SMM est activé, alors la machine s'arrête en boucle
+infinie. **VERIFIER, surtout le saut**
+
+**TODO**
+
+Fonction ``0xfffffd8d``
+-----------------------
+:section	0xfffffd8d:0xfffffe62	CODE32
+
+:section	0xfffffd8d:0xfffffe62	PCODE32
+
+:section	0xffc20020:0xffc20022	DATA32
+:section	0xffc20030:0xffc20032	DATA32
+
+#:section	0xffc20000:0xffc40000	COUNT08
+
+:image	0xfffffd8d:0xfffffe62	GRAPH32	0xfffffd8d
+
+Cette fonction permet d'identifier, dans la zone de code de ``0xffc20000`` à ``ffc40000``,
+si une mise à jour du microcode est nécessaire.
+
+**TODO**
+
+Fonction ``0xfffffaf0``
+-----------------------
+:section	0xfffffaf0:0xfffffb11	CODE32
+
+:section	0xfffffb11:0xfffffb57	CODE32
+
+:section	0xfffffb57:0xfffffd15	PCODE32
+
+:section	0xfffffd15:0xfffffd53	DATA16
+
+Initialisation des MTRR à partir d'une liste statique disponible à l'adresse
+``0xfffffd15`` (cf. adresse ``0xfffffb83``). Les valeurs utilisées pour ``ecx``
+(cf. adresse ``0xfffffb96``) correspondent aux MSR pernettant de configurer les MTRR.
+
+Création d'une zone de données en ``0xfef10000`` après avoir désactivé
+certains accès à la mémoire... (cf. adresse ``0xfffffceb``).
+Cela permettra par la suite d'avoir une pile.
+
+Fonction ``0xffffff13``
+-----------------------
+:section	0xffffff13:0xffffff1c	CODE32
+:section	0xfffff8c0:0xfffff8c5	CODE32
+:section	0xfffff8e0:0xfffff8e9	CODE32
+:section	0xfffff8c5:0xfffff8ca	CODE32
+:section	0xfffff930:0xfffffae4	CODE32
+
+Fonction ``0xffff8ca``
+----------------------
+:section	0xfffff8ca:0xfffff8cf	CODE32
+:section	0xfffff8f0:0xfffff92e	CODE32
+
+Fonction ``0xfffff8cf``
+-----------------------
+:section	0xfffff8cf:0xfffff8d4	CODE32
+:section	0xffffff1c:0xffffff40	CODE32
+:section	0xffffffe0:0xffffffe3	DATA32
+
+Le traitement réalisé à l'adresse ``0xffffff1c`` correspond à la creation d'une structure
+dans la pile. Un pointeur vers cette structure sera récupéré dans la fonction appelée à
+l'adresse ``0xfffe5404``. La valeur ``0x8000`` pourrait correspondre à la taille de la pile.
+
+Fonction ``fffe5404``
+---------------------
+:section	0xfffe5404:0xfffe5410	CODE32
+:section	0xfffe5fe6:0xfffe5ff4	CODE32
+:section	0xfffe5ee5:0xfffe5fe6	PCODE32
+
+:image	0xfffe5ee5:0xfffe5fe6	GRAPH32	0xfffe5ee5
+
+Attention, il y a un pointeur de fonction en ``0xfffe5fd8``.
+
+Fonction ``fffe5d22``
+---------------------
+:section	0xfffe5d22:0xfffe5d27	CODE32
+
+A l'adresse ``0xfffe5ef9`` de la fonction ``0xfffe5404`` (qui invoque la fonction
+``0xfffe5d22``), ``edi`` vaut 0 (valeur correspondant à ``0xc(%ebp)`` en ``0xfffe5ef0``
+et initialisée en ``0xfffe5fe6``). Or, si ce registre vaut 0, la fonction présente
+n'est pas invoquée. **Cette remarque n'est valable que pour la fonction ``0xfffe5404``.**
+
+**TODO**
+
+Fonction ``fffe5d27`` -- ``memset``
+-----------------------------------
+:section	0xfffe5d27:0xfffe5d2b	CODE32
+
+:section	0xfffe66e4:0xfffe67ac	PCODE32
+
+Cette fonction ressemble à un ``memset``. Le premier paramètre ``0x8(ebp)``
+serait l'adresse du *buffer*. Le second paramètre ``0xc(ebp)`` serait la taille
+de la zone.  Le troisième paramètre ``0x10(ebp)`` serait l'octet à copier.
+En fonction de la taille de la zone à initialiserm les extensions MMX peuvent
+être utilisées.
+
+Fonction ``fffe64a4``
+---------------------
+:section	0xfffe64a4:0xfffe64aa	CODE32
+
+Cette fonction sauvegarde le premier paramètre dans le registre ``mm7``.
+**TODO**
+
+Fonction ``fffe5d2c``
+---------------------
+:section	0xfffe5d2c:0xfffe5dd2	CODE32
+
+:image	0xfffe5d2c:0xfffe5dd2	GRAPH32	0xfffe5d2c
+
+**TODO**
+
+Fonction ``fffe5ff4``
+---------------------
+
+:section	0xfffe5ff4:0xfffe600c	CODE32
+
+**TODO**
+
+**TODO**
+--------
+
+:section	0xfffe67b4:0xfffe67d5	CODE32
+
+:section	0xfffe6624:0xfffe66e2	CODE32
+
+:section	0xfffe5afb:0xfffe5b6d	CODE32
+
+:section	0xfffe63e9:0xfffe6401	CODE32
+
+:section	0xfffe6274:0xfffe635a	CODE32
+
+:section	0xfffe6274:0xfffe635a	PCODE32
+
+:section	0xfffe5583:0xfffe55b3	CODE32
+
+:section	0xfffe6183:0xfffe620e	CODE32
+
+:section	0xfffe5671:0xfffe5833	CODE32
+
+:section	0xfffe6083:0xfffe6183	PCODE32
+
+:image	0xfffe6083:0xfffe6183	GRAPH32	0xfffe6083
+
+Dans le dernier affichage : il y a deux fonctions !

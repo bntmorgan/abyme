@@ -1,5 +1,0 @@
-bit=dec
-start=hex
-file-offset=hex
-length=dec
-word-size=dec

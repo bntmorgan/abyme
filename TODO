@@ -1,3 +1,9 @@
+Mettre au propre ce fichier au format RST
+Mettre au propre l'arborescence du repertoire bios :
+  - un sous repertoire tools (contenant les algo de decompilation, graphes, etc.)
+  - un sous repertoire rom
+  - un sous repertoire rapport (contenant les sections, etc.)
+
 Essayer de changer EPT : empecher l'acces au dela de 1Mo par le bios et executer l'int13.
  -> a chaque erreur, analyser la raison : on pourra voir si il y a un acces au MMCONFIG (mapping pcie)
     -> si il y a acces a MMCONFIG, on pourra voir si EPT est configure correctement pour le type de
