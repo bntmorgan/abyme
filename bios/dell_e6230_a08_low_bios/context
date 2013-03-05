@@ -1,0 +1,3 @@
+file=mem_0x00000000_0x000fffff
+file-offset=0x00000000
+vendor=intel

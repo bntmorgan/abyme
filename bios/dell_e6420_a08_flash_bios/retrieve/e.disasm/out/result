@@ -1,0 +1,12 @@
+0x0000000000000000:0x00000000000001ff	DATA32
+# IVT du BIOS
+# The IVT at address 0x54 (i.e. value 0xf52c0264)
+# is the interruption 0x15
+# This value equals 0xf52c0 + 0x0264 = 0xf5524
+> hexdump -v -e '6/4 "%08x " "\n"' -s -12582912 -n 512 ../out/d.bios.rom
+  | python cat.py -s 0x0 -p 0x18
+
+0x00000000000f5524:0x00000000000f552d	CODE16
+# The value associated to cs is 0xf52c
+# The address *%cs:0x260 equals 0xf52c0 + 0x0260 = 0xf5520
+# This address contains the address of the destination of the jmp
