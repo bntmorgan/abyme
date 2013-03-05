@@ -1,0 +1,1274 @@
+%PDF-1.4
+%“Œ‹ž ReportLab Generated PDF document http://www.reportlab.com
+% 'BasicFonts': class PDFDictionary 
+1 0 obj
+% The standard fonts dictionary
+<< /F1 2 0 R
+ /F2 3 0 R
+ /F3 4 0 R
+ /F4 6 0 R
+ /F5 8 0 R >>
+endobj
+% 'F1': class PDFType1Font 
+2 0 obj
+% Font Helvetica
+<< /BaseFont /Helvetica
+ /Encoding /WinAnsiEncoding
+ /Name /F1
+ /Subtype /Type1
+ /Type /Font >>
+endobj
+% 'F2': class PDFType1Font 
+3 0 obj
+% Font Helvetica-Bold
+<< /BaseFont /Helvetica-Bold
+ /Encoding /WinAnsiEncoding
+ /Name /F2
+ /Subtype /Type1
+ /Type /Font >>
+endobj
+% 'F3': class PDFType1Font 
+4 0 obj
+% Font Courier
+<< /BaseFont /Courier
+ /Encoding /WinAnsiEncoding
+ /Name /F3
+ /Subtype /Type1
+ /Type /Font >>
+endobj
+% 'Page1': class PDFPage 
+5 0 obj
+% Page dictionary
+<< /Contents 22 0 R
+ /MediaBox [ 0
+ 0
+ 595.2756
+ 841.8898 ]
+ /Parent 21 0 R
+ /Resources << /Font 1 0 R
+ /ProcSet [ /PDF
+ /Text
+ /ImageB
+ /ImageC
+ /ImageI ] >>
+ /Rotate 0
+ /Trans <<  >>
+ /Type /Page >>
+endobj
+% 'F4': class PDFType1Font 
+6 0 obj
+% Font Courier-Bold
+<< /BaseFont /Courier-Bold
+ /Encoding /WinAnsiEncoding
+ /Name /F4
+ /Subtype /Type1
+ /Type /Font >>
+endobj
+% 'Page2': class PDFPage 
+7 0 obj
+% Page dictionary
+<< /Contents 23 0 R
+ /MediaBox [ 0
+ 0
+ 595.2756
+ 841.8898 ]
+ /Parent 21 0 R
+ /Resources << /Font 1 0 R
+ /ProcSet [ /PDF
+ /Text
+ /ImageB
+ /ImageC
+ /ImageI ] >>
+ /Rotate 0
+ /Trans <<  >>
+ /Type /Page >>
+endobj
+% 'F5': class PDFType1Font 
+8 0 obj
+% Font Helvetica-Oblique
+<< /BaseFont /Helvetica-Oblique
+ /Encoding /WinAnsiEncoding
+ /Name /F5
+ /Subtype /Type1
+ /Type /Font >>
+endobj
+% 'Page3': class PDFPage 
+9 0 obj
+% Page dictionary
+<< /Contents 24 0 R
+ /MediaBox [ 0
+ 0
+ 595.2756
+ 841.8898 ]
+ /Parent 21 0 R
+ /Resources << /Font 1 0 R
+ /ProcSet [ /PDF
+ /Text
+ /ImageB
+ /ImageC
+ /ImageI ] >>
+ /Rotate 0
+ /Trans <<  >>
+ /Type /Page >>
+endobj
+% 'Page4': class PDFPage 
+10 0 obj
+% Page dictionary
+<< /Contents 25 0 R
+ /MediaBox [ 0
+ 0
+ 595.2756
+ 841.8898 ]
+ /Parent 21 0 R
+ /Resources << /Font 1 0 R
+ /ProcSet [ /PDF
+ /Text
+ /ImageB
+ /ImageC
+ /ImageI ] >>
+ /Rotate 0
+ /Trans <<  >>
+ /Type /Page >>
+endobj
+% 'Page5': class PDFPage 
+11 0 obj
+% Page dictionary
+<< /Contents 26 0 R
+ /MediaBox [ 0
+ 0
+ 595.2756
+ 841.8898 ]
+ /Parent 21 0 R
+ /Resources << /Font 1 0 R
+ /ProcSet [ /PDF
+ /Text
+ /ImageB
+ /ImageC
+ /ImageI ] >>
+ /Rotate 0
+ /Trans <<  >>
+ /Type /Page >>
+endobj
+% 'Page6': class PDFPage 
+12 0 obj
+% Page dictionary
+<< /Contents 27 0 R
+ /MediaBox [ 0
+ 0
+ 595.2756
+ 841.8898 ]
+ /Parent 21 0 R
+ /Resources << /Font 1 0 R
+ /ProcSet [ /PDF
+ /Text
+ /ImageB
+ /ImageC
+ /ImageI ] >>
+ /Rotate 0
+ /Trans <<  >>
+ /Type /Page >>
+endobj
+% 'Page7': class PDFPage 
+13 0 obj
+% Page dictionary
+<< /Contents 28 0 R
+ /MediaBox [ 0
+ 0
+ 595.2756
+ 841.8898 ]
+ /Parent 21 0 R
+ /Resources << /Font 1 0 R
+ /ProcSet [ /PDF
+ /Text
+ /ImageB
+ /ImageC
+ /ImageI ] >>
+ /Rotate 0
+ /Trans <<  >>
+ /Type /Page >>
+endobj
+% 'R14': class PDFCatalog 
+14 0 obj
+% Document Root
+<< /Outlines 16 0 R
+ /PageLabels 29 0 R
+ /PageMode /UseNone
+ /Pages 21 0 R
+ /Type /Catalog >>
+endobj
+% 'R15': class PDFInfo 
+15 0 obj
+<< /Author ()
+ /CreationDate (D:20130301104921-01'00')
+ /Creator (\(unspecified\))
+ /Keywords ()
+ /Producer (ReportLab PDF Library - www.reportlab.com)
+ /Subject (\(unspecified\))
+ /Title () >>
+endobj
+% 'R16': class PDFOutlines 
+16 0 obj
+<< /Count 4
+ /First 17 0 R
+ /Last 20 0 R
+ /Type /Outlines >>
+endobj
+% 'Outline.0': class OutlineEntryObject 
+17 0 obj
+<< /Dest [ 5 0 R
+ /XYZ
+ 62.69291
+ 765.0236
+ 0 ]
+ /Next 18 0 R
+ /Parent 16 0 R
+ /Title (Liste des sections trait\351es) >>
+endobj
+% 'Outline.1': class OutlineEntryObject 
+18 0 obj
+<< /Dest [ 5 0 R
+ /XYZ
+ 62.69291
+ 528.0236
+ 0 ]
+ /Next 19 0 R
+ /Parent 16 0 R
+ /Prev 17 0 R
+ /Title (Passage en mode prot\351g\351) >>
+endobj
+% 'Outline.2': class OutlineEntryObject 
+19 0 obj
+<< /Dest [ 7 0 R
+ /XYZ
+ 62.69291
+ 566.6236
+ 0 ]
+ /Next 20 0 R
+ /Parent 16 0 R
+ /Prev 18 0 R
+ /Title (Fonction 0xfffffe66) >>
+endobj
+% 'Outline.3': class OutlineEntryObject 
+20 0 obj
+<< /Dest [ 12 0 R
+ /XYZ
+ 62.69291
+ 765.0236
+ 0 ]
+ /Parent 16 0 R
+ /Prev 19 0 R
+ /Title (Fonction 0xfffffd8d) >>
+endobj
+% 'R21': class PDFPages 
+21 0 obj
+% page tree
+<< /Count 7
+ /Kids [ 5 0 R
+ 7 0 R
+ 9 0 R
+ 10 0 R
+ 11 0 R
+ 12 0 R
+ 13 0 R ]
+ /Type /Pages >>
+endobj
+% 'R22': class PDFStream 
+22 0 obj
+% page stream
+<< /Length 6248 >>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+q
+1 0 0 1 62.69291 744.0236 cm
+q
+BT 1 0 0 1 0 3.5 Tm 21 TL /F2 17.5 Tf 0 0 0 rg (Liste des sections trait\351es) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 732.0236 cm
+Q
+q
+1 0 0 1 62.69291 732.0236 cm
+Q
+q
+1 0 0 1 62.69291 720.0236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+q
+1 0 0 1 6 -3 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL 10.5 0 Td (\177) Tj T* -10.5 0 Td ET
+Q
+Q
+q
+1 0 0 1 23 -3 cm
+q
+BT 1 0 0 1 0 2 Tm 12 TL /F3 10 Tf 0 0 0 rg (0x00000000fffffff0:0x00000000fffffff4 ) Tj /F1 10 Tf (CODE16) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 714.0236 cm
+Q
+q
+1 0 0 1 62.69291 702.0236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+q
+1 0 0 1 6 -3 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL 10.5 0 Td (\177) Tj T* -10.5 0 Td ET
+Q
+Q
+q
+1 0 0 1 23 -3 cm
+q
+BT 1 0 0 1 0 2 Tm 12 TL /F3 10 Tf 0 0 0 rg (0x00000000ffffff40:0x00000000ffffff6a ) Tj /F1 10 Tf (CODE16) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 696.0236 cm
+Q
+q
+1 0 0 1 62.69291 684.0236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+q
+1 0 0 1 6 -3 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL 10.5 0 Td (\177) Tj T* -10.5 0 Td ET
+Q
+Q
+q
+1 0 0 1 23 -3 cm
+q
+BT 1 0 0 1 0 2 Tm 12 TL /F3 10 Tf 0 0 0 rg (0x00000000ffffffb8:0x00000000ffffffbd ) Tj /F1 10 Tf (GDTR32) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 678.0236 cm
+Q
+q
+1 0 0 1 62.69291 666.0236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+q
+1 0 0 1 6 -3 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL 10.5 0 Td (\177) Tj T* -10.5 0 Td ET
+Q
+Q
+q
+1 0 0 1 23 -3 cm
+q
+BT 1 0 0 1 0 2 Tm 12 TL /F3 10 Tf 0 0 0 rg (0x00000000ffffff70:0x00000000ffffffb7 ) Tj /F1 10 Tf (GDT32) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 660.0236 cm
+Q
+q
+1 0 0 1 62.69291 648.0236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+q
+1 0 0 1 6 -3 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL 10.5 0 Td (\177) Tj T* -10.5 0 Td ET
+Q
+Q
+q
+1 0 0 1 23 -3 cm
+q
+BT 1 0 0 1 0 2 Tm 12 TL /F3 10 Tf 0 0 0 rg (0x00000000fffffe66:0x00000000fffffe80 ) Tj /F1 10 Tf (CODE32) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 642.0236 cm
+Q
+q
+1 0 0 1 62.69291 630.0236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+q
+1 0 0 1 6 -3 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL 10.5 0 Td (\177) Tj T* -10.5 0 Td ET
+Q
+Q
+q
+1 0 0 1 23 -3 cm
+q
+BT 1 0 0 1 0 2 Tm 12 TL /F3 10 Tf 0 0 0 rg (0x00000000fffffe81:0x00000000fffffe93 ) Tj /F1 10 Tf (CODE32) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 624.0236 cm
+Q
+q
+1 0 0 1 62.69291 612.0236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+q
+1 0 0 1 6 -3 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL 10.5 0 Td (\177) Tj T* -10.5 0 Td ET
+Q
+Q
+q
+1 0 0 1 23 -3 cm
+q
+BT 1 0 0 1 0 2 Tm 12 TL /F3 10 Tf 0 0 0 rg (0x00000000fffffe94:0x00000000fffffe9a ) Tj /F1 10 Tf (CODE32) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 606.0236 cm
+Q
+q
+1 0 0 1 62.69291 594.0236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+q
+1 0 0 1 6 -3 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL 10.5 0 Td (\177) Tj T* -10.5 0 Td ET
+Q
+Q
+q
+1 0 0 1 23 -3 cm
+q
+BT 1 0 0 1 0 2 Tm 12 TL /F3 10 Tf 0 0 0 rg (0x00000000fffffe62:0x00000000fffffe65 ) Tj /F1 10 Tf (DATA32) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 588.0236 cm
+Q
+q
+1 0 0 1 62.69291 576.0236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+q
+1 0 0 1 6 -3 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL 10.5 0 Td (\177) Tj T* -10.5 0 Td ET
+Q
+Q
+q
+1 0 0 1 23 -3 cm
+q
+BT 1 0 0 1 0 2 Tm 12 TL /F3 10 Tf 0 0 0 rg (0x00000000fffffe9b:0x00000000fffffea4 ) Tj /F1 10 Tf (CODE32) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 570.0236 cm
+Q
+q
+1 0 0 1 62.69291 558.0236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+q
+1 0 0 1 6 -3 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL 10.5 0 Td (\177) Tj T* -10.5 0 Td ET
+Q
+Q
+q
+1 0 0 1 23 -3 cm
+q
+BT 1 0 0 1 0 2 Tm 12 TL /F3 10 Tf 0 0 0 rg (0x00000000fffffea5:0x00000000ffffff12 ) Tj /F1 10 Tf (CODE32) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 552.0236 cm
+Q
+q
+1 0 0 1 62.69291 540.0236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+q
+1 0 0 1 6 -3 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL 10.5 0 Td (\177) Tj T* -10.5 0 Td ET
+Q
+Q
+q
+1 0 0 1 23 -3 cm
+q
+BT 1 0 0 1 0 2 Tm 12 TL /F3 10 Tf 0 0 0 rg (0x00000000fffffd8d:0x00000000fffffe61 ) Tj /F1 10 Tf (CODE32) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 540.0236 cm
+Q
+q
+1 0 0 1 62.69291 507.0236 cm
+q
+BT 1 0 0 1 0 3.5 Tm 21 TL /F2 17.5 Tf 0 0 0 rg (Passage en mode prot\351g\351) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 389.8236 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 108 re B*
+Q
+q
+BT 1 0 0 1 0 86 Tm 12 TL /F3 10 Tf 0 0 0 rg (d.bios.rom:     format de fichier binary) Tj T*  T*  T* (D\351assemblage de la section .data:) Tj T*  T* (fffffff0 ) Tj (<) Tj (.data+0x3ffff0) Tj (>) Tj (:) Tj T* (fffffff0:   0f 09                   wbinvd) Tj T* (fffffff2:   e9 4b ff                jmp    0xffffff40) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 104.6236 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 276 re B*
+Q
+q
+BT 1 0 0 1 0 254 Tm 12 TL /F3 10 Tf 0 0 0 rg (d.bios.rom:     format de fichier binary) Tj T*  T*  T* (D\351assemblage de la section .data:) Tj T*  T* (ffffff40 ) Tj (<) Tj (.data+0x3fff40) Tj (>) Tj (:) Tj T* (ffffff40:   db e3                   fninit) Tj T* (ffffff42:   0f 6e c0                movd   %eax,%mm0) Tj T* (ffffff45:   fa                      cli) Tj T* (ffffff46:   66 2e 0f 01 16 b8 ff    lgdtl  %cs:-0x48) Tj T* (ffffff4d:   0f 20 c0                mov    %cr0,%eax) Tj T* (ffffff50:   0c 01                   or     $0x1,%al) Tj T* (ffffff52:   0f 22 c0                mov    %eax,%cr0) Tj T* (ffffff55:   fc                      cld) Tj T* (ffffff56:   b8 08 00                mov    $0x8,%ax) Tj T* (ffffff59:   8e d8                   mov    %ax,%ds) Tj T* (ffffff5b:   8e c0                   mov    %ax,%es) Tj T* (ffffff5d:   8e d0                   mov    %ax,%ss) Tj T* (ffffff5f:   8e e0                   mov    %ax,%fs) Tj T* (ffffff61:   8e e8                   mov    %ax,%gs) Tj T* (ffffff63:   66 ea 66 fe ff ff 10    ljmpl  $0x10,$0xfffffe66) Tj T* (ffffff6a:   00) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+ 
+endstream
+endobj
+% 'R23': class PDFStream 
+23 0 obj
+% page stream
+<< /Length 4523 >>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+q
+1 0 0 1 62.69291 739.8236 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 24 re B*
+Q
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F3 10 Tf 12 TL (00000000ffffffb8 0047-ffffff70) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 610.6236 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 120 re B*
+Q
+q
+0 0 0 rg
+BT 1 0 0 1 0 98 Tm /F3 10 Tf 12 TL (00000000ffffff70 00000000 00000000) Tj T* (00000000ffffff78 0000ffff 00cf9300) Tj T* (00000000ffffff80 0000ffff 00cf9b00) Tj T* (00000000ffffff88 0000ffff 00cf9300) Tj T* (00000000ffffff90 0000ffff 00cf9b00) Tj T* (00000000ffffff98 00000000 00000000) Tj T* (00000000ffffffa0 0000ffff 00cf9300) Tj T* (00000000ffffffa8 0000ffff 00af9b00) Tj T* (00000000ffffffb0 00000000 00000000) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 578.6236 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 14 Tm /F1 10 Tf 12 TL .166098 Tw (Le bios commence par sauter \340 une routine permettant de passer en mode prot\351g\351. La GDT est en mode) Tj T* 0 Tw (FLAT pour chacun de ses descripteurs de segments. A pr\351sent, le processeur est en mode prot\351g\351.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 545.6236 cm
+q
+BT 1 0 0 1 0 3.5 Tm 21 TL /F2 17.5 Tf 0 0 0 rg (Fonction ) Tj /F4 17.5 Tf (0xfffffe66) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 356.4236 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 180 re B*
+Q
+q
+BT 1 0 0 1 0 158 Tm 12 TL /F3 10 Tf 0 0 0 rg (d.bios.rom:     format de fichier binary) Tj T*  T*  T* (D\351assemblage de la section .data:) Tj T*  T* (fffffe66 ) Tj (<) Tj (.data+0x3ffe66) Tj (>) Tj (:) Tj T* (fffffe66:   b8 60 00 00 80          mov    $0x80000060,%eax) Tj T* (fffffe6b:   66 ba f8 0c             mov    $0xcf8,%dx) Tj T* (fffffe6f:   ef                      out    %eax,\(%dx\)) Tj T* (fffffe70:   66 ba fc 0c             mov    $0xcfc,%dx) Tj T* (fffffe74:   b8 04 00 00 00          mov    $0x4,%eax) Tj T* (fffffe79:   ef                      out    %eax,\(%dx\)) Tj T* (fffffe7a:   ed                      in     \(%dx\),%eax) Tj T* (fffffe7b:   0d 01 00 00 f8          or     $0xf8000001,%eax) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 312.4236 cm
+q
+BT 1 0 0 1 0 26 Tm .816651 Tw 12 TL /F1 10 Tf 0 0 0 rg (Le controlleur m\351moire du processeur est initialis\351. Il est configurable \340 travers l'espace PCI en utilisant) Tj T* 0 Tw 1.468651 Tw (les I/O. Son identifiant est : ) Tj /F3 10 Tf (B0:D0:F0) Tj /F1 10 Tf (. Pour obtenir ces informations, il suffit d'appliquer les formules) Tj T* 0 Tw (suivantes :) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 231.2236 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 72 re B*
+Q
+q
+BT 1 0 0 1 0 50 Tm 12 TL /F3 10 Tf 0 0 0 rg (address = 0x80000060) Tj T* (B = \(address - 0x80000000\) ) Tj (>) Tj (>) Tj ( 16) Tj T* (D = \(\(address - 0x80000000\) ) Tj (>) Tj (>) Tj ( 11\) ) Tj (&) Tj ( 31) Tj T* (F = \(\(address - 0x80000000\) ) Tj (>) Tj (>) Tj (  8\) ) Tj (&) Tj ( 7) Tj T* (register = \(address - 0x80000000\) ) Tj (&) Tj ( 255) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 175.2236 cm
+q
+BT 1 0 0 1 0 38 Tm .422126 Tw 12 TL /F1 10 Tf 0 0 0 rg (Dans son espace de configuration, le registre ) Tj /F3 10 Tf (0x60 ) Tj /F1 10 Tf (correspond au ) Tj /F3 10 Tf (PCIEXBAR) Tj /F1 10 Tf (. L'espace MMIO est donc) Tj T* 0 Tw .471412 Tw (configur\351 pour \352tre adress\351 en ) Tj /F3 10 Tf (0xf8000000) Tj /F1 10 Tf (. Le ) Tj /F3 10 Tf (4 ) Tj /F1 10 Tf (signifie que seulement ) Tj /F3 10 Tf (64Mo ) Tj /F1 10 Tf (seront adressables, ce) Tj T* 0 Tw 1.680574 Tw (qui est coh\351rent avec les composants dans le portable et ce qui \351vite les gaspillage de m\351moire. Le) Tj T* 0 Tw (pseudo-code est le suivant :) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 118.0236 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 48 re B*
+Q
+q
+0 0 0 rg
+BT 1 0 0 1 0 26 Tm /F3 10 Tf 12 TL (io\(0xcf8\) = 0x80000060) Tj T* (io\(0xcfc\) = 0x4) Tj T* (io\(0xcfc\) = io\(0xcfc\) | 0xf8000001) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 98.02362 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL (Ces informantions sont disponibles dans le document :) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 92.02362 cm
+Q
+ 
+endstream
+endobj
+% 'R24': class PDFStream 
+24 0 obj
+% page stream
+<< /Length 5392 >>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+q
+1 0 0 1 62.69291 741.0236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 0 2 Tm  T* ET
+q
+1 0 0 1 20 0 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 14 Tm /F1 10 Tf 12 TL .998314 Tw (Mobile 3rd Generation Intel CoreTM Processor Family, Mobile Intel Pentium Processor Family, and) Tj T* 0 Tw (Mobile Intel Celeron Processor Family) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 741.0236 cm
+Q
+q
+1 0 0 1 62.69291 712.6772 cm
+n 0 14.17323 m 469.8898 14.17323 l S
+Q
+q
+1 0 0 1 62.69291 571.4772 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 132 re B*
+Q
+q
+BT 1 0 0 1 0 110 Tm 12 TL /F3 10 Tf 0 0 0 rg (d.bios.rom:     format de fichier binary) Tj T*  T*  T* (D\351assemblage de la section .data:) Tj T*  T* (fffffe81 ) Tj (<) Tj (.data+0x3ffe81) Tj (>) Tj (:) Tj T* (fffffe81:   bf f0 80 0f f8          mov    $0xf80f80f0,%edi) Tj T* (fffffe86:   c7 07 01 c0 d1 fe       movl   $0xfed1c001,\(%edi\)) Tj T* (fffffe8c:   bf 10 f4 d1 fe          mov    $0xfed1f410,%edi) Tj T* (fffffe91:   83 27 fb                andl   $0xfffffffb,\(%edi\)) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 539.4772 cm
+q
+BT 1 0 0 1 0 14 Tm 2.216342 Tw 12 TL /F1 10 Tf 0 0 0 rg (L'espace ) Tj /F3 10 Tf (0xf80f80f0 ) Tj /F1 10 Tf (correspond au composant ) Tj /F3 10 Tf (B0:D0:F0) Tj /F1 10 Tf (. Pour obtenir cette information, il suffit) Tj T* 0 Tw (d'appliquer les formules suivantes :) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 446.2772 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 84 re B*
+Q
+q
+0 0 0 rg
+BT 1 0 0 1 0 62 Tm /F3 10 Tf 12 TL (address = 0xf80f80f0) Tj T* (PCIEXBAR = 0xf8000000) Tj T* (R = address % 4096) Tj T* (F = \(\(address - PCIEXBAR\) / 4096\) % 8) Tj T* (D = \(\(address - PCIEXBAR\) / \(4096 * 8\)\) % 32) Tj T* (B = \(\(address - PCIEXBAR\) / \(4096 * 8 * 32\)\)) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 366.2772 cm
+q
+BT 1 0 0 1 0 62 Tm 1.668555 Tw 12 TL /F1 10 Tf 0 0 0 rg (Ce composant correspond \340 l'interface avec le bus LPC \() Tj /F5 10 Tf (LPC Interface Bridge Registers) Tj /F1 10 Tf (\). Le registre) Tj T* 0 Tw 3.050697 Tw /F3 10 Tf (0xf0 ) Tj /F1 10 Tf (est l'adresse du RCBA \() Tj /F5 10 Tf (Root Complex Base Address) Tj /F1 10 Tf (\). Cette zone contient les registres de) Tj T* 0 Tw .223828 Tw (configuration du chipset. Elle est \340 pr\351sent accessible \340 l'adresse ) Tj /F3 10 Tf (0xfed1c000) Tj /F1 10 Tf (. L'offset ) Tj /F3 10 Tf (0xfed1f410 -) Tj T* 0 Tw 1.147126 Tw (0xfed1c000 ) Tj /F1 10 Tf (correspond au registre ) Tj /F3 10 Tf (0x3410 ) Tj /F1 10 Tf (de cette zone, le GCS \() Tj /F5 10 Tf (General Control and Status) Tj /F1 10 Tf (\). En) Tj T* 0 Tw .194104 Tw (masquant ce registre avec ) Tj /F3 10 Tf (0xfffffffb) Tj /F1 10 Tf (, le bios positionne \340 ) Tj /F3 10 Tf (0 ) Tj /F1 10 Tf (le bit RPR : ) Tj /F2 10 Tf (TODO : mieux comprendre) Tj T* 0 Tw (ce bit) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 360.2772 cm
+Q
+q
+1 0 0 1 62.69291 210.2772 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 0 2 Tm  T* ET
+q
+1 0 0 1 20 114 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 26 Tm /F1 10 Tf 12 TL .417126 Tw (Reserved Page Route \(RPR\) \227 R/W. Determines where to send the reserved page registers. These) Tj T* 0 Tw 1.368735 Tw (addresses are sent to PCI or LPC for the purpose of generating POST codes. The I/O addresses) Tj T* 0 Tw (modified by this field are: 80h, 84h, 85h, 86h, 88h, 8Ch, 8Dh, and 8Eh.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 20 84 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 14 Tm /F1 10 Tf 12 TL .740542 Tw (0 = Writes will be forwarded to LPC, shadowed within the PCH, and reads will be returned from the) Tj T* 0 Tw (internal shadow) Tj T* ET
+Q
+Q
+q
+1 0 0 1 20 54 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 14 Tm /F1 10 Tf 12 TL .894987 Tw (1 = Writes will be forwarded to PCI, shadowed within the PCH, and reads will be returned from the) Tj T* 0 Tw (internal shadow.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 20 0 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 38 Tm /F1 10 Tf 12 TL .421567 Tw (NOTE: if some writes are done to LPC/PCI to these I/O ranges, and then this bit is flipped, such that) Tj T* 0 Tw .447209 Tw (writes will now go to the other interface, the reads will not return what was last written. Shadowing is) Tj T* 0 Tw .77686 Tw (performed on each interface. The aliases for these registers, at 90h, 94h, 95h, 96h, 98h, 9Ch, 9Dh,) Tj T* 0 Tw (and 9Eh, are always decoded to LPC.) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 210.2772 cm
+Q
+q
+1 0 0 1 62.69291 192.2772 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL (Ces informantions sont disponibles dans le document :) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 186.2772 cm
+Q
+q
+1 0 0 1 62.69291 174.2772 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 0 2 Tm  T* ET
+q
+1 0 0 1 20 0 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL (Intel 6 Series Chipset and Intel C200 Series Chipset) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 174.2772 cm
+Q
+q
+1 0 0 1 62.69291 145.9307 cm
+n 0 14.17323 m 469.8898 14.17323 l S
+Q
+q
+1 0 0 1 62.69291 88.73071 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 48 re B*
+Q
+q
+BT 1 0 0 1 0 26 Tm 12 TL /F3 10 Tf 0 0 0 rg (d.bios.rom:     format de fichier binary) Tj T*  T*  T* ET
+Q
+Q
+Q
+Q
+Q
+ 
+endstream
+endobj
+% 'R25': class PDFStream 
+25 0 obj
+% page stream
+<< /Length 4229 >>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+q
+1 0 0 1 62.69291 691.8236 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 72 re B*
+Q
+q
+BT 1 0 0 1 0 50 Tm 12 TL /F3 10 Tf 0 0 0 rg (D\351assemblage de la section .data:) Tj T*  T* (fffffe94 ) Tj (<) Tj (.data+0x3ffe94) Tj (>) Tj (:) Tj T* (fffffe94:   66 b8 01 00             mov    $0x1,%ax) Tj T* (fffffe98:   66 e7 80                out    %ax,$0x80) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 671.8236 cm
+q
+BT 1 0 0 1 0 2 Tm 12 TL /F1 10 Tf 0 0 0 rg (Le port ) Tj /F3 10 Tf (0x80 ) Tj /F1 10 Tf (semble \352tre utilis\351 comment port de diagnostic :) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 665.8236 cm
+Q
+q
+1 0 0 1 62.69291 653.8236 cm
+0 0 0 rg
+BT /F1 10 Tf 12 TL ET
+BT 1 0 0 1 0 2 Tm  T* ET
+q
+1 0 0 1 20 0 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F1 10 Tf 12 TL (I/O port 0x80 is traditionally used for POST Codes. \(POST = Power On Self Test\)) Tj T* ET
+Q
+Q
+q
+Q
+Q
+q
+1 0 0 1 62.69291 653.8236 cm
+Q
+q
+1 0 0 1 62.69291 625.4772 cm
+n 0 14.17323 m 469.8898 14.17323 l S
+Q
+q
+1 0 0 1 62.69291 592.2772 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 24 re B*
+Q
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F3 10 Tf 12 TL (00000000fffffe62 fffffea5) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 475.0772 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 108 re B*
+Q
+q
+BT 1 0 0 1 0 86 Tm 12 TL /F3 10 Tf 0 0 0 rg (d.bios.rom:     format de fichier binary) Tj T*  T*  T* (D\351assemblage de la section .data:) Tj T*  T* (fffffe9b ) Tj (<) Tj (.data+0x3ffe9b) Tj (>) Tj (:) Tj T* (fffffe9b:   bc 62 fe ff ff          mov    $0xfffffe62,%esp) Tj T* (fffffea0:   e9 e8 fe ff ff          jmp    0xfffffd8d) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 419.0772 cm
+q
+BT 1 0 0 1 0 38 Tm .843059 Tw 12 TL /F1 10 Tf 0 0 0 rg (Les instructions aux adresses ) Tj /F3 10 Tf (0xfffffe9b ) Tj /F1 10 Tf (et ) Tj /F3 10 Tf (0xfffffea0 ) Tj /F1 10 Tf (correspondent \340 un ) Tj /F3 10 Tf (call) Tj /F1 10 Tf (. Par contre, au) Tj T* 0 Tw 2.97784 Tw (lieu de laisser le processeur empiler l'adresse de retour, cette derni\350re est d\351finie statiquement \340) Tj T* 0 Tw .45998 Tw (l'adresse ) Tj /F5 10 Tf (a0x`fffffe62`) Tj /F1 10 Tf (. Apr\350s l'ex\351cution de la routine \340 l'adresse ) Tj /F3 10 Tf (0xfffffd8d ) Tj /F1 10 Tf (l'ex\351cution se poursuivra) Tj T* 0 Tw (\340 l'adresse ) Tj /F3 10 Tf (*0xfffffe62 == 0xfffffea5) Tj /F1 10 Tf (.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 390.7307 cm
+n 0 14.17323 m 469.8898 14.17323 l S
+Q
+q
+1 0 0 1 62.69291 81.53071 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 300 re B*
+Q
+q
+BT 1 0 0 1 0 278 Tm 12 TL /F3 10 Tf 0 0 0 rg (d.bios.rom:     format de fichier binary) Tj T*  T*  T* (D\351assemblage de la section .data:) Tj T*  T* (fffffea5 ) Tj (<) Tj (.data+0x3ffea5) Tj (>) Tj (:) Tj T* (fffffea5:   0b c0                   or     %eax,%eax) Tj T* (fffffea7:   74 0c                   je     0xfffffeb5) Tj T* (fffffea9:   b9 79 00 00 00          mov    $0x79,%ecx) Tj T* (fffffeae:   33 d2                   xor    %edx,%edx) Tj T* (fffffeb0:   83 c0 30                add    $0x30,%eax) Tj T* (fffffeb3:   0f 30                   wrmsr) Tj T* (fffffeb5:   bf dc 80 0f f8          mov    $0xf80f80dc,%edi) Tj T* (fffffeba:   83 0f 08                orl    $0x8,\(%edi\)) Tj T* (fffffebd:   b9 a0 01 00 00          mov    $0x1a0,%ecx) Tj T* (fffffec2:   0f 32                   rdmsr) Tj T* (fffffec4:   0f ba f0 16             btr    $0x16,%eax) Tj T* (fffffec8:   73 02                   jae    0xfffffecc) Tj T* (fffffeca:   0f 30                   wrmsr) Tj T* (fffffecc:   b9 1b 00 00 00          mov    $0x1b,%ecx) Tj T* (fffffed1:   0f 32                   rdmsr) Tj T* (fffffed3:   83 e2 f0                and    $0xfffffff0,%edx) Tj T* (fffffed6:   25 ff 0f 00 00          and    $0xfff,%eax) Tj T* (fffffedb:   0d 00 00 e0 fe          or     $0xfee00000,%eax) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+ 
+endstream
+endobj
+% 'R26': class PDFStream 
+26 0 obj
+% page stream
+<< /Length 1609 >>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+q
+1 0 0 1 62.69291 511.8236 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 252 re B*
+Q
+q
+BT 1 0 0 1 0 230 Tm 12 TL /F3 10 Tf 0 0 0 rg (fffffee0:   0f 30                   wrmsr) Tj T* (fffffee2:   0f 20 e0                mov    %cr4,%eax) Tj T* (fffffee5:   0d 00 06 00 00          or     $0x600,%eax) Tj T* (fffffeea:   0f 22 e0                mov    %eax,%cr4) Tj T* (fffffeed:   b0 03                   mov    $0x3,%al) Tj T* (fffffeef:   e6 80                   out    %al,$0x80) Tj T* (fffffef1:   ba 52 65 72 50          mov    $0x50726552,%edx) Tj T* (fffffef6:   b0 73                   mov    $0x73,%al) Tj T* (fffffef8:   e6 b2                   out    %al,$0xb2) Tj T* (fffffefa:   e6 84                   out    %al,$0x84) Tj T* (fffffefc:   e6 84                   out    %al,$0x84) Tj T* (fffffefe:   0a c0                   or     %al,%al) Tj T* (ffffff00:   75 0c                   jne    0xffffff0e) Tj T* (ffffff02:   66 ba f9 0c             mov    $0xcf9,%dx) Tj T* (ffffff06:   b0 02                   mov    $0x2,%al) Tj T* (ffffff08:   ee                      out    %al,\(%dx\)) Tj T* (ffffff09:   b0 06                   mov    $0x6,%al) Tj T* (ffffff0b:   ee                      out    %al,\(%dx\)) Tj T* (ffffff0c:   eb fe                   jmp    0xffffff0c) Tj T* (ffffff0e:   e9 dd fb ff ff          jmp    0xfffffaf0) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 491.8236 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F2 10 Tf 12 TL (TODO) Tj T* ET
+Q
+Q
+ 
+endstream
+endobj
+% 'R27': class PDFStream 
+27 0 obj
+% page stream
+<< /Length 3553 >>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+q
+1 0 0 1 62.69291 744.0236 cm
+q
+BT 1 0 0 1 0 3.5 Tm 21 TL /F2 17.5 Tf 0 0 0 rg (Fonction ) Tj /F4 17.5 Tf (0xfffffd8d) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 86.82362 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 648 re B*
+Q
+q
+BT 1 0 0 1 0 626 Tm 12 TL /F3 10 Tf 0 0 0 rg (d.bios.rom:     format de fichier binary) Tj T*  T*  T* (D\351assemblage de la section .data:) Tj T*  T* (fffffd8d ) Tj (<) Tj (.data+0x3ffd8d) Tj (>) Tj (:) Tj T* (fffffd8d:   b0 02                   mov    $0x2,%al) Tj T* (fffffd8f:   e6 80                   out    %al,$0x80) Tj T* (fffffd91:   bb 00 00 c2 ff          mov    $0xffc20000,%ebx) Tj T* (fffffd96:   8b d3                   mov    %ebx,%edx) Tj T* (fffffd98:   8b 43 30                mov    0x30\(%ebx\),%eax) Tj T* (fffffd9b:   25 ff ff 00 00          and    $0xffff,%eax) Tj T* (fffffda0:   03 d8                   add    %eax,%ebx) Tj T* (fffffda2:   03 52 20                add    0x20\(%edx\),%edx) Tj T* (fffffda5:   83 3b ff                cmpl   $0xffffffff,\(%ebx\)) Tj T* (fffffda8:   74 24                   je     0xfffffdce) Tj T* (fffffdaa:   b9 04 00 00 00          mov    $0x4,%ecx) Tj T* (fffffdaf:   8b f3                   mov    %ebx,%esi) Tj T* (fffffdb1:   bf 65 fd ff ff          mov    $0xfffffd65,%edi) Tj T* (fffffdb6:   f3 a7                   repz cmpsl %es:\(%edi\),%ds:\(%esi\)) Tj T* (fffffdb8:   74 1d                   je     0xfffffdd7) Tj T* (fffffdba:   8b 43 14                mov    0x14\(%ebx\),%eax) Tj T* (fffffdbd:   25 ff ff ff 00          and    $0xffffff,%eax) Tj T* (fffffdc2:   03 d8                   add    %eax,%ebx) Tj T* (fffffdc4:   83 c3 07                add    $0x7,%ebx) Tj T* (fffffdc7:   83 e3 f8                and    $0xfffffff8,%ebx) Tj T* (fffffdca:   3b da                   cmp    %edx,%ebx) Tj T* (fffffdcc:   72 d7                   jb     0xfffffda5) Tj T* (fffffdce:   b0 0e                   mov    $0xe,%al) Tj T* (fffffdd0:   e6 80                   out    %al,$0x80) Tj T* (fffffdd2:   e9 88 00 00 00          jmp    0xfffffe5f) Tj T* (fffffdd7:   8b fb                   mov    %ebx,%edi) Tj T* (fffffdd9:   8b 43 14                mov    0x14\(%ebx\),%eax) Tj T* (fffffddc:   25 ff ff ff 00          and    $0xffffff,%eax) Tj T* (fffffde1:   03 f8                   add    %eax,%edi) Tj T* (fffffde3:   83 c3 18                add    $0x18,%ebx) Tj T* (fffffde6:   8b f3                   mov    %ebx,%esi) Tj T* (fffffde8:   b8 01 00 00 00          mov    $0x1,%eax) Tj T* (fffffded:   0f a2                   cpuid) Tj T* (fffffdef:   8b d8                   mov    %eax,%ebx) Tj T* (fffffdf1:   b9 17 00 00 00          mov    $0x17,%ecx) Tj T* (fffffdf6:   0f 32                   rdmsr) Tj T* (fffffdf8:   c1 ea 12                shr    $0x12,%edx) Tj T* (fffffdfb:   80 e2 07                and    $0x7,%dl) Tj T* (fffffdfe:   8a ca                   mov    %dl,%cl) Tj T* (fffffe00:   b2 01                   mov    $0x1,%dl) Tj T* (fffffe02:   d2 e2                   shl    %cl,%dl) Tj T* (fffffe04:   3b f7                   cmp    %edi,%esi) Tj T* (fffffe06:   73 57                   jae    0xfffffe5f) Tj T* (fffffe08:   83 3e ff                cmpl   $0xffffffff,\(%esi\)) Tj T* (fffffe0b:   74 52                   je     0xfffffe5f) Tj T* (fffffe0d:   b9 00 08 00 00          mov    $0x800,%ecx) Tj T* (fffffe12:   83 7e 1c 00             cmpl   $0x0,0x1c\(%esi\)) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+ 
+endstream
+endobj
+% 'R28': class PDFStream 
+28 0 obj
+% page stream
+<< /Length 2414 >>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+q
+1 0 0 1 62.69291 427.8236 cm
+q
+q
+1 0 0 1 0 0 cm
+q
+1 0 0 1 6.6 6.6 cm
+q
+.662745 .662745 .662745 RG
+.5 w
+.960784 .960784 .862745 rg
+n -6 -6 468.6898 336 re B*
+Q
+q
+BT 1 0 0 1 0 314 Tm 12 TL /F3 10 Tf 0 0 0 rg (fffffe16:   74 03                   je     0xfffffe1b) Tj T* (fffffe18:   8b 4e 20                mov    0x20\(%esi\),%ecx) Tj T* (fffffe1b:   3b 5e 0c                cmp    0xc\(%esi\),%ebx) Tj T* (fffffe1e:   75 07                   jne    0xfffffe27) Tj T* (fffffe20:   8b c6                   mov    %esi,%eax) Tj T* (fffffe22:   84 56 18                test   %dl,0x18\(%esi\)) Tj T* (fffffe25:   75 3a                   jne    0xfffffe61) Tj T* (fffffe27:   8b 6e 20                mov    0x20\(%esi\),%ebp) Tj T* (fffffe2a:   8b 46 1c                mov    0x1c\(%esi\),%eax) Tj T* (fffffe2d:   83 c0 30                add    $0x30,%eax) Tj T* (fffffe30:   3b e8                   cmp    %eax,%ebp) Tj T* (fffffe32:   76 1b                   jbe    0xfffffe4f) Tj T* (fffffe34:   8b 0c 30                mov    \(%eax,%esi,1\),%ecx) Tj T* (fffffe37:   8d 6c 30 14             lea    0x14\(%eax,%esi,1\),%ebp) Tj T* (fffffe3b:   39 5d 00                cmp    %ebx,0x0\(%ebp\)) Tj T* (fffffe3e:   75 07                   jne    0xfffffe47) Tj T* (fffffe40:   8b c6                   mov    %esi,%eax) Tj T* (fffffe42:   84 55 04                test   %dl,0x4\(%ebp\)) Tj T* (fffffe45:   75 1a                   jne    0xfffffe61) Tj T* (fffffe47:   83 c5 0c                add    $0xc,%ebp) Tj T* (fffffe4a:   e2 ef                   loop   0xfffffe3b) Tj T* (fffffe4c:   8b 4e 20                mov    0x20\(%esi\),%ecx) Tj T* (fffffe4f:   81 c1 ff 01 00 00       add    $0x1ff,%ecx) Tj T* (fffffe55:   81 e1 00 fe ff ff       and    $0xfffffe00,%ecx) Tj T* (fffffe5b:   03 f1                   add    %ecx,%esi) Tj T* (fffffe5d:   eb a5                   jmp    0xfffffe04) Tj T* (fffffe5f:   33 c0                   xor    %eax,%eax) Tj T* ET
+Q
+Q
+Q
+Q
+Q
+q
+1 0 0 1 62.69291 395.8236 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 14 Tm /F1 10 Tf 12 TL 1.154269 Tw (['python3.2 ./disasm-to-graph.py -o 0xffc00000 -s 0xfffffd8d -e fffffe61 -b 32 -f d.bios.rom', 'dot -Tpng -o) Tj T* 0 Tw (0xfffffd8d.png'] .. image:: 0xfffffd8d.png) Tj T* ET
+Q
+Q
+q
+1 0 0 1 62.69291 377.8236 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 2 Tm /F2 10 Tf 12 TL (TODO) Tj T* ET
+Q
+Q
+ 
+endstream
+endobj
+% 'R29': class PDFPageLabels 
+29 0 obj
+% Document Root
+<< /Nums [ 0
+ 30 0 R
+ 1
+ 31 0 R
+ 2
+ 32 0 R
+ 3
+ 33 0 R
+ 4
+ 34 0 R
+ 5
+ 35 0 R
+ 6
+ 36 0 R ] >>
+endobj
+% 'R30': class PDFPageLabel 
+30 0 obj
+% None
+<< /S /D
+ /St 1 >>
+endobj
+% 'R31': class PDFPageLabel 
+31 0 obj
+% None
+<< /S /D
+ /St 2 >>
+endobj
+% 'R32': class PDFPageLabel 
+32 0 obj
+% None
+<< /S /D
+ /St 3 >>
+endobj
+% 'R33': class PDFPageLabel 
+33 0 obj
+% None
+<< /S /D
+ /St 4 >>
+endobj
+% 'R34': class PDFPageLabel 
+34 0 obj
+% None
+<< /S /D
+ /St 5 >>
+endobj
+% 'R35': class PDFPageLabel 
+35 0 obj
+% None
+<< /S /D
+ /St 6 >>
+endobj
+% 'R36': class PDFPageLabel 
+36 0 obj
+% None
+<< /S /D
+ /St 7 >>
+endobj
+xref
+0 37
+0000000000 65535 f
+0000000113 00000 n
+0000000257 00000 n
+0000000422 00000 n
+0000000597 00000 n
+0000000756 00000 n
+0000001037 00000 n
+0000001206 00000 n
+0000001487 00000 n
+0000001666 00000 n
+0000001945 00000 n
+0000002225 00000 n
+0000002505 00000 n
+0000002785 00000 n
+0000003066 00000 n
+0000003225 00000 n
+0000003473 00000 n
+0000003598 00000 n
+0000003788 00000 n
+0000003992 00000 n
+0000004186 00000 n
+0000004350 00000 n
+0000004509 00000 n
+0000010856 00000 n
+0000015478 00000 n
+0000020969 00000 n
+0000025297 00000 n
+0000027005 00000 n
+0000030657 00000 n
+0000033174 00000 n
+0000033345 00000 n
+0000033422 00000 n
+0000033499 00000 n
+0000033576 00000 n
+0000033653 00000 n
+0000033730 00000 n
+0000033807 00000 n
+trailer
+<< /ID 
+ % ReportLab generated PDF document -- digest (http://www.reportlab.com) 
+ [(\212\177\264\307\223\306D\350p\005S\233\015\020\3475) (\212\177\264\307\223\306D\350p\005S\233\015\020\3475)] 
+
+ /Info 15 0 R
+ /Root 14 0 R
+ /Size 37 >>
+startxref
+33854
+%%EOF

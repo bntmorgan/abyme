@@ -1,0 +1,21 @@
+base f8000000 start-bus 0 bus 0 device 0 function 0 vendor 8086 device 104
+base f8000000 start-bus 0 bus 0 device 1 function 0 vendor 8086 device 101
+base f8000000 start-bus 0 bus 0 device 16 function 0 vendor 8086 device 1c3a
+base f8000000 start-bus 0 bus 0 device 19 function 0 vendor 8086 device 1502
+base f8000000 start-bus 0 bus 0 device 1a function 0 vendor 8086 device 1c2d
+base f8000000 start-bus 0 bus 0 device 1b function 0 vendor 8086 device 1c20
+base f8000000 start-bus 0 bus 0 device 1c function 0 vendor 8086 device 1c10
+base f8000000 start-bus 0 bus 0 device 1c function 1 vendor 8086 device 1c12
+base f8000000 start-bus 0 bus 0 device 1c function 2 vendor 8086 device 1c14
+base f8000000 start-bus 0 bus 0 device 1c function 3 vendor 8086 device 1c16
+base f8000000 start-bus 0 bus 0 device 1c function 5 vendor 8086 device 1c1a
+base f8000000 start-bus 0 bus 0 device 1d function 0 vendor 8086 device 1c26
+base f8000000 start-bus 0 bus 0 device 1f function 0 vendor 8086 device 1c4f
+base f8000000 start-bus 0 bus 0 device 1f function 2 vendor 8086 device 282a
+base f8000000 start-bus 0 bus 0 device 1f function 3 vendor 8086 device 1c22
+base f8000000 start-bus 0 bus 1 device 0 function 0 vendor 10de device 1056
+base f8000000 start-bus 0 bus 1 device 0 function 1 vendor 10de device e08
+base f8000000 start-bus 0 bus 3 device 0 function 0 vendor 8086 device 422b
+base f8000000 start-bus 0 bus b device 0 function 0 vendor 1217 device 8221
+base f8000000 start-bus 0 bus b device 0 function 1 vendor 1217 device 8231
+memory size=200000001
