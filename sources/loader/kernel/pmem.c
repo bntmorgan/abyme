@@ -62,7 +62,7 @@ uint64_t pmem_get_aligned_memory_at_end_of_free_area(uint32_t size, uint32_t ali
        */
       if (area_start_align <= value) {
         INFO("Copying vmm at %X (end of area: %X)\n", value, area_end_align);
-        __asm__ __volatile__("xchg %bx, %bx");
+        //__asm__ __volatile__("xchg %bx, %bx");
         return value;
       }
     }
