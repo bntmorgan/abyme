@@ -6,6 +6,7 @@
  * Unshared prototypes
  */
 void dump_vmcs_fields(uint64_t offset, uint32_t fs, uint32_t count, uint32_t step);
+uint64_t debug_shortcut(char *s);
 
 struct breakpoint breakpoints[DEBUG_BREAKPOINTS_SIZE];
 int bsize;
@@ -204,14 +205,20 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
 }
 
 #define DEBUG_HANDLE_DUMP {\
-  printk("\naddress ? "); \
+  printk("\naddress ? (shortcuts : rip, rsp, rbp, ...)"); \
   getstring(input, DEBUG_INPUT_SIZE); \
   printk("\n"); \
-  uint64_t addr = atoi_hexa(input); \
+  uint64_t addr = debug_shortcut((char*)input); \
+  if (addr == (uint64_t)-1) { \
+    addr = atoi_hexa(input); \
+  } \
   printk("\n %X size ? ", addr); \
   getstring(input, DEBUG_INPUT_SIZE); \
   printk("\n"); \
   uint64_t size = atoi_hexa(input); \
+  if (size == 0) { \
+    size = 0x16; \
+  } \
   debug_dump(addr, size); \
 }
 
@@ -447,7 +454,7 @@ void debug_dump(uint64_t addr, uint64_t size) {
 void debug_breakpoint_add(uint64_t address) {
   if (bsize < DEBUG_BREAKPOINTS_SIZE) {
     // Backup the code
-    INFO("Save %02x %02x %02x\n", *((uint8_t *)address + 0), *((uint8_t *)address + 1), *((uint8_t *)address + 2));
+    //INFO("Save %02x %02x %02x\n", *((uint8_t *)address + 0), *((uint8_t *)address + 1), *((uint8_t *)address + 2));
     breakpoints[bsize].code[0] = *((uint8_t *)address + 0);
     breakpoints[bsize].code[1] = *((uint8_t *)address + 1);
     breakpoints[bsize].code[2] = *((uint8_t *)address + 2);
@@ -455,7 +462,13 @@ void debug_breakpoint_add(uint64_t address) {
     *((uint8_t *)address + 0) = 0x0f; // vmcall
     *((uint8_t *)address + 1) = 0x01;
     *((uint8_t *)address + 2) = 0xc1;
-    INFO("Set vmcall %02x %02x %02x\n", *((uint8_t *)address + 0), *((uint8_t *)address + 1), *((uint8_t *)address + 2));
+    //INFO("Set vmcall %02x %02x %02x\n", *((uint8_t *)address + 0), *((uint8_t *)address + 1), *((uint8_t *)address + 2));
+    if (*((uint8_t *)address + 0) != 0x0f ||
+        *((uint8_t *)address + 1) != 0x01 ||
+        *((uint8_t *)address + 2) != 0xc1 ) {
+      INFO("Warning : the memory seems to be protected : breakpoint wont be effective\n");
+    }
+
     breakpoints[bsize].address = address;
     bsize++;
   }
@@ -464,11 +477,10 @@ void debug_breakpoint_add(uint64_t address) {
 void debug_breakpoint_del(int index) {
   if (index >= 0 && index < bsize) {
     // Restore the code
-    INFO("Before restore %02x %02x %02x\n", *((uint8_t *)breakpoints[index].address + 0), *((uint8_t *)breakpoints[index].address + 1), *((uint8_t *)breakpoints[index].address + 2));
+    //INFO("Before restore %02x %02x %02x\n", *((uint8_t *)breakpoints[index].address + 0), *((uint8_t *)breakpoints[index].address + 1), *((uint8_t *)breakpoints[index].address + 2));
     *((uint8_t *)breakpoints[index].address + 0) = breakpoints[index].code[0];
     *((uint8_t *)breakpoints[index].address + 1) = breakpoints[index].code[1];
     *((uint8_t *)breakpoints[index].address + 2) = breakpoints[index].code[2];
-    INFO("After restore %02x %02x %02x\n", *((uint8_t *)breakpoints[index].address + 0), *((uint8_t *)breakpoints[index].address + 1), *((uint8_t *)breakpoints[index].address + 2));
     // Exchange the breakpoint
     if (bsize > 1) {
       breakpoints[index].address = breakpoints[bsize - 1].address;
@@ -537,7 +549,7 @@ uint64_t atoi_hexa(char *s) {
     } else if(s[i] >= 'a' && s[i] <= 'f') {
       number += (s[i] - 'a' + 10) * pow(0x10, size - i - 1);
     }
-printk("c:%c %X\n", s[i], number);
+    //printk("c:%c %X\n", s[i], number);
   }
   return number;
 }
@@ -613,4 +625,43 @@ void dump_vmcs_fields(uint64_t offset, uint32_t fs, uint32_t count, uint32_t ste
   uint8_t fields[4096];
   read_vmcs_fields(offset, fs, count, step, (uint8_t *)&fields[0]);
   DUMP(&fields, fs, count * fs, offset, step);
+}
+
+uint8_t debug_strcmp(char *a, char *b) {
+  if (*a == '\0') {
+    return -1;
+  }
+  if (*b == '\0') {
+    return 1;
+  }
+  while (*a != '\0' && *b != '\0') {
+    if (*a < *b) {
+      return -1;
+    }
+    if (*a > *b) {
+      return 1;
+    }
+    a++;
+    b++;
+  }
+  if (*a == '\0' && *b != '\0') {
+    return -1;
+  }
+  if (*b == '\0' && *a != '\0') {
+    return 1;
+  }
+  return 0;
+}
+
+uint64_t debug_shortcut(char *s) {
+  // registres
+  if (debug_strcmp(s, "rsp") == 0) {
+    return (*(guest_states + DEBUG_CURRENT_STATE_INDEX)).rsp;
+  } else if(debug_strcmp(s, "rip") == 0) {
+    return (*(guest_states + DEBUG_CURRENT_STATE_INDEX)).rip;
+  } else if(debug_strcmp(s, "rbp") == 0) {
+    return (*(guest_states + DEBUG_CURRENT_STATE_INDEX)).rbp;
+  }
+  // No shortcut found
+  return -1;
 }
