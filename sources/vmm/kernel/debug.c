@@ -1,16 +1,19 @@
 #include "debug.h"
 #include "stdio.h"
 #include "vmm.h"
+#include "hardware/msr.h"
+#include "hardware/cpu.h"
 
 /**
  * Unshared prototypes
  */
 void dump_vmcs_fields(uint64_t offset, uint32_t fs, uint32_t count, uint32_t step);
 uint64_t debug_shortcut(char *s);
+void debug_alter_vmcs(uint32_t field, uint32_t bit, uint8_t on);
 
 struct breakpoint breakpoints[DEBUG_BREAKPOINTS_SIZE];
 int bsize;
-int step = 1;
+int step = 0;
 char input[DEBUG_INPUT_SIZE];
 
 /**
@@ -352,6 +355,7 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   } \
 }
 
+
 int debug(uint32_t reason, int force) {
   int bp = debug_breakpoint_break(guest_states[DEBUG_CURRENT_STATE_INDEX].rip);
   if (!step && bp == -1 && !force) {
@@ -392,11 +396,17 @@ int debug(uint32_t reason, int force) {
         break; 
       case 'c':
         run = 0;
-        step = 0;
+        if (step) {
+          debug_alter_vmcs(CPU_BASED_VM_EXEC_CONTROL, MONITOR_TRAP_FLAG, 0); \
+          step = 0;
+        }
         break; 
       case 's':
         run = 0;
-        step = 1;
+        if (!step) {
+          step = 1;
+          debug_alter_vmcs(CPU_BASED_VM_EXEC_CONTROL, MONITOR_TRAP_FLAG, 1); \
+        }
         break; 
       case 'o':
         DEBUG_HANDLE_SET_IO
@@ -664,4 +674,17 @@ uint64_t debug_shortcut(char *s) {
   }
   // No shortcut found
   return -1;
+}
+
+void debug_alter_vmcs(uint32_t field, uint32_t bit, uint8_t on) {
+  INFO("\n");
+  uint32_t f = cpu_vmread(field);
+  INFO("Before %x\n", f);
+  if (on) {
+    f |= bit;
+  } else {
+    f &= ~(bit);
+  }
+  INFO("After %x\n", f);
+  cpu_vmwrite(field, f);
 }
