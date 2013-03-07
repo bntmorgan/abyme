@@ -2,6 +2,7 @@
 
 #include "screen.h"
 #include "stdlib.h"
+#include "keyboard.h"
 
 void printk_string(int8_t *string, int8_t minimum_length, int8_t padding) {
   int8_t *ptr = string;
@@ -92,4 +93,31 @@ void printk(char *format, ...) {
     format = format + 1;
   }
   __builtin_va_end(values);
+}
+
+#define DEBUG_DUMP_COLUMNS 6
+void dump(uint64_t addr, uint64_t size) {
+  uint32_t i = 0, j;
+  while (i < size) {
+    printk("%016x ", addr + i);
+    for (j = 0; j < DEBUG_DUMP_COLUMNS; j++) {
+      intptr_t test = (addr + i);
+      uint32_t lulz = *((uint32_t*)test);
+      printk("%08x", lulz);
+      if (i != DEBUG_DUMP_COLUMNS - 1) {
+        printk(" ");
+      }
+      i += 4;
+      if (i >= size) {
+        break;
+      }
+    }
+    printk("\n");
+  }
+}
+
+int getchar() {
+  char c = keyboard_decode(waitkey());
+  printk("%c", c);
+  return c;
 }

@@ -5,23 +5,18 @@
 #include "hardware/cpu.h"
 
 #define DEBUG_BREAKPOINTS_SIZE 0xff
-#define DEBUG_SCANCODES_SIZE 0xff
 #define DEBUG_INPUT_SIZE 0x20
 
 #define DEBUG_VMM_ENTRY_POINT 0x700
 
 uint8_t waitkey();
-char getchar();
 void debug_breakpoint_add(uint64_t address);
 void debug_breakpoint_del(int index);
 void debug_breakpoint_print();
 int debug(uint32_t reason, int force);
 void getstring(char *input, unsigned int size);
-unsigned int strlen(char *c);
-uint64_t atoi_hexa(char *s);
 int debug_breakpoint_break(uint64_t rip);
 void debug_instruction_print(uint64_t rip, uint32_t length);
-void debug_dump(uint64_t addr, uint64_t size);
 
 #define DEBUG_GUEST_STATE \
   DEBUG_GUEST_STATE_FIELD(DEBUG_FIELD_VMCS, cr0, GUEST_CR0) \

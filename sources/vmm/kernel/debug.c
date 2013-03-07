@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "stdio.h"
+#include "stdlib.h"
 #include "vmm.h"
 #include "hardware/msr.h"
 #include "hardware/cpu.h"
@@ -16,106 +17,6 @@ int bsize;
 int step = 0;
 char input[DEBUG_INPUT_SIZE];
 
-/**
- * Scancodes to ASCII CODE convertion
- *
- * Theese scancodes are from Eric Alata's Dell Lattitude
- */
-char scancodes[DEBUG_SCANCODES_SIZE] = {
-  0x00, // Nil
-  0x1f, // ESC
-  0x31, // 1
-  0x32, // 2
-  0x33, // 3
-  0x34, // 4
-  0x35, // 5
-  0x36, // 6
-  0x37, // 7
-  0x38, // 8
-  0x39, // 9
-  0x30, // 0
-  0x29, // °
-  0x2b, // +
-  0x08, // Backspace
-  0x09, // Tab
-  0x61, // a
-  0x7a, // z
-  0x65, // e
-  0x72, // r
-  0x74, // t
-  0x79, // y
-  0x75, // u
-  0x69, // i
-  0x6f, // o
-  0x70, // p
-  0x5e, // ^
-  0x24, // $
-  '\r', // Carriage Return
-  //0x00, // Carriage Return
-  0x00, // Control
-  0x71, // q
-  0x73, // s
-  0x64, // d
-  0x66, // f
-  0x67, // g
-  0x68, // h
-  0x6a, // j
-  0x6b, // k
-  0x6c, // l
-  0x6d, // m
-  0x00, // ù
-  0x00, // Power two
-  0x00, // Left shift
-  0x2a, // *
-  0x77, // w
-  0x78, // x
-  0x63, // c
-  0x76, // v
-  0x62, // b
-  0x6e, // n
-  0x2c, // ,
-  0x3b, // ;
-  0x3a, // :
-  0x21, // !
-  0x00, // Right Shift
-  0x00, // Nill
-  0x00, // Alt
-  0x20, // Space
-  0x00, // Caps lock
-  0x00, // F1
-  0x00, // F2
-  0x00, // F3
-  0x00, // F4
-  0x00, // F5
-  0x00, // F6
-  0x00, // F7
-  0x00, // F8
-  0x00, // F9
-  0x00, // F10
-  0x00, // Nil
-  0x00, // Nil
-  0x00, // Line start
-  0x00, // Up arrow
-  0x00, // Page up
-  0x00, // Nil
-  0x00, // Left arrow
-  0x00, // Nil
-  0x00, // Right arrow
-  0x00, // Nil
-  0x00, // Line end
-  0x00, // Bottom arrow
-  0x00, // Page down
-  0x00, // insert
-  0x7f, // delete
-  0x00, // Nil
-  0x00, // Nil
-  0x00, // Nil
-  0x00, // Nil
-  0x00, // Nil
-  0x00, // Nil
-  0x00, // Nil
-  0x00, // Mod (Windows)
-};
 
 //#define GUEST_CREG     0
 //#define GUEST_SEG_BASE 1
@@ -135,7 +36,7 @@ void debug_save_guest_state(struct guest_state *state, gpr64_t *guest_gpr) {
 #define DEBUG_GUEST_STATE_FIELD_PRINT(field) \
   do {\
     if (field_index_from <= i && i <= field_index_to) {\
-      INFO(#field " = 0x%016x\n", state->field); \
+      printk(#field " = 0x%016x\n", state->field); \
     }\
     i++;\
   } while (0);
@@ -152,7 +53,7 @@ void debug_print_guest_state(struct guest_state *state, uint32_t field_index_fro
 #define DEBUG_GUEST_STATE_FIELD_PRINT_DIFF(field) \
   do {\
     if (state_a->field != state_b->field) { \
-      INFO(#field ": 0x%016x -> 0x%016x\n", state_a->field, state_b->field); \
+      printk(#field ": 0x%016x -> 0x%016x\n", state_a->field, state_b->field); \
     }\
   } while (0);
 #define DEBUG_GUEST_STATE_FIELD_DEBUG_FIELD_REG(field) DEBUG_GUEST_STATE_FIELD_PRINT_DIFF(field)
@@ -167,7 +68,7 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   printk("d : del\n"); \
   printk("p : print breakpoints\n"); \
   printk("v : print the current state\n"); \
-  printk("w : print the last state\n"); \
+  printk("z : print the last state\n"); \
   printk("x : print the changes\n"); \
   printk("i : print current instruction (mem[rip])\n"); \
   printk("m : dump memory\n"); \
@@ -222,7 +123,7 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   if (size == 0) { \
     size = 0x16; \
   } \
-  debug_dump(addr, size); \
+  dump(addr, size); \
 }
 
 #define DEBUG_HANDLE_BREAKPOINT_DEL {\
@@ -368,7 +269,7 @@ int debug(uint32_t reason, int force) {
   int run = -1;
   while(run) {
     DEBUG_PRINT_PROMPT
-    c = getchar();
+    c = (char)getchar();
     switch (c) {
       case 'b':
         DEBUG_HANDLE_BREAKPOINT_ADD
@@ -382,7 +283,7 @@ int debug(uint32_t reason, int force) {
       case 'v':
         DEBUG_HANDLE_STATE_PRINT
         break; 
-      case 'l':
+      case 'z':
         DEBUG_HANDLE_LAST_STATE_PRINT
         break; 
       case 'x':
@@ -438,27 +339,7 @@ void debug_install() {
 
 void debug_instruction_print(uint64_t rip, uint32_t length) {
   printk("Last instruction\n");
-  debug_dump(rip, length);
-}
-
-#define DEBUG_DUMP_COLUMNS 6
-
-void debug_dump(uint64_t addr, uint64_t size) {
-  uint32_t i = 0, j;
-  while (i < size) {
-    printk("%016x ", addr + i);
-    for (j = 0; j < DEBUG_DUMP_COLUMNS; j++) {
-      printk("%08x", *((uint32_t *)(addr + i)));
-      if (i != DEBUG_DUMP_COLUMNS - 1) {
-        printk(" ");
-      }
-      i += 4;
-      if (i >= size) {
-        break;
-      }
-    }
-    printk("\n");
-  }
+  dump(rip, length);
 }
 
 void debug_breakpoint_add(uint64_t address) {
@@ -521,68 +402,11 @@ int debug_breakpoint_break(uint64_t rip) {
   return -1;
 }
 
-/** 
- * Wait for keyboard event
- */
-uint8_t waitkey() { 
-  unsigned char k;
-  do {
-    k = cpu_inportb(0x60);
-  }
-  while (k < 128);
-  do {
-    k = cpu_inportb(0x60);
-  }
-  while (k > 128);
-  return k;
-}
-
-//XXX uint64_t is very big
-uint64_t pow(uint64_t number, uint64_t p) {
-  if (p == 0) {
-    return 1;
-  }
-  uint64_t n = number;
-  uint64_t i;
-  for (i = 1; i < p; ++i) {
-    n *= number;
-  }
-  return n;
-}
-
-uint64_t atoi_hexa(char *s) {
-  unsigned int size = strlen(s), i;
-  uint64_t number = 0;
-  for (i = 0; i < size; ++i) {
-    if (s[i] >= '0' && s[i] <= '9') {
-      number += (s[i] - 0x30) * pow(0x10, size - i - 1);
-    } else if(s[i] >= 'a' && s[i] <= 'f') {
-      number += (s[i] - 'a' + 10) * pow(0x10, size - i - 1);
-    }
-    //printk("c:%c %X\n", s[i], number);
-  }
-  return number;
-}
-
-unsigned int strlen(char *s) {
-  unsigned int size = 0, i;
-  for (i = 0; s[i] != '\0'; ++i) {
-    ++size;
-  }
-  return size;
-}
-
-char getchar() {
-  char c = scancodes[waitkey()];
-  printk("%c", c);
-  return c;
-}
-
 void getstring(char *input, unsigned int size) {
   char c = 0x0;
   unsigned int i = 0;
   while (i < (size - 1)) {
-    c = getchar();
+    c = (char)getchar();
     input[i] = c;
     if (c == '\r') {
       break;

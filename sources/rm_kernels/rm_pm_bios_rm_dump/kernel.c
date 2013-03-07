@@ -1,6 +1,6 @@
 #include "types.h"
 #include "seg.h"
-#include "common/own_bios.h"
+#include "own_bios.h"
 
 __asm__("jmpl $0x0, $main	;\n");
 

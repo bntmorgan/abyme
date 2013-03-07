@@ -43,4 +43,6 @@ uint8_t cpu_is_ept_supported(void);
 
 uint8_t cpu_is_unrestricted_guest_supported(void);
 
+uint8_t cpu_inportb(uint32_t port);
+
 #endif

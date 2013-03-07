@@ -188,3 +188,9 @@ void cpu_print_info(void) {
   eip = CPU_READ_EIP();
   INFO("cpu: cs=%04x ds=%04x ss=%04x eip=%08x cr0=%08x\n", cs, ds, ss, eip, cr0);
 }
+
+uint8_t cpu_inportb(uint32_t port) {
+  uint8_t value;
+  __asm__ __volatile__("inb %%dx, %%al" : "=a" (value) : "d" (port));
+  return value;
+}

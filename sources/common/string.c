@@ -17,3 +17,11 @@ void memcpy(void *dst, void *src, size_t size) {
       "popf      ;"
     : : "D"(dst), "S"(src), "c"(size));
 }
+
+unsigned int strlen(char *s) {
+  unsigned int size = 0, i;
+  for (i = 0; s[i] != '\0'; ++i) {
+    ++size;
+  }
+  return size;
+}

@@ -1,4 +1,5 @@
 #include "stdlib.h"
+#include "string.h"
 
 void itoa(int8_t *dst, uint8_t base, int32_t value) {
   uint32_t uvalue = (uint32_t) value;
@@ -38,3 +39,31 @@ void itoa(int8_t *dst, uint8_t base, int32_t value) {
     ptr = ptr - 1;
   }
 }
+
+//XXX uint64_t is very big
+uint64_t pow(uint64_t number, uint64_t p) {
+  if (p == 0) {
+    return 1;
+  }
+  uint64_t n = number;
+  uint64_t i;
+  for (i = 1; i < p; ++i) {
+    n *= number;
+  }
+  return n;
+}
+
+uint64_t atoi_hexa(char *s) {
+  unsigned int size = strlen(s), i;
+  uint64_t number = 0;
+  for (i = 0; i < size; ++i) {
+    if (s[i] >= '0' && s[i] <= '9') {
+      number += (s[i] - 0x30) * pow(0x10, size - i - 1);
+    } else if(s[i] >= 'a' && s[i] <= 'f') {
+      number += (s[i] - 'a' + 10) * pow(0x10, size - i - 1);
+    }
+    //printk("c:%c %X\n", s[i], number);
+  }
+  return number;
+}
+

@@ -96,6 +96,7 @@ bioshang_end:
  * Descriptors.
  */
 
+#if 0
 .macro GDT_ENTRY_16 type, base, limit
   .word (((\limit) >> 12) & 0xffff)
   .word (((\base)  >>  0) & 0xffff)
@@ -125,3 +126,4 @@ gdt_end:
 gdtr:
   .word gdt_end - gdt - 1
   .long gdt
+#endif
