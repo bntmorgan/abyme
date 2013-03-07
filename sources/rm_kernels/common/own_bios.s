@@ -80,7 +80,14 @@ very_end:
 
 .code16
 bioshang_start:
-  call hook_bios
+  // Restore our segments
+  xor %eax, %eax
+  mov %ax, %ds
+  mov %ax, %es
+  mov %ax, %fs
+  mov %ax, %gs
+  mov %ax, %ss
+  lcall $0x0, $hook_bios
 here:
   jmp here
 bioshang_end:

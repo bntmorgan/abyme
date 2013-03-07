@@ -1,6 +1,6 @@
 #include "types.h"
 #include "seg.h"
-#include "own_bios.h"
+#include "common/own_bios.h"
 
 __asm__("jmpl $0x0, $main	;\n");
 
@@ -19,7 +19,6 @@ void __NOINLINE __REGPARM print(const char *s) {
 int __NORETURN main(void) {
   print("Time to own the bios...\r\n");
   own_bios(0xf80c1);
-  //own_bios(0xfefefefe);
   print("end\r\n:))");
   while (1);
 }
