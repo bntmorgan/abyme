@@ -18,8 +18,12 @@ void __NOINLINE __REGPARM print(const char *s) {
 
 int __NORETURN main(void) {
   print("Time to own the bios...\r\n");
-  own_bios();
-  __asm__ __volatile__ ("xchg %bx, %bx");
+  own_bios(0xf80c1);
+  //own_bios(0xfefefefe);
   print("end\r\n:))");
   while (1);
+}
+
+void hook_bios() {
+  print("Hooked feiozjfezio jfize jiozef jizof jio\r\n");
 }

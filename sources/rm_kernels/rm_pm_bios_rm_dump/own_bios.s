@@ -1,11 +1,13 @@
 .global own_bios
 
+.extern hook_bios
+
 .align 4
 
 .code16
 own_bios:
-  push %bp
-  mov %sp, %bp
+  push %ebp
+  mov %esp, %ebp
 
   cli
   // Register our gtd
@@ -24,19 +26,27 @@ next:
   mov %ax, %fs
   mov %ax, %gs
   mov %ax, %ss
+
   /* unprotect the BIOS memory */
   // XXX Unprotecting the bios memory
   // Copying the BIOS flash in ram
   // See Intel 3rd generation core PAM0-PAM6
   movb $0x30, 0xf8000080
-  movb $0x30, 0xf8000081
+  movb $0x33, 0xf8000081
   movb $0x33, 0xf8000082
   movb $0x00, 0xf80f80d8
+
+  /**
+   * Get the first parameter
+   * It is used to locate where to install
+   * the bios hang
+   */ 
+  mov 8(%ebp), %eax
 
   // Own the handler
   cld
   mov $bioshang_start, %esi
-  mov $0xf80c1, %edi
+  mov %eax, %edi
   mov $(bioshang_end - bioshang_start), %ecx
   rep movsb
 
@@ -52,7 +62,7 @@ next:
 end:
   // Go back to real mode dudes
   mov %cr0, %eax
-  and $0xfffe, %ax
+  and $0xfffffffe, %ax
   mov %eax, %cr0
   // Real mode segments
   xor %eax, %eax
@@ -61,20 +71,16 @@ end:
   mov %ax, %fs
   mov %ax, %gs
   mov %ax, %ss
-  mov %bp, %sp
   jmpl $0x0, $very_end
 .code16
 very_end:
-  pop %bp
-  ret
+  mov %ebp, %esp
+  pop %ebp
+  retl
 
 .code16
 bioshang_start:
-  mov $0xb800, %ax
-  mov %ax, %ds
-  movw $0x764, 0x0
-  movw $0x765, 0x2
-  movw $0x766, 0x4
+  call hook_bios
 here:
   jmp here
 bioshang_end:
