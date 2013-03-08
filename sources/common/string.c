@@ -1,5 +1,9 @@
 #include "string.h"
 
+#ifdef _CODE16GCC_
+__asm__(".code16gcc\n");
+#endif
+
 void memset(void *dst, uint8_t c, size_t size) {
   __asm__ __volatile__(
       "pushf     ;"

@@ -84,7 +84,7 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
 
 #define DEBUG_CURRENT_STATE_INDEX (guest_states_index % 2)
 
-#define DEBUG_PREVIOUS_STATE_INDEX (guest_states_index % 2 + 1)
+#define DEBUG_PREVIOUS_STATE_INDEX ((guest_states_index + 1) % 2)
 
 #define DEBUG_PRINT_PROMPT {\
   printk("debug@%x[%x]$", guest_states[DEBUG_CURRENT_STATE_INDEX].rip, reason); \
@@ -146,7 +146,7 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
 
 #define DEBUG_HANDLE_STATE_DIFF {\
   printk("\n"); \
-  debug_print_guest_state_diff(guest_states, guest_states + 1); \
+  debug_print_guest_state_diff(guest_states + DEBUG_PREVIOUS_STATE_INDEX, guest_states + DEBUG_CURRENT_STATE_INDEX); \
 }
 
 #define DEBUG_HANDLE_SET_IO { \

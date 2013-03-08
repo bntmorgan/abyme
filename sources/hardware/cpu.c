@@ -4,6 +4,10 @@
 #include "stdio.h"
 #include "vmm_info.h"
 
+#ifdef _CODE16GCC_
+__asm__(".code16gcc\n");
+#endif
+
 static uintptr_t reg;
 
 void cpu_outportb(uint32_t port, uint8_t value) {
@@ -86,6 +90,7 @@ void cpu_write_cr3(uintptr_t value) {
   __asm__ __volatile__("mov %0, %%cr3" : : "a"(value));
 }
 
+#ifdef __X86_64__
 uint32_t cpu_get_seg_desc_base(uintptr_t gdt_base, uint16_t seg_sel) {
   /*
    * See [Intel_August_2012], volume 3, section 3.4.2.
@@ -95,6 +100,7 @@ uint32_t cpu_get_seg_desc_base(uintptr_t gdt_base, uint16_t seg_sel) {
   *((uintptr_t*) &seg_desc) = *(((uintptr_t*) gdt_base) + (seg_sel >> 3));
   return ((seg_desc.base2 << 24) | (seg_desc.base1 << 16) | seg_desc.base0);
 }
+#endif
 
 #ifdef __X86_64__
 void cpu_enable_ne(void) {

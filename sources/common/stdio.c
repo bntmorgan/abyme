@@ -4,6 +4,10 @@
 #include "stdlib.h"
 #include "keyboard.h"
 
+#ifdef _CODE16GCC_
+__asm__(".code16gcc\n");
+#endif
+
 void printk_string(int8_t *string, int8_t minimum_length, int8_t padding) {
   int8_t *ptr = string;
   uint8_t length = 0;

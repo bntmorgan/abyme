@@ -1,6 +1,10 @@
 #include "keyboard.h"
 #include "hardware/cpu.h"
 
+#ifdef _CODE16GCC_
+__asm__(".code16gcc\n");
+#endif
+
 /**
  * Scancodes to ASCII CODE convertion
  *

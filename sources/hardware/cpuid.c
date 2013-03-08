@@ -6,6 +6,10 @@
 
 #include "stdio.h"
 
+#ifdef _CODE16GCC_
+__asm__(".code16gcc\n");
+#endif
+
 #define cpuid_a(idx, eax) \
   __asm__ __volatile__("cpuid" : "=a"(eax) : "a"(idx))
 #define cpuid_cd(idx, ecx, edx) \

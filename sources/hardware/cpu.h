@@ -60,7 +60,9 @@ void cpu_write_cr4(uintptr_t reg);
 
 void cpu_write_cr3(uintptr_t reg);
 
+#ifdef __X86_64__
 uint32_t cpu_get_seg_desc_base(uintptr_t gdt_base, uint16_t seg_sel);
+#endif
 
 #ifdef __X86_64__
 void cpu_enable_vmxe(void);

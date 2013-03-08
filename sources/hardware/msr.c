@@ -2,6 +2,10 @@
 
 #include "stdio.h"
 
+#ifdef _CODE16GCC_
+__asm__(".code16gcc\n");
+#endif
+
 /*
  * eax is the low value and edx the high value.
  */

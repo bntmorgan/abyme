@@ -22,6 +22,8 @@ Positionner le bit 13 du CR4 à 0 dans la vm. Vérifier si ça a du sens.
 
 Analyse fine des valeur du controlleur mémoire
 
+Faire un vmcall en VMXRoot pour activer le mode dual monitor : ko
+
 Résultats :
 
 Syslinux :
