@@ -69,13 +69,13 @@ void vmem_check_current_gdt_base(void) {
    * we don't care about the TI and RPL.
    * See [Intel_August_2012], volume 3, section 3.4.2.
    */
-  cpu_read_gdt((uint32_t *) &gdt_ptr);
+  cpu_read_gdt((uint8_t *) &gdt_ptr);
   gdt_desc = (uint8_t *) gdt_ptr.base;
   INFO("GDT base 0x%x\n", gdt_desc);
-  cpu_read_cs(&segment_selector);
+  segment_selector = cpu_read_cs();
   vmem_get_gdt_desc(gdt_desc + (segment_selector & ~0x7), &entry_cs);
   INFO("CS 0x%x BASE CS 0x%x\n", segment_selector & ~0x7, entry_cs.base);
-  cpu_read_ds(&segment_selector);
+  segment_selector = cpu_read_ds();
   vmem_get_gdt_desc(gdt_desc + (segment_selector & ~0x7), &entry_ds);
   INFO("DS 0x%x BASE DS 0x%x\n", segment_selector & ~0x7, entry_ds.base);
   vmem_print_info();
@@ -166,7 +166,7 @@ void vmem_print_info(void) {
    */
   gdt_pm_ptr_t gdt_ptr;
   gdt_entry_t entry;
-  cpu_read_gdt((uint32_t *) &gdt_ptr);
+  cpu_read_gdt((uint8_t *) &gdt_ptr);
   INFO("gdt: base=%8x limit=%8x\n", gdt_ptr.base, gdt_ptr.limit);
   uint8_t *gdt_desc = (uint8_t *) gdt_ptr.base;
   while (gdt_desc < (uint8_t *) gdt_ptr.base + gdt_ptr.limit) {
@@ -179,6 +179,6 @@ void vmem_print_info(void) {
    * Print informations on CR3 (note that paging is configured for long mode).
    */
   uint32_t cr3;
-  cpu_read_cr3(&cr3);
+  cr3 = cpu_read_cr3();
   INFO("paging from cr3=%08x\n", cr3);
 }

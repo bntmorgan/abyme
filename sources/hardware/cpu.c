@@ -75,15 +75,15 @@ uintptr_t cpu_read_tr(void) {
 }
 
 void cpu_write_cr0(uintptr_t value) {
-  __asm__ __volatile__("mov %%rax, %%cr0" : : "a" (value));
+  __asm__ __volatile__("mov %0, %%cr0" : : "a" (value));
 }
 
 void cpu_write_cr4(uintptr_t value) {
-  __asm__ __volatile__("mov %%rax, %%cr4" : : "a" (value));
+  __asm__ __volatile__("mov %0, %%cr4" : : "a" (value));
 }
 
 void cpu_write_cr3(uintptr_t value) {
-  __asm__ __volatile__("movl %%rax, %%cr3" : : "a"(value));
+  __asm__ __volatile__("mov %0, %%cr3" : : "a"(value));
 }
 
 uint32_t cpu_get_seg_desc_base(uintptr_t gdt_base, uint16_t seg_sel) {
@@ -96,6 +96,7 @@ uint32_t cpu_get_seg_desc_base(uintptr_t gdt_base, uint16_t seg_sel) {
   return ((seg_desc.base2 << 24) | (seg_desc.base1 << 16) | seg_desc.base0);
 }
 
+#ifdef __X86_64__
 void cpu_enable_ne(void) {
   /*
    * See [Intel_August_2012], volume 3, section 2.5.
@@ -104,9 +105,11 @@ void cpu_enable_ne(void) {
       "mov %%cr0, %%rax      ;"
       "or $0x00000020, %%rax ;"
       "mov %%rax, %%cr0      ;"
-    : : : "rax");
+    : : : "eax");
 }
+#endif
 
+#ifdef __X86_64__
 void cpu_enable_vmxe(void) {
   /*
    * See [Intel_August_2012], volume 3, section 2.5.
@@ -117,6 +120,7 @@ void cpu_enable_vmxe(void) {
       "mov %%rax, %%cr4      ;"
     : : : "rax");
 }
+#endif
 
 void cpu_vmxon(uint8_t *region) {
   INFO("vmxon region at %08X\n", (uintptr_t) region);
@@ -127,7 +131,7 @@ void cpu_vmxon(uint8_t *region) {
    * See [Intel_August_2012], volume 3, section 30.3.
    */
   __asm__ __volatile__(
-      "vmxon (%%rdi) ;"
+      "vmxon (%1) ;"
       "setae %%cl    ;"
     : "=c" (ok) : "D" (&region));
   if (ok) {
@@ -146,7 +150,7 @@ void cpu_vmclear(uint8_t *region) {
    * See [Intel_August_2012], volume 3, section 30.3.
    */
   __asm__ __volatile__(
-      "vmclear (%%rdi) ;"
+      "vmclear (%1) ;"
       "seta %%cl       ;"
     : "=c" (ok) : "D" (&region));
   if (ok) {
@@ -165,7 +169,7 @@ void cpu_vmptrld(uint8_t *region) {
    * See [Intel_August_2012], volume 3, section 30.3.
    */
   __asm__ __volatile__(
-      "vmptrld (%%rdi) ;"
+      "vmptrld (%1) ;"
       "seta %%cl       ;"
     : "=c" (ok) : "D" (&region));
   if (ok) {
@@ -211,20 +215,19 @@ void cpu_vmresume(void) {
   }
 }
 
+#ifdef __X86_64__
 void cpu_vmwrite(uint32_t field, uint32_t value) {
   __asm__ __volatile__("vmwrite %%rax, %%rdx" : : "a" (value), "d" (field));
 }
+#endif
 
+#ifdef __X86_64__
 uint32_t cpu_vmread(uint32_t field) {
   uint32_t value;
   __asm__ __volatile__("vmread %%rdx, %%rax" : "=a" (value): "d" (field));
   return value;
 }
-
-void cpu_stop(void) {
-  __asm__ __volatile__("cli");
-  while (1);
-}
+#endif
 
 uint32_t cpu_adjust32(uint32_t value, uint32_t msr) {
   /*
@@ -241,10 +244,13 @@ uint32_t cpu_adjust32(uint32_t value, uint32_t msr) {
   return value;
 }
 
+#ifdef __X86_64__
 uintptr_t cpu_adjust64(uintptr_t value, uint32_t fixed0_msr, uint32_t fixed1_msr) {
   return (value & msr_read64(fixed1_msr)) | msr_read64(fixed0_msr);
 }
+#endif
 
+#ifndef __X86_64__
 void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg) {
   __asm__ __volatile__(
       /*
@@ -280,11 +286,13 @@ void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg) {
       "1:\n"
     : : "m" (gdt_ptr), "m" (code_seg), "m" (data_seg) : "memory");
 }
+#endif
 
 #define MSR_ADDRESS_IA32_EFER                 0xc0000080
 #define MSR_ADDRESS_IA32_EFER__BIT__LME       0x8
 #define MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2  0x48B
 
+#ifndef __X86_64__
 void cpu_enable_paging(void) {
   /*
    * The paging is setup with identity mapping without offset.
@@ -304,6 +312,7 @@ void cpu_enable_paging(void) {
       "movl %eax, %cr0 ;"
   );
 }
+#endif
 
 void cpu_enable_long_mode(void) {
   /*
@@ -318,6 +327,7 @@ void cpu_enable_long_mode(void) {
   );
 }
 
+#ifndef __X86_64__
 void cpu_enable_pae(void) {
   /*
    * See [Intel_August_2012], volume 3, section 2.5.
@@ -328,10 +338,7 @@ void cpu_enable_pae(void) {
       "movl %eax, %cr4 ;"
   );
 }
-
-void cpu_outportb(uint32_t port, uint8_t value) {
-  __asm__ __volatile__("outb %%al,%%dx" : : "d" (port), "a" (value));
-}
+#endif
 
 void cpu_stop(void) {
   __asm__ __volatile__("cli");
@@ -339,30 +346,35 @@ void cpu_stop(void) {
   while (1);
 }
 
+#ifndef __X86_64__
 uint8_t cpu_is_paging_enabled(void) {
   /*
    * See [Intel_August_2012], volume 3, section 2.5.
    */
   uint32_t cr0;
-  cpu_read_cr0(&cr0);
+  cr0 = cpu_read_cr0();
   if ((cr0 & 0x80000000) == 0x80000000) {
     return 1;
   }
   return 0;
 }
+#endif
 
+#ifndef __X86_64__
 uint8_t cpu_is_protected_mode_enabled(void) {
   /*
    * See [Intel_August_2012], volume 3, section 2.5.
    */
   uint32_t cr0;
-  cpu_read_cr0(&cr0);
+  cr0 = cpu_read_cr0();
   if ((cr0 & 0x1) == 0x1) {
     return 1;
   }
   return 0;
 }
+#endif
 
+#ifndef __X86_64__
 uint8_t cpu_is_ept_supported(void) {
   /*
    * See [Intel_August_2012], volume 3, section A.3.3.
@@ -372,7 +384,9 @@ uint8_t cpu_is_ept_supported(void) {
   msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &edx);
   return (edx & (1 << 1)) == (1 << 1);
 }
+#endif
 
+#ifndef __X86_64__
 uint8_t cpu_is_unrestricted_guest_supported(void) {
   /*
    * See [Intel_August_2012], volume 3, section A.3.3.
@@ -382,17 +396,20 @@ uint8_t cpu_is_unrestricted_guest_supported(void) {
   msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &edx);
   return (edx & (1 << 7)) == (1 << 7);
 }
+#endif
 
+#ifndef __X86_64__
 void cpu_print_info(void) {
   uint32_t cs;
   uint32_t ds;
   uint32_t ss;
   uint32_t cr0;
   uint32_t eip;
-  cpu_read_cs(&cs);
-  cpu_read_ds(&ds);
-  cpu_read_ss(&ss);
-  cpu_read_cr0(&cr0);
+  cs = cpu_read_cs();
+  ds = cpu_read_ds();
+  ss = cpu_read_ss();
+  cr0 = cpu_read_cr0();
   eip = CPU_READ_EIP();
   INFO("cpu: cs=%04x ds=%04x ss=%04x eip=%08x cr0=%08x\n", cs, ds, ss, eip, cr0);
 }
+#endif

@@ -62,9 +62,13 @@ void cpu_write_cr3(uintptr_t reg);
 
 uint32_t cpu_get_seg_desc_base(uintptr_t gdt_base, uint16_t seg_sel);
 
+#ifdef __X86_64__
 void cpu_enable_vmxe(void);
+#endif
 
+#ifdef __X86_64__
 void cpu_enable_ne(void);
+#endif
 
 void cpu_vmxon(uint8_t *region);
 
@@ -76,17 +80,25 @@ void cpu_vmlaunch(void);
 
 void cpu_vmresume(void);
 
+#ifdef __X86_64__
 void cpu_vmwrite(uint32_t field, uint32_t value);
+#endif
 
+#ifdef __X86_64__
 uint32_t cpu_vmread(uint32_t field);
+#endif
 
 void cpu_stop(void);
 
 uint32_t cpu_adjust32(uint32_t value, uint32_t msr);
 
+#ifdef __X86_64__
 uintptr_t cpu_adjust64(uintptr_t value, uint32_t fixed0_msr, uint32_t fixed1_msr);
+#endif
 
+#ifndef __X86_64__
 void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg);
+#endif
 
 #define CPU_READ_EIP() ({                            \
     uint32_t reg;                                    \
@@ -96,15 +108,25 @@ void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg);
 
 void cpu_stop(void);
 
+#ifndef __X86_64__
 void cpu_print_info(void);
+#endif
 
+#ifndef __X86_64__
 uint8_t cpu_is_paging_enabled(void);
+#endif
 
+#ifndef __X86_64__
 uint8_t cpu_is_protected_mode_enabled(void);
+#endif
 
+#ifndef __X86_64__
 void cpu_enable_pae(void);
+#endif
 
+#ifndef __X86_64__
 void cpu_enable_paging(void);
+#endif
 
 void cpu_enable_long_mode(void);
 
