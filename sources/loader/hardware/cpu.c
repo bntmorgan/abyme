@@ -9,7 +9,7 @@
 /*
  * eax is the low value and edx the high value.
  */
-void cpu_read_msr(uint32_t address, uint32_t *eax, uint32_t *edx) {
+void msr_read(uint32_t address, uint32_t *eax, uint32_t *edx) {
   __asm__ __volatile__("rdmsr" : "=a" (*eax), "=d" (*edx) : "c" (address));
 }
 
@@ -161,7 +161,7 @@ uint8_t cpu_is_ept_supported(void) {
    * See [Intel_August_2012], volume 3, section 24.6.2, table 24-7.
    */
   uint32_t eax, edx;
-  cpu_read_msr(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &edx);
+  msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &edx);
   return (edx & (1 << 1)) == (1 << 1);
 }
 
@@ -171,7 +171,7 @@ uint8_t cpu_is_unrestricted_guest_supported(void) {
    * See [Intel_August_2012], volume 3, section 24.6.2, table 24-7.
    */
   uint32_t eax, edx;
-  cpu_read_msr(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &edx);
+  msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2, &eax, &edx);
   return (edx & (1 << 7)) == (1 << 7);
 }
 

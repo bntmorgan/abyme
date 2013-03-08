@@ -9,7 +9,7 @@
     reg;                                             \
   })
 
-void cpu_read_msr(uint32_t address, uint32_t *eax, uint32_t *edx);
+void msr_read(uint32_t address, uint32_t *eax, uint32_t *edx);
 
 void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg);
 
