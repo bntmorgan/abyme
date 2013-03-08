@@ -58,6 +58,8 @@ void cpu_write_cr0(uintptr_t reg);
 
 void cpu_write_cr4(uintptr_t reg);
 
+void cpu_write_cr3(uintptr_t reg);
+
 uint32_t cpu_get_seg_desc_base(uintptr_t gdt_base, uint16_t seg_sel);
 
 void cpu_enable_vmxe(void);
@@ -83,5 +85,31 @@ void cpu_stop(void);
 uint32_t cpu_adjust32(uint32_t value, uint32_t msr);
 
 uintptr_t cpu_adjust64(uintptr_t value, uint32_t fixed0_msr, uint32_t fixed1_msr);
+
+void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg);
+
+#define CPU_READ_EIP() ({                            \
+    uint32_t reg;                                    \
+    __asm__ __volatile__("mov $., %0" : "=a" (reg)); \
+    reg;                                             \
+  })
+
+void cpu_stop(void);
+
+void cpu_print_info(void);
+
+uint8_t cpu_is_paging_enabled(void);
+
+uint8_t cpu_is_protected_mode_enabled(void);
+
+void cpu_enable_pae(void);
+
+void cpu_enable_paging(void);
+
+void cpu_enable_long_mode(void);
+
+uint8_t cpu_is_ept_supported(void);
+
+uint8_t cpu_is_unrestricted_guest_supported(void);
 
 #endif
