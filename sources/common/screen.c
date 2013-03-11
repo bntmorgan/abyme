@@ -52,9 +52,7 @@ void screen_update_cursor(void) {
 }
 
 void screen_clear(void) {
-  //uint16_t *video_memory = (uint16_t *) 0xb8000;
   for (uint32_t i = 0; i < screen_w * screen_h; i++) {
-    //video_memory[i] = 0x0F00;
     set_video_mem(i, 0x0f00);
   }
   cursor_x = 0;
@@ -65,25 +63,19 @@ void screen_clear(void) {
 void screen_scroll(void) {
   //uint16_t *video_memory = (uint16_t *) 0xb8000;
   for (uint32_t i = screen_w; i < screen_w * screen_h; i++) {
-    //video_memory[i - screen_w] = video_memory[i];
     set_video_mem(i - screen_w, get_video_mem(i));
   }
   for (uint32_t i = screen_w * (screen_h - 1); i < screen_w * screen_h; i++) {
-    //video_memory[i] = 0x0F00;
     set_video_mem(i, 0x0f00);
   }
   cursor_y--;
 }
 
 void screen_print(uint8_t value) {
-  //uint8_t *video_memory = (uint8_t *) 0xb8000;
-  //uint16_t *video_memory = (uint16_t *) 0xb8000;
   if (value == '\n') {
     cursor_y++;
     cursor_x = 0;
   } else {
-    //video_memory[(cursor_y * screen_w + cursor_x)] = (((uint16_t)value & 0x00ff) | 0x0f00);
-    //*(((uint16_t*)0xb8000) + (cursor_y * screen_w + cursor_x)) = (((uint16_t)value & 0x00ff) | 0x0f00);
     set_video_mem((cursor_y * screen_w + cursor_x), (((uint16_t)value & 0x00ff) | 0x0f00));
     cursor_x++;
   }

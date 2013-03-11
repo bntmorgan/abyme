@@ -34,7 +34,6 @@ int __NOINLINE __REGPARM read_first_sector(uint8_t *sector) {
   uint8_t c = 0;
   uint16_t ret = 0; 
   __asm__ __volatile__ ("mov %0, %%esi" : : "a"((uint16_t*)&d));
-  __asm__ __volatile__ ("xchg %bx, %bx");
   __asm__ __volatile__ ("int $0x13" : "=cc" (c), "=a" (ret) : "a" (0x4200), "d" (0x80));
     
   if (c) {
@@ -47,17 +46,16 @@ int __NOINLINE __REGPARM read_first_sector(uint8_t *sector) {
 //#define DEBUG
 
 int __NORETURN main(void) {
-  __asm__ __volatile__ ("xchg %bx, %bx");
-  printk("Time to own the bios...\r\n");
+  printk("Time to own the bios...\n");
   own_bios(0xf831f);
-  printk("end\r\n:))");
+  printk("end\n:))");
   // Sector read
   printk("bonjour\n");
   uint8_t sector[512]; // The sector data
   if (read_first_sector(sector)) {
-    printk("FAILED\r\n");
+    printk("FAILED\n");
   } else {
-    printk("SUCCESS\r\n");
+    printk("SUCCESS\n");
     uint32_t i;
     char buf[11];
     for (i = 0; i < 0x10; i++) {
@@ -84,12 +82,12 @@ int __NORETURN main(void) {
 #endif
     }
   }
-  printk("end\r\n:))");
+  printk("end\n:))");
   while (1);
 }
 
 void hook_bios() {
-  printk("hook bios\r\n");
+  printk("hook bios\n");
   // Never return
   while(1);
 }

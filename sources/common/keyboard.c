@@ -8,7 +8,7 @@ __asm__(".code16gcc\n");
 /**
  * Scancodes to ASCII CODE convertion
  *
- * Theese scancodes are from Eric Alata's Dell Lattitude
+ * E6420 Scan codes
  */
 char scancodes[DEBUG_SCANCODES_SIZE] = {
   0x00, // Nil
