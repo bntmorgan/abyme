@@ -18,6 +18,8 @@ dir		:= $(d)/pm_bios_rm_int13
 include		$(dir)/rules.mk
 dir		:= $(d)/pm_rm_smm
 include		$(dir)/rules.mk
+dir		:= $(d)/pm_rm_test_libc
+include		$(dir)/rules.mk
 
 d		:= $(dirstack_$(sp))
 sp		:= $(basename $(sp))
