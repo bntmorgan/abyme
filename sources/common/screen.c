@@ -12,7 +12,7 @@ uint32_t cursor_x = 0;
 uint32_t cursor_y = 0;
 
 #ifdef _CODE16GCC_
-void __attribute__ ((noinline)) set_video_mem(uint16_t index, uint16_t value) {
+static inline void set_video_mem(uint16_t index, uint16_t value) {
   __asm__ __volatile__(
       "mov %%ax, %%ds ;"
       "mov %%ebx, (%%edx, %%ecx, 2) ;"
@@ -21,13 +21,13 @@ void __attribute__ ((noinline)) set_video_mem(uint16_t index, uint16_t value) {
   : : "a"(0xb800), "b"(value), "c"(index), "d"(0x00));
 }
 #else
-void __attribute__ ((noinline)) set_video_mem(uint16_t index, uint16_t value) {
+static inline void set_video_mem(uint16_t index, uint16_t value) {
   *(((uint16_t*)0xb8000) + (index)) = (value);
 }
 #endif
 
 #ifdef _CODE16GCC_
-uint16_t get_video_mem(uint16_t index) {
+static inline uint16_t get_video_mem(uint16_t index) {
   uint16_t val;
   __asm__ __volatile__(
       "push %%ds ;"
@@ -38,7 +38,7 @@ uint16_t get_video_mem(uint16_t index) {
   return val;
 }
 #else
-uint16_t get_video_mem(uint16_t index) {
+static inline uint16_t get_video_mem(uint16_t index) {
   return *(((uint16_t*)0xb8000) + (index));
 }
 #endif
