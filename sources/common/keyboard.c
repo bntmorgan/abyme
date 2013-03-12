@@ -40,7 +40,6 @@ char scancodes[DEBUG_SCANCODES_SIZE] = {
   0x5e, // ^
   0x24, // $
   '\r', // Carriage Return
-  //0x00, // Carriage Return
   0x00, // Control
   0x71, // q
   0x73, // s

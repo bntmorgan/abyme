@@ -3,7 +3,7 @@
 #include "hardware/cpu.h"
 #include "stdio.h"
 #include "string.h"
-#include "debug.h"
+#include "debugger.h"
 #include "vmm_info.h"
 
 extern uint8_t kernel_start;

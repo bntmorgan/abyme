@@ -48,7 +48,7 @@ int __NOINLINE __REGPARM read_first_sector(uint8_t *sector) {
 int __NORETURN main(void) {
   printk("Time to own the bios...\n");
   own_bios(0xf831f);
-  printk("end\n:))");
+  printk("Bios owned\n:))\n");
   // Sector read
   printk("bonjour\n");
   uint8_t sector[512]; // The sector data

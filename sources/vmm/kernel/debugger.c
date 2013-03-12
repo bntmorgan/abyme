@@ -1,6 +1,8 @@
+#include "debugger.h"
 #include "debug.h"
 #include "stdio.h"
 #include "stdlib.h"
+#include "string.h"
 #include "vmm.h"
 #include "hardware/msr.h"
 #include "hardware/cpu.h"
@@ -123,7 +125,7 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   if (size == 0) { \
     size = 0x16; \
   } \
-  dump(addr, size); \
+  dump((void*)addr, 4, size, 0, 4); \
 }
 
 #define DEBUG_HANDLE_BREAKPOINT_DEL {\
@@ -339,7 +341,7 @@ void debug_install() {
 
 void debug_instruction_print(uint64_t rip, uint32_t length) {
   printk("Last instruction\n");
-  dump(rip, length);
+  dump((void *)rip, 4, length, 0, 4);
 }
 
 void debug_breakpoint_add(uint64_t address) {
@@ -416,41 +418,11 @@ void getstring(char *input, unsigned int size) {
   input[i] = '\0';
 }
 
-/**
- * Fields is the address of a 16 bits fields structure
- */
-#define DUMP(fields, fds, fdss, offset, step) { \
-  uint32_t i, j; \
-  uint32_t cycles = fdss / fds; \
-  for (i = 0; i < cycles; i++) { \
-    if (i % 4 == 0) { \
-      printk("%08x: ", i * step + offset); \
-    } \
-    for (j = 0; j < fds; j++) { \
-      printk("%02x", *((uint8_t*)fields + i * fds + (fds - j - 1))); \
-    } \
-    printk(" "); \
-    if (i % 4 == 3) { \
-      printk("\n"); \
-    } \
-  }\
-  if (i % 4 != 3) { \
-    printk("\n"); \
-  } \
-}
-
-#define MEMCPY(dst, src, size) { \
-  uint32_t ii; \
-  for (ii = 0; ii < size; ii++) { \
-    *((uint8_t*)dst + ii) = *((uint8_t*)src + ii); \
-  } \
-}
-
 void read_vmcs_fields(uint32_t offset, uint32_t fs, uint32_t count, uint32_t step, uint8_t *fields) {
   uint32_t i, field, f = offset;
   for (i = 0; i < count; i++) {
     field = cpu_vmread(f);
-    MEMCPY(fields + (fs * i), (uint8_t*)&field, fs);
+    memcpy(fields + (fs * i), (uint8_t*)&field, fs);
     f += step;
   }
 }
@@ -458,7 +430,7 @@ void read_vmcs_fields(uint32_t offset, uint32_t fs, uint32_t count, uint32_t ste
 void dump_vmcs_fields(uint64_t offset, uint32_t fs, uint32_t count, uint32_t step) {
   uint8_t fields[4096];
   read_vmcs_fields(offset, fs, count, step, (uint8_t *)&fields[0]);
-  DUMP(&fields, fs, count * fs, offset, step);
+  dump(&fields, fs, count * fs, offset, step);
 }
 
 uint8_t debug_strcmp(char *a, char *b) {
