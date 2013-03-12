@@ -64,6 +64,7 @@ void printk(char *format, ...) {
         int32_t value = __builtin_va_arg(values, int32_t);
         itoa(buffer, 16, value);
         printk_string(buffer, minimum_length, padding);
+#ifndef _CODE16GCC_
       } else if (c == 'X') {
         int64_t value = __builtin_va_arg(values, int64_t);
         uint8_t hi_minimum_length = 0;
@@ -83,6 +84,7 @@ void printk(char *format, ...) {
         }
         itoa(buffer, 16, (uint32_t) value);
         printk_string(buffer, lo_minimum_length, padding);
+#endif
       } else if (c == 's') {
         int8_t *string = __builtin_va_arg(values, int8_t *);
         printk_string(string, minimum_length, padding);

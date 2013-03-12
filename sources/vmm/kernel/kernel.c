@@ -9,6 +9,7 @@
 #include "vmm_info.h"
 #include "vmm_setup.h"
 #include "smp.h"
+#include "hardware/msr.h"
 #include "debugger.h"
 
 /*
@@ -118,6 +119,10 @@ void kernel_main(vmm_info_t *_vmm_info) {
    * XXX Overriding the int 13 handler
    */
   //write_bioshang(0xf80c6);
+  
+  uint32_t msr_ia32_efer_low, msr_ia32_efer_high;
+  msr_read(MSR_ADDRESS_IA32_EFER, &msr_ia32_efer_low, &msr_ia32_efer_high);
+  printk("IA32_EFER low : %08x, IA32_EFER high : %08x\n", msr_ia32_efer_low, msr_ia32_efer_high);
   
   vmm_vm_setup_and_launch();
 }

@@ -33,6 +33,11 @@ uintptr_t cpu_read_cr0(void) {
   return reg;
 }
 
+uintptr_t cpu_read_cr2(void) {
+  __asm__ __volatile__("mov %%cr2, %0" : "=a" (reg));
+  return reg;
+}
+
 uintptr_t cpu_read_cr3(void) {
   __asm__ __volatile__("mov %%cr3, %0" : "=a" (reg));
   return reg;

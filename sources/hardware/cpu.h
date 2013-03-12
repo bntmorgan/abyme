@@ -36,6 +36,8 @@ void cpu_read_idt(uint8_t *idt_ptr);
 
 uintptr_t cpu_read_cr0(void);
 
+uintptr_t cpu_read_cr2(void);
+
 uintptr_t cpu_read_cr3(void);
 
 uintptr_t cpu_read_cr4(void);

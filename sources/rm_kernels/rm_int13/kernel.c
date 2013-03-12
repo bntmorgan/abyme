@@ -1,7 +1,9 @@
 #include "types.h"
 #include "own_bios.h"
 #include "stdio.h"
+#include "screen.h"
 #include "stdlib.h"
+#include "debug.h"
 #include "seg.h"
 
 __asm__("jmpl $0x0, $main	;\n");
@@ -46,11 +48,14 @@ int __NOINLINE __REGPARM read_first_sector(uint8_t *sector) {
 //#define DEBUG
 
 int __NORETURN main(void) {
+  screen_clear();
   printk("Time to own the bios...\n");
   own_bios(0xf831f);
   printk("Bios owned\n:))\n");
   // Sector read
-  printk("bonjour\n");
+  //printk("bonjour\n");
+  //dump_core_state();
+  //while(1);
   uint8_t sector[512]; // The sector data
   if (read_first_sector(sector)) {
     printk("FAILED\n");
@@ -87,7 +92,9 @@ int __NORETURN main(void) {
 }
 
 void hook_bios() {
+  screen_clear();
   printk("hook bios\n");
+  dump_core_state();
   // Never return
   while(1);
 }

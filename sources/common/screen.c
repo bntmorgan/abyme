@@ -14,10 +14,10 @@ uint32_t cursor_y = 0;
 #ifdef _CODE16GCC_
 static inline void set_video_mem(uint16_t index, uint16_t value) {
   __asm__ __volatile__(
+      "push %%ds ;"
       "mov %%ax, %%ds ;"
       "mov %%ebx, (%%edx, %%ecx, 2) ;"
-      "xor %%ax, %%ax ;"
-      "mov %%ax, %%ds ;"
+      "pop %%ds ;"
   : : "a"(0xb800), "b"(value), "c"(index), "d"(0x00));
 }
 #else
@@ -43,7 +43,7 @@ static inline uint16_t get_video_mem(uint16_t index) {
 }
 #endif
 
-void screen_update_cursor(void) {
+void __attribute__((noinline)) screen_update_cursor(void) {
   uint16_t location = cursor_y * screen_w + cursor_x;
   cpu_outportb(0x3D4, 14);
   cpu_outportb(0x3D5, location >> 8);

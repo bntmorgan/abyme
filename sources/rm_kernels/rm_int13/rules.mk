@@ -10,7 +10,7 @@ OBJS_16_$(d)		:= $(call SRC_2_OBJ, \
 										$(d)/kernel.o $(d)/common_16/own_bios.o \
 										$(d)/common/stdio.o $(d)/common/stdlib.o $(d)/hardware/cpu.o \
 										$(d)/hardware/msr.o $(d)/common/screen.o $(d)/common/keyboard.o \
-										$(d)/common/string.o)
+										$(d)/common/string.o $(d)/common/debug.o)
 OBJECTS			+= $(OBJS_16_$(d))
 $(OBJS_16_$(d)):	CC_FLAGS_KERNEL	:= $(CC_FLAGS_16)\
 									-I$(d)/include -I$(d)/include_16 -I$(d) -std=c99 \
