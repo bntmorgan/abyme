@@ -7,16 +7,16 @@ import portio
 
 portio.iopl(3)
 
-if len(sys.argv) != 7:
-	print("Syntax: %s base_address start_bus bus device function outfile" % sys.argv[0])
+if len(sys.argv) != 2:
+	print("Syntax: %s outfile" % sys.argv[0])
 	sys.exit(1)
 
-outfile = sys.argv[6]
-base_address = int(sys.argv[1], 16)
-start_bus = int(sys.argv[2])
-bus = int(sys.argv[3], 16)
-device = int(sys.argv[4], 16)
-function = int(sys.argv[5], 16)
+outfile = sys.argv[1]
+base_address = 0xf8000000
+start_bus = 0
+bus = 0
+device = 0x1f
+function = 0
 
 wmem = open("/dev/mem", "r+b")
 mem = open("/dev/mem", "rb")
