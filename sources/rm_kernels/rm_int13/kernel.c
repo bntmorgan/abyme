@@ -53,9 +53,9 @@ int __NORETURN main(void) {
   own_bios(0xf831f);
   printk("Bios owned\n:))\n");
   // Sector read
-  //printk("bonjour\n");
-  //dump_core_state();
-  //while(1);
+  // printk("bonjour\n");
+  // dump_core_state();
+  // while(1);
   uint8_t sector[512]; // The sector data
   if (read_first_sector(sector)) {
     printk("FAILED\n");
@@ -91,10 +91,10 @@ int __NORETURN main(void) {
   while (1);
 }
 
-void hook_bios() {
+void hook_bios(struct core_gpr gpr) {
   screen_clear();
   printk("hook bios\n");
-  dump_core_state();
+  dump_core_state(&gpr);
   // Never return
   while(1);
 }
