@@ -4,6 +4,10 @@
 #include "stdlib.h"
 #include "keyboard.h"
 
+#ifdef _CODE16GCC_
+__asm__(".code16gcc\n");
+#endif
+
 void printk_string(int8_t *string, int8_t minimum_length, int8_t padding) {
   int8_t *ptr = string;
   uint8_t length = 0;
@@ -60,6 +64,7 @@ void printk(char *format, ...) {
         int32_t value = __builtin_va_arg(values, int32_t);
         itoa(buffer, 16, value);
         printk_string(buffer, minimum_length, padding);
+#ifndef _CODE16GCC_
       } else if (c == 'X') {
         int64_t value = __builtin_va_arg(values, int64_t);
         uint8_t hi_minimum_length = 0;
@@ -79,6 +84,7 @@ void printk(char *format, ...) {
         }
         itoa(buffer, 16, (uint32_t) value);
         printk_string(buffer, lo_minimum_length, padding);
+#endif
       } else if (c == 's') {
         int8_t *string = __builtin_va_arg(values, int8_t *);
         printk_string(string, minimum_length, padding);
@@ -93,27 +99,6 @@ void printk(char *format, ...) {
     format = format + 1;
   }
   __builtin_va_end(values);
-}
-
-#define DEBUG_DUMP_COLUMNS 6
-void dump(uint64_t addr, uint64_t size) {
-  uint32_t i = 0, j;
-  while (i < size) {
-    printk("%016x ", addr + i);
-    for (j = 0; j < DEBUG_DUMP_COLUMNS; j++) {
-      intptr_t test = (addr + i);
-      uint32_t lulz = *((uint32_t*)test);
-      printk("%08x", lulz);
-      if (i != DEBUG_DUMP_COLUMNS - 1) {
-        printk(" ");
-      }
-      i += 4;
-      if (i >= size) {
-        break;
-      }
-    }
-    printk("\n");
-  }
 }
 
 int getchar() {

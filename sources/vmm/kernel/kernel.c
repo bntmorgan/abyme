@@ -9,7 +9,8 @@
 #include "vmm_info.h"
 #include "vmm_setup.h"
 #include "smp.h"
-#include "debug.h"
+#include "hardware/msr.h"
+#include "debugger.h"
 
 /*
  * Used to identify the size used of vmm (see the linker script).

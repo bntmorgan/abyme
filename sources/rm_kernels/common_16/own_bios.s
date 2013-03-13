@@ -80,14 +80,104 @@ very_end:
 
 .code16
 bioshang_start:
-  // Restore our segments
+
+  // Save the things we need to be unchanged
+
+  // %esp : %esp + 0xa
+  push %esp
+  // %eax : %esp + 0x6
+  push %eax
+  call _eip
+_eip:
+  pop %eax
+  // %eip : %esp + 0x2
+  push %eax
+  // %ds : %esp + 0x0
+  push %ds
+  xor %ax, %ax
+  mov %ax, %ds
+
+  // Create the state structure in the hook stack 0x6000
+
+  // Save %eax
+  movl %ss:0x6(%esp), %eax
+  movl %eax, 0x6000
+  movl %ebx, 0x6004
+  movl %ecx, 0x6008
+  movl %edx, 0x600c
+  // Save %esp
+  movl %ss:0xa(%esp), %eax
+  movl %eax, 0x6010
+  movl %ebp, 0x6014
+  movl %esi, 0x6018
+  movl %edi, 0x601c
+  // Save %eip
+  movl %ss:0x2(%esp), %eax
+  movl %eax, 0x6020
+  // Save segments selectors
+  // Save tr
+  xor %ax, %ax
+  movw %ax, 0x6024
+  movw %gs, 0x6028
+  movw %fs, 0x602c
+  movw %es, 0x6030
+  movw %ds, 0x6034
+  // Save %ds
+  movw %ss:0x0(%esp), %ax
+  movw %ax, 0x6038
+  movw %cs, 0x603c
+
+  // Cleanup
+  pop %ds
+  pop %eax
+  pop %eax
+  pop %esp
+
+  // Save the BIOS state in the current stack
+  push %esp
+  push %ebp
+  push %eax
+  push %ebx
+  push %ecx
+  push %edx
+  push %esi
+  push %edi
+  push %ds
+  push %es
+  push %fs
+  push %gs
+  push %ss
+
+  // Set up the hook_bios() environment
   xor %eax, %eax
   mov %ax, %ds
   mov %ax, %es
   mov %ax, %fs
   mov %ax, %gs
   mov %ax, %ss
+
+  // Set our new stack
+  movl $0x5, %esp
+  movl %esp, %ebp
+  
+  // Long jump to us
   lcall $0x0, $hook_bios
+  
+  // Save the BIOS state in the current stack
+  push %ss
+  push %gs
+  push %fs
+  push %es
+  push %ds
+  push %edi
+  push %esi
+  push %edx
+  push %ecx
+  push %ebx
+  push %eax
+  push %ebp
+  push %esp
+
 here:
   jmp here
 bioshang_end:

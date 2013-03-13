@@ -2,6 +2,10 @@
 
 #include "stdio.h"
 
+#ifdef _CODE16GCC_
+__asm__(".code16gcc\n");
+#endif
+
 /*
  * eax is the low value and edx the high value.
  */
@@ -15,11 +19,13 @@ uint32_t msr_read32(uint32_t address) {
   return eax;
 }
 
+#ifdef __X86_64__
 uint64_t msr_read64(uint32_t address) {
   uint32_t eax, edx;
   msr_read(address, &eax, &edx);
   return (((uint64_t) edx) << 32) | ((uint64_t) eax);
 }
+#endif
 
 void msr_write(uint32_t address, uint32_t eax, uint32_t edx) {
   __asm__ __volatile__("wrmsr" : : "a" (eax), "d" (edx), "c" (address));

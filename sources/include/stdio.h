@@ -24,7 +24,5 @@ void printk_string(int8_t *string, int8_t minimum_length, int8_t padding);
 
 void printk(char *format, ...);
 
-void dump(uint64_t addr, uint64_t size);
-
 int getchar();
 #endif

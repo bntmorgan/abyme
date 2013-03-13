@@ -1,6 +1,10 @@
 #include "stdlib.h"
 #include "string.h"
 
+#ifdef _CODE16GCC_
+__asm__(".code16gcc\n");
+#endif
+
 void itoa(int8_t *dst, uint8_t base, int32_t value) {
   uint32_t uvalue = (uint32_t) value;
   int8_t *ptr = dst;
