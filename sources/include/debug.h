@@ -8,21 +8,22 @@
  * Proc state
  */
 struct core_gpr {
-  uintptr_t cs;
-  uintptr_t ds;
-  uintptr_t es;
-  uintptr_t fs;
-  uintptr_t gs;
-  uintptr_t tr;
-  uintptr_t rip;
-  uintptr_t rdi;
-  uintptr_t rsi;
-  uintptr_t rbp;
-  uintptr_t rsp;
-  uintptr_t rdx;
-  uintptr_t rcx;
-  uintptr_t rbx;
   uintptr_t rax;
+  uintptr_t rbx;
+  uintptr_t rcx;
+  uintptr_t rdx;
+  uintptr_t rsp;
+  uintptr_t rbp;
+  uintptr_t rsi;
+  uintptr_t rdi;
+  uintptr_t rip;
+  uint16_t tr;
+  uint16_t gs;
+  uint16_t fs;
+  uint16_t es;
+  uint16_t ds;
+  uint16_t ss;
+  uint16_t cs;
 };
 
 struct core_state {

@@ -14,8 +14,8 @@ dir		:= $(d)/rm_b8000
 include		$(dir)/rules.mk
 dir		:= $(d)/rm_smm
 include		$(dir)/rules.mk
-dir		:= $(d)/rm_pm_bios_rm_dump
-include		$(dir)/rules.mk
+#dir		:= $(d)/rm_pm_bios_rm_dump
+#include		$(dir)/rules.mk
 dir		:= $(d)/rm_test_libc
 include		$(dir)/rules.mk
 

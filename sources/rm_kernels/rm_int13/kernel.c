@@ -95,6 +95,16 @@ void hook_bios(struct core_gpr gpr) {
   screen_clear();
   printk("hook bios\n");
   dump_core_state(&gpr);
+  __asm__ __volatile(
+    "movl %ebp, %esp;"
+    "pop %ebp;"
+    "jmpl %esp;"
+  );
+  __asm__ __volatile(
+    "movl %ebp, %esp;"
+    "pop %ebp;"
+    "lret;"
+  );
   // Never return
   while(1);
 }

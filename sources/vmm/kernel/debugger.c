@@ -125,7 +125,7 @@ void debug_print_guest_state_diff(struct guest_state *state_a, struct guest_stat
   if (size == 0) { \
     size = 0x16; \
   } \
-  dump((void*)addr, 4, size, 0, 4); \
+  dump((void*)addr, 4, size, addr, 4); \
 }
 
 #define DEBUG_HANDLE_BREAKPOINT_DEL {\
@@ -341,7 +341,7 @@ void debug_install() {
 
 void debug_instruction_print(uint64_t rip, uint32_t length) {
   printk("Last instruction\n");
-  dump((void *)rip, 4, length, 0, 4);
+  dump((void *)rip, 4, length, rip, 4);
 }
 
 void debug_breakpoint_add(uint64_t address) {

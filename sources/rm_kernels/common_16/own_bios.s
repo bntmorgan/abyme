@@ -1,6 +1,7 @@
 .global own_bios
 
 .extern hook_bios
+.extern printk
 
 .align 4
 
@@ -84,16 +85,16 @@ bioshang_start:
   // Save the things we need to be unchanged
 
   // %esp : %esp + 0xa
-  push %esp
+  pushl %esp
   // %eax : %esp + 0x6
-  push %eax
+  pushl %eax
   call _eip
 _eip:
-  pop %eax
+  popl %eax
   // %eip : %esp + 0x2
-  push %eax
+  pushl %eax
   // %ds : %esp + 0x0
-  push %ds
+  pushw %ds
   xor %ax, %ax
   mov %ax, %ds
 
@@ -118,14 +119,14 @@ _eip:
   // Save tr
   xor %ax, %ax
   movw %ax, 0x6024
-  movw %gs, 0x6028
-  movw %fs, 0x602c
-  movw %es, 0x6030
-  movw %ds, 0x6034
+  movw %gs, 0x6026
+  movw %fs, 0x6028
+  movw %es, 0x602a
   // Save %ds
   movw %ss:0x0(%esp), %ax
-  movw %ax, 0x6038
-  movw %cs, 0x603c
+  movw %ax, 0x602c
+  movw %ss, 0x602e
+  movw %cs, 0x6030
 
   // Cleanup
   pop %ds
@@ -134,6 +135,11 @@ _eip:
   pop %esp
 
   // Save the BIOS state in the current stack
+  push %ss
+  push %ds
+  push %es
+  push %fs
+  push %gs
   push %esp
   push %ebp
   push %eax
@@ -142,11 +148,6 @@ _eip:
   push %edx
   push %esi
   push %edi
-  push %ds
-  push %es
-  push %fs
-  push %gs
-  push %ss
 
   // Set up the hook_bios() environment
   xor %eax, %eax
@@ -157,36 +158,42 @@ _eip:
   mov %ax, %ss
 
   // Set our new stack
-  movl $0x5, %esp
+  movl $0x6000, %esp
   movl %esp, %ebp
   
-  // Long jump to us
+  // Far call to us
   lcall $0x0, $hook_bios
+
+  pushl $lulz
+  // Far call to printk
+  vmcall
+  lcall $0x0, $printk
   
   // Save the BIOS state in the current stack
-  push %ss
-  push %gs
-  push %fs
-  push %es
-  push %ds
-  push %edi
-  push %esi
-  push %edx
-  push %ecx
-  push %ebx
-  push %eax
-  push %ebp
-  push %esp
+  pop %edi
+  pop %esi
+  pop %edx
+  pop %ecx
+  pop %ebx
+  pop %eax
+  pop %ebp
+  pop %esp
+  pop %gs
+  pop %fs
+  pop %es
+  pop %ds
+  // Of course ss at the end DUDE
+  pop %ss
 
 here:
   jmp here
+
 bioshang_end:
 
 /*
  * Descriptors.
  */
 
-#if 0
 .macro GDT_ENTRY_16 type, base, limit
   .word (((\limit) >> 12) & 0xffff)
   .word (((\base)  >>  0) & 0xffff)
@@ -216,4 +223,10 @@ gdt_end:
 gdtr:
   .word gdt_end - gdt - 1
   .long gdt
-#endif
+
+lulz:
+  .byte 'a'
+  .byte 'b'
+  .byte 'c'
+  .byte 0x0
+
