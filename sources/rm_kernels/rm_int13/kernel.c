@@ -98,13 +98,13 @@ void hook_bios(struct core_gpr gpr) {
   __asm__ __volatile(
     "movl %ebp, %esp;"
     "pop %ebp;"
-    "jmpl %esp;"
+    "ljmp *(%esp);"
   );
+  // Never return
+  while(1);
   __asm__ __volatile(
     "movl %ebp, %esp;"
     "pop %ebp;"
     "lret;"
   );
-  // Never return
-  while(1);
 }

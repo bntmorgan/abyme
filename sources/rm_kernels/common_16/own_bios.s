@@ -17,9 +17,9 @@ run_protected:
   mov %esp, %ebp
 
   cli
-  // We already have a known gtd see at the bottom 
+  // We need a new gdt when we are with tinyvisor (test without failed : triple faulted)
   // Register our gtd
-  // lgdt gdtr
+  lgdt gdtr
   // Go into the protected mode
   mov %cr0, %eax
   or $0x1, %al
@@ -34,7 +34,7 @@ run_protected:
   push %gs
 
   // Select the good segments for the gdt
-  jmpl $0x08, $next
+  ljmp $0x08, $next
 
 .code32
 next:
@@ -64,7 +64,7 @@ next:
   mov %ax, %fs
   mov %ax, %gs
   mov %ax, %ss
-  jmpl $0x18, $end 
+  ljmp $0x18, $end 
 
 .code16  
 end:
@@ -252,7 +252,6 @@ bioshang_end:
 /*
  * Descriptors.
  */
-
 .macro GDT_ENTRY_16 type, base, limit
   .word (((\limit) >> 12) & 0xffff)
   .word (((\base)  >>  0) & 0xffff)
@@ -269,21 +268,19 @@ bioshang_end:
   .byte (0x90 + (((\type)  >>  0) & 0x6f))
   .byte (0xC0 + (((\limit) >> 28) & 0x0f))
   .byte (0x00 + (((\base)  >> 24) & 0xff))
-.endm*/
+.endm
 
-/*
 gdt:
   GDT_ENTRY_32 0x0,                               0x0, 0x00000000
-  GDT_ENTRY_32 0x8 \/* SEG X *\/ + 0x2 \/* SEG R *\/, 0x0, 0xffffffff
-  GDT_ENTRY_32 0x2 \/* SEG W *\/,                   0x0, 0xffffffff
-  GDT_ENTRY_16 0x8 \/* SEG X *\/ + 0x2 \/* SEG R *\/, 0x0, 0xffffffff
-  GDT_ENTRY_16 0x2 \/* SEG W *\/,                   0x0, 0xffffffff
+  GDT_ENTRY_32 0x8 /* SEG X */ + 0x2 /* SEG R */, 0x0, 0xffffffff
+  GDT_ENTRY_32 0x2 /* SEG W */,                   0x0, 0xffffffff
+  GDT_ENTRY_16 0x8 /* SEG X */ + 0x2 /* SEG R */, 0x0, 0xffffffff
+  GDT_ENTRY_16 0x2 /* SEG W */,                   0x0, 0xffffffff
 gdt_end:
 
 gdtr:
   .word gdt_end - gdt - 1
   .long gdt
-*/
 
 lulz:
   .byte 'a'
