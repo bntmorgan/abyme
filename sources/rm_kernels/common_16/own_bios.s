@@ -6,6 +6,16 @@
 
 .align 4
 
+restore_bios:
+  // Own the handler
+  cld
+  mov $handler_save, %esi
+  mov %eax, %edi
+  mov $(bioshang_end - bioshang_start), %ecx
+  rep movsb
+h:
+  jmp h
+
 /**
  * Runs the pointed function in AWESOME protected mode
  * Save the caller segmentation
@@ -157,56 +167,41 @@ _eip:
   xor %ax, %ax
   mov %ax, %ds
 
-  // Create the state structure in the hook stack 0x6000
+  // Create the state structure 
 
   // Save %eax
   movl %ss:0x6(%esp), %eax
-  movl %eax, 0x6000
-  movl %ebx, 0x6004
-  movl %ecx, 0x6008
-  movl %edx, 0x600c
+  movl %eax, bios_state + 0x00
+  movl %ebx, bios_state + 0x04
+  movl %ecx, bios_state + 0x08
+  movl %edx, bios_state + 0x0c
   // Save %esp
   movl %ss:0xa(%esp), %eax
-  movl %eax, 0x6010
-  movl %ebp, 0x6014
-  movl %esi, 0x6018
-  movl %edi, 0x601c
+  movl %eax, bios_state + 0x10
+  movl %ebp, bios_state + 0x14
+  movl %esi, bios_state + 0x18
+  movl %edi, bios_state + 0x1c
   // Save %eip
-  movl %ss:0x2(%esp), %eax
-  movl %eax, 0x6020
+  movl handler_address, %eax
+  movl %eax, bios_state + 0x20
   // Save segments selectors
   // Save tr
   xor %ax, %ax
-  movw %ax, 0x6024
-  movw %gs, 0x6026
-  movw %fs, 0x6028
-  movw %es, 0x602a
+  movw %ax, bios_state + 0x24
+  movw %gs, bios_state + 0x26
+  movw %fs, bios_state + 0x28
+  movw %es, bios_state + 0x2a
   // Save %ds
   movw %ss:0x0(%esp), %ax
-  movw %ax, 0x602c
-  movw %ss, 0x602e
-  movw %cs, 0x6030
+  movw %ax, bios_state + 0x2c
+  movw %ss, bios_state + 0x2e
+  movw %cs, bios_state + 0x30
 
   // Cleanup
   pop %ds
   pop %eax
   pop %eax
   pop %esp
-
-  // Save the BIOS state in the current stack
-  push %ss
-  push %ds
-  push %es
-  push %fs
-  push %gs
-  push %esp
-  push %ebp
-  push %eax
-  push %ebx
-  push %ecx
-  push %edx
-  push %esi
-  push %edi
 
   // Set up the hook_bios() environment
   xor %eax, %eax
@@ -220,34 +215,20 @@ _eip:
   movl $0x6000, %esp
   movl %esp, %ebp
   
+  // Set the parameter core_gpr pointer
+  movl $bios_state, (%esp)
+
   // Far call to us
-  lcall $0x0, $hook_bios
-
-  pushl $lulz
-  // Far call to printk
-  vmcall
-  lcall $0x0, $printk
-  
-  // Save the BIOS state in the current stack
-  pop %edi
-  pop %esi
-  pop %edx
-  pop %ecx
-  pop %ebx
-  pop %eax
-  pop %ebp
-  pop %esp
-  pop %gs
-  pop %fs
-  pop %es
-  pop %ds
-  // Of course ss at the end DUDE
-  pop %ss
-
-here:
-  jmp here
+  ljmp $0x0, $call_hook_bios
 
 bioshang_end:
+
+.code16
+call_hook_bios:
+  calll hook_bios
+  jmp restore_bios
+  
+
 
 /*
  * Descriptors.
@@ -290,6 +271,9 @@ lulz:
  
 handler_address:
   .long 0xcacacaca
+
+bios_state:
+  .space 50, 0xca
 
 handler_save:
   .space 0x100, 0xca

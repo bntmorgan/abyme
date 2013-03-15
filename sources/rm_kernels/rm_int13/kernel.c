@@ -91,20 +91,8 @@ int __NORETURN main(void) {
   while (1);
 }
 
-void hook_bios(struct core_gpr gpr) {
+void hook_bios(struct core_gpr *gpr) {
   screen_clear();
   printk("hook bios\n");
-  dump_core_state(&gpr);
-  __asm__ __volatile(
-    "movl %ebp, %esp;"
-    "pop %ebp;"
-    "ljmp *(%esp);"
-  );
-  // Never return
-  while(1);
-  __asm__ __volatile(
-    "movl %ebp, %esp;"
-    "pop %ebp;"
-    "lret;"
-  );
+  dump_core_state(gpr);
 }
