@@ -11,12 +11,22 @@ own_bios:
   mov %esp, %ebp
 
   cli
+  // We already have a known gtd see at the bottom 
   // Register our gtd
-  lgdt gdtr
+  // lgdt gdtr
   // Go into the protected mode
   mov %cr0, %eax
   or $0x1, %al
   mov %eax, %cr0
+
+  // Save the segmentation state
+  push %ss
+  push %cs
+  push %ds
+  push %es
+  push %fs
+  push %gs
+
   // Select the good segments for the gdt
   jmpl $0x08, $next
 .code32
@@ -73,17 +83,26 @@ end:
   mov %cr0, %eax
   and $0xfffffffe, %ax
   mov %eax, %cr0
-  // Real mode segments
-  xor %eax, %eax
-  mov %ax, %ds
-  mov %ax, %es
-  mov %ax, %fs
-  mov %ax, %gs
-  mov %ax, %ss
+
+  // Restore caller segmentation
+  pop %gs
+  pop %fs
+  pop %es
+  pop %ds
+  // pop %cs
+  pop %ax 
+  pop %ss
+
+  // Create the seg:offset address for the long jump
+  // push %cs
+  push %ax
+  push $very_end
+
   sti
-  jmpl $0x0, $very_end
+  jmpl (%esp)
 .code16
 very_end:
+  pop %eax
   mov %ebp, %esp
   pop %ebp
   retl
@@ -219,19 +238,21 @@ bioshang_end:
   .byte (0x90 + (((\type)  >>  0) & 0x6f))
   .byte (0xC0 + (((\limit) >> 28) & 0x0f))
   .byte (0x00 + (((\base)  >> 24) & 0xff))
-.endm
+.endm*/
 
+/*
 gdt:
   GDT_ENTRY_32 0x0,                               0x0, 0x00000000
-  GDT_ENTRY_32 0x8 /* SEG X */ + 0x2 /* SEG R */, 0x0, 0xffffffff
-  GDT_ENTRY_32 0x2 /* SEG W */,                   0x0, 0xffffffff
-  GDT_ENTRY_16 0x8 /* SEG X */ + 0x2 /* SEG R */, 0x0, 0xffffffff
-  GDT_ENTRY_16 0x2 /* SEG W */,                   0x0, 0xffffffff
+  GDT_ENTRY_32 0x8 \/* SEG X *\/ + 0x2 \/* SEG R *\/, 0x0, 0xffffffff
+  GDT_ENTRY_32 0x2 \/* SEG W *\/,                   0x0, 0xffffffff
+  GDT_ENTRY_16 0x8 \/* SEG X *\/ + 0x2 \/* SEG R *\/, 0x0, 0xffffffff
+  GDT_ENTRY_16 0x2 \/* SEG W *\/,                   0x0, 0xffffffff
 gdt_end:
 
 gdtr:
   .word gdt_end - gdt - 1
   .long gdt
+*/
 
 lulz:
   .byte 'a'
