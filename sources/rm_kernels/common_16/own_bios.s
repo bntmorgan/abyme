@@ -43,11 +43,19 @@ next:
    * the bios hang
    */ 
   mov 8(%ebp), %eax
+  mov %eax, handler_address
+
+  // Save the handler
+  cld
+  mov handler_address, %esi
+  mov $handler_save, %edi
+  mov $(bioshang_end - bioshang_start), %ecx
+  rep movsb
 
   // Own the handler
   cld
   mov $bioshang_start, %esi
-  mov %eax, %edi
+  mov handler_address, %edi
   mov $(bioshang_end - bioshang_start), %ecx
   rep movsb
 
@@ -72,6 +80,7 @@ end:
   mov %ax, %fs
   mov %ax, %gs
   mov %ax, %ss
+  sti
   jmpl $0x0, $very_end
 .code16
 very_end:
@@ -229,4 +238,10 @@ lulz:
   .byte 'b'
   .byte 'c'
   .byte 0x0
+ 
+handler_address:
+  .long 0xcacacaca
+
+handler_save:
+  .space 0x100, 0xca
 
