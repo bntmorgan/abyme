@@ -1,12 +1,18 @@
 .global own_bios
+.global run_protected
 
 .extern hook_bios
 .extern printk
 
 .align 4
 
+/**
+ * Runs the pointed function in AWESOME protected mode
+ * Save the caller segmentation
+ * That rocks
+ */
 .code16
-own_bios:
+run_protected:
   push %ebp
   mov %esp, %ebp
 
@@ -29,6 +35,7 @@ own_bios:
 
   // Select the good segments for the gdt
   jmpl $0x08, $next
+
 .code32
 next:
   mov $0x10, %ax
@@ -37,6 +44,64 @@ next:
   mov %ax, %fs
   mov %ax, %gs
   mov %ax, %ss
+  
+  // Calls the protected function
+  // first parameter : address
+  mov 8(%ebp), %eax
+  // second parameter : parameter
+  mov 12(%ebp), %ebx
+
+  push %ebx
+  call *%eax
+
+  // Free memory
+  add $0x4, %esp
+
+  // Restore 16 bits segments
+  mov $0x20, %ax
+  mov %ax, %ds
+  mov %ax, %es
+  mov %ax, %fs
+  mov %ax, %gs
+  mov %ax, %ss
+  jmpl $0x18, $end 
+
+.code16  
+end:
+  // Go back to real mode dudes
+  mov %cr0, %eax
+  and $0xfffffffe, %ax
+  mov %eax, %cr0
+
+  // Restore caller segmentation
+  pop %gs
+  pop %fs
+  pop %es
+  pop %ds
+  // pop %cs
+  pop %ax 
+  pop %ss
+
+  // Create the seg:offset address for the long jump
+  // push %cs
+  push %ax
+  push $very_end
+
+  ljmp *(%esp)
+
+.code16
+very_end:
+  pop %eax
+  mov %ebp, %esp
+  pop %ebp
+  sti
+  retl
+
+
+.code32
+own_bios:
+  push %ebp
+  mov %esp, %ebp
 
   /* unprotect the BIOS memory */
   // XXX Unprotecting the bios memory
@@ -69,43 +134,9 @@ next:
   mov $(bioshang_end - bioshang_start), %ecx
   rep movsb
 
-  // Restore 16 bits segments
-  mov $0x20, %ax
-  mov %ax, %ds
-  mov %ax, %es
-  mov %ax, %fs
-  mov %ax, %gs
-  mov %ax, %ss
-  jmpl $0x18, $end 
-.code16  
-end:
-  // Go back to real mode dudes
-  mov %cr0, %eax
-  and $0xfffffffe, %ax
-  mov %eax, %cr0
-
-  // Restore caller segmentation
-  pop %gs
-  pop %fs
-  pop %es
-  pop %ds
-  // pop %cs
-  pop %ax 
-  pop %ss
-
-  // Create the seg:offset address for the long jump
-  // push %cs
-  push %ax
-  push $very_end
-
-  sti
-  jmpl (%esp)
-.code16
-very_end:
-  pop %eax
   mov %ebp, %esp
   pop %ebp
-  retl
+  ret
 
 .code16
 bioshang_start:

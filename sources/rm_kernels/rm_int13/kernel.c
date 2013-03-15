@@ -50,7 +50,7 @@ int __NOINLINE __REGPARM read_first_sector(uint8_t *sector) {
 int __NORETURN main(void) {
   screen_clear();
   printk("Time to own the bios...\n");
-  own_bios(0xf831f);
+  run_protected(&own_bios, 0xf831f);
   printk("Bios owned\n:))\n");
   // Sector read
   // printk("bonjour\n");
