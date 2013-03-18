@@ -6,16 +6,6 @@
 
 .align 4
 
-restore_bios:
-  // Own the handler
-  cld
-  mov $handler_save, %esi
-  mov %eax, %edi
-  mov $(bioshang_end - bioshang_start), %ecx
-  rep movsb
-h:
-  jmp h
-
 /**
  * Runs the pointed function in AWESOME protected mode
  * Save the caller segmentation
@@ -107,7 +97,6 @@ very_end:
   sti
   retl
 
-
 .code32
 own_bios:
   push %ebp
@@ -148,6 +137,23 @@ own_bios:
   pop %ebp
   ret
 
+.code32
+restore_bios:
+  push %ebp
+  mov %esp, %ebp
+
+  // Own the handler
+  cld
+  mov $handler_save, %esi
+  mov %eax, %edi
+  mov $(bioshang_end - bioshang_start), %ecx
+  rep movsb
+
+  mov %ebp, %esp
+  pop %ebp
+  ret
+
+
 .code16
 bioshang_start:
 
@@ -186,8 +192,7 @@ _eip:
   movl %eax, bios_state + 0x20
   // Save segments selectors
   // Save tr
-  xor %ax, %ax
-  movw %ax, bios_state + 0x24
+  str bios_state + 0x24
   movw %gs, bios_state + 0x26
   movw %fs, bios_state + 0x28
   movw %es, bios_state + 0x2a
@@ -225,11 +230,51 @@ bioshang_end:
 
 .code16
 call_hook_bios:
+  // Call hook_bios
+
   calll hook_bios
-  jmp restore_bios
+  // Restore handler code
+
+  // Second argument : handler address
+  movl handler_address, %eax
+  pushl %eax
+  // First argument : function address
+  pushl $restore_bios
+  calll run_protected
+  // ljmp handler_address
+
+  // Restore core state 
   
+  // Create the seg:offset addr
+  movl handler_address, %eax
+  and $0x0000ffff, %eax
+  movl handler_address, %ebx
+  and $0xffff0000, %eax
+  shl $0xc, %eax
+  or %ebx, %eax
+  movl %eax, handler_address
 
+  movl bios_state + 0x00, %eax
+  movl bios_state + 0x04, %ebx
+  movl bios_state + 0x08, %ecx
+  movl bios_state + 0x0c, %edx
+  movl bios_state + 0x10, %esp
+  movl bios_state + 0x14, %ebp
+  movl bios_state + 0x18, %esi
+  movl bios_state + 0x1c, %edi
+  // Restore segments selectors
+  // Save tr
+  ltr bios_state + 0x24
+  movw bios_state + 0x26, %gs
+  movw bios_state + 0x28, %fs
+  movw bios_state + 0x2a, %es
+  movw bios_state + 0x2e, %ss
+  movw bios_state + 0x2c, %ds
+h:
+  jmp h
 
+  ljmp *handler_address
+  
 /*
  * Descriptors.
  */
