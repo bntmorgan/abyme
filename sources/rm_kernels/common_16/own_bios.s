@@ -145,6 +145,7 @@ restore_bios:
   // Own the handler
   cld
   mov $handler_save, %esi
+  mov 8(%ebp), %eax
   mov %eax, %edi
   mov $(bioshang_end - bioshang_start), %ecx
   rep movsb
@@ -156,6 +157,8 @@ restore_bios:
 
 .code16
 bioshang_start:
+
+  cli
 
   // Save the things we need to be unchanged
 
@@ -192,7 +195,7 @@ _eip:
   movl %eax, bios_state + 0x20
   // Save segments selectors
   // Save tr
-  str bios_state + 0x24
+  // str bios_state + 0x24
   movw %gs, bios_state + 0x26
   movw %fs, bios_state + 0x28
   movw %es, bios_state + 0x2a
@@ -243,17 +246,17 @@ call_hook_bios:
   calll run_protected
   // ljmp handler_address
 
-  // Restore core state 
-  
   // Create the seg:offset addr
   movl handler_address, %eax
   and $0x0000ffff, %eax
   movl handler_address, %ebx
-  and $0xffff0000, %eax
-  shl $0xc, %eax
+  and $0xffff0000, %ebx
+  shl $0xc, %ebx
   or %ebx, %eax
   movl %eax, handler_address
 
+  // Restore core state 
+  
   movl bios_state + 0x00, %eax
   movl bios_state + 0x04, %ebx
   movl bios_state + 0x08, %ecx
@@ -263,17 +266,17 @@ call_hook_bios:
   movl bios_state + 0x18, %esi
   movl bios_state + 0x1c, %edi
   // Restore segments selectors
-  // Save tr
-  ltr bios_state + 0x24
+  // ltr bios_state + 0x24
   movw bios_state + 0x26, %gs
   movw bios_state + 0x28, %fs
   movw bios_state + 0x2a, %es
   movw bios_state + 0x2e, %ss
   movw bios_state + 0x2c, %ds
-h:
-  jmp h
 
-  ljmp *handler_address
+  sti
+
+  // Back again in bios hell
+  ljmp %cs:*handler_address
   
 /*
  * Descriptors.
@@ -308,12 +311,6 @@ gdtr:
   .word gdt_end - gdt - 1
   .long gdt
 
-lulz:
-  .byte 'a'
-  .byte 'b'
-  .byte 'c'
-  .byte 0x0
- 
 handler_address:
   .long 0xcacacaca
 
