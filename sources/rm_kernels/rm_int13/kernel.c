@@ -94,5 +94,9 @@ int __NORETURN main(void) {
 void hook_bios(struct core_gpr *gpr) {
   screen_clear();
   printk("hook bios\n");
+  __asm__ __volatile__(
+    "movl 0x2640, %eax;"
+    "movl %eax, %cr4;"
+  );
   dump_core_state(gpr);
 }
