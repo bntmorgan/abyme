@@ -4,7 +4,8 @@ OBJDUMP				:= objdump
 ARCH := $(shell uname -m | sed s,i[3456789]86,ia32,)
 
 EFI_INCLUDE			:= /usr/include/efi
-EFI_INCLUDES 		:= -I$(EFI_INCLUDE) -I$(EFI_INCLUDE)/$(ARCH) -I$(EFI_INCLUDE)/protocol
+INCLUDE_DIR			:= sources/include
+EFI_INCLUDES 		:= -I$(EFI_INCLUDE) -I$(EFI_INCLUDE)/$(ARCH) -I$(EFI_INCLUDE)/protocol -I$(INCLUDE_DIR)
 EFI_PATH 				:= /usr/lib
 
 LIB_GCC	 				:= $(shell $(CC) -print-libgcc-file-name)
@@ -30,7 +31,6 @@ define SRC_2_BIN
 endef
 
 all: targets
-	@echo $(TARGETS)
 
 # Overriden in rules.mk
 TARGETS :=
@@ -47,16 +47,16 @@ build/%.o: sources/%.s
 build/%.o: sources/%.c
 	@echo "  [CC]    $< -> $@"
 	@mkdir -p $(dir $@)
-	$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_KERNEL) -o $@ -c $<
+	@$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_KERNEL) -o $@ -c $<
 
 binary/%.efi:
 	@echo "  [LD]    $< -> $@"
 	@mkdir -p $(dir $@)
-	$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_KERNEL) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
+	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_KERNEL) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
 	@objcopy -j .text -j .sdata -j .data \
 		-j .dynamic -j .dynsym  -j .rel \
 		-j .rela -j .reloc \
-		--target=efi-app-$(ARCH) $@
+		$(OBJCPY_FLAGS_KERNEL) $@
 	@strip $@
 
 targets: $(patsubst sources/%, binary/%, $(TARGETS))
@@ -67,3 +67,6 @@ clean:
 info:
 	@echo Targets [$(TARGETS)]
 	@echo Objects [$(OBJECTS)]
+
+usb: all
+	sudo mount /dev/sdb1 /mnt && sudo cp -r binary/efi/* /mnt/EFI/ && sudo umount /mnt
