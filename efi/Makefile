@@ -69,4 +69,4 @@ info:
 	@echo Objects [$(OBJECTS)]
 
 usb: all
-	sudo mount /dev/sdb1 /mnt && sudo cp -r binary/efi/* /mnt/EFI/ && sudo umount /mnt
+	sudo mount /dev/sdb1 /mnt && sudo cp -r binary/efi/* /mnt/EFI/ && sudo cp -r ../binary/* /mnt/boot && sudo umount /mnt

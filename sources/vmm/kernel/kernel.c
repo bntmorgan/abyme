@@ -12,6 +12,9 @@
 #include "hardware/msr.h"
 #include "debugger.h"
 
+#include <efi.h>
+#include <efilib.h>
+
 /*
  * Used to identify the size used of vmm (see the linker script).
  */
@@ -53,6 +56,20 @@ void write_bioshang(uint64_t addr_goal) {
 }
 
 void kernel_main(vmm_info_t *_vmm_info) {
+
+  EFI_SYSTEM_TABLE **systab = (EFI_SYSTEM_TABLE **)0x80000000;
+  
+  while(1);
+
+  if (*systab == (EFI_SYSTEM_TABLE *)0xcf5b6f18 ) {
+
+    (*systab)->ConOut->OutputString((*systab)->ConOut, (CHAR16*)L"HZEUIF HUIZEF HUIZEF HUI FHZEUIHEZFUI HUEZI HFUIZE HFUIZE HFUIZEHFUI ZHEFUI HZEFUI HUEFZI FHUIZE FHUIZE HFU IZE HFUIZEHFUIEZHFUI HFUEZI FHUZIE FHUEZHFUIZE HFUI ZEHFUI HZEFUI HUFEZ HFUIZE FHUIEZ HFUIZEFHUI Hello World\n\r");
+ 
+  }
+
+  while(1);
+
+
   uint8_t *dst;
   uint32_t i;
   vmm_info = _vmm_info;

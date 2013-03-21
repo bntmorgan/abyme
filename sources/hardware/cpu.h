@@ -4,7 +4,7 @@
 #include "types.h"
 
 /* BOCHS magic breakpoint */
-#define BREAKPOINT() __asm__ __volatile__("xchg %bx, %bx")
+//#define BREAKPOINT() __asm__ __volatile__("xchg %bx, %bx")
 
 typedef struct {
   uintptr_t rip;

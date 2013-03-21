@@ -12,7 +12,7 @@ $(OBJS_$(d))		:  CC_FLAGS_KERNEL	:=
 
 $(TARGET)				:  LD_FLAGS_KERNEL	:= 
 $(TARGET)				:  LD_OBJECTS	:= $(OBJS_$(d))
-$(TARGET)				:  OBJCPY_FLAGS_KERNEL	:= --target=efi-rtdrv-$(ARCH)
+$(TARGET)				:  OBJCPY_FLAGS_KERNEL	:= --target=efi-app-$(ARCH)
 $(TARGET)				:  $(OBJS_$(d))
 
 d               := $(dirstack_$(sp))

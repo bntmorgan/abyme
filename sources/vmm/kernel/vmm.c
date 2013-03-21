@@ -370,6 +370,6 @@ void vmm_handle_vm_exit(gpr64_t guest_gpr) {
       INFO("unhandled reason[%x]: %x\n", exit_reason, guest_gpr.rip);
       // XXX
       debug(0, 1);
-      BREAKPOINT();
+      //BREAKPOINT();
   }
 }
