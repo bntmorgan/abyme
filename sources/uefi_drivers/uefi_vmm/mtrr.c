@@ -5,15 +5,6 @@
 
 mtrr_fixed_t mtrr_fixed;
 
-uint8_t mtrr_support(void) {
-  uint64_t rdx;
-  __asm__ __volatile__(
-    "cpuid;"
-  : "=d"(rdx) : "a"(0x1));
-  INFO("rdx : %x, bit 12 support ? %d\n", rdx, (rdx >> 12) & 0x1);
-  return (rdx >> 12) & 0x1;
-}
-
 void mtrr_fixed_read(void) {
   mtrr_fixed.fix64K_00000.q = msr_read64(MSR_ADDRESS_IA32_MTRR_FIX64K_00000);
   mtrr_fixed.fix16K_80000.q = msr_read64(MSR_ADDRESS_IA32_MTRR_FIX16K_80000);

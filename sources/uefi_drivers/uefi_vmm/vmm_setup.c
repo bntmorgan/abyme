@@ -24,6 +24,11 @@ void vmm_main() {
   // Print the current virtual memory
   // configuration
   vmem_print_info();
+  // TODO test
+  mtrr_initialize();
+  mtrr_compute_memory_ranges();
+print_ranges();
+  while(1);
   // Dump the core state
   struct core_gpr gpr;
   struct core_cr cr;

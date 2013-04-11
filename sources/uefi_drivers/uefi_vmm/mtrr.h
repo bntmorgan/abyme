@@ -17,4 +17,10 @@ void mtrr_print(void);
 
 uint64_t mtrr_variable_count(void);
 
+uint8_t mtrr_initialize(void);
+
+uint8_t mtrr_compute_memory_ranges(void);
+
+void print_ranges();
+
 #endif
