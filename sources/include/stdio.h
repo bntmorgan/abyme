@@ -3,7 +3,8 @@
 
 #include <efi.h>
 #include "types.h"
-#include "hardware/cpu.h"
+//TODO: on ne devrait pas avoir a inclure ce fichier, non???
+#include "cpu.h"
 
 //#include "hardware/cpu.h"
 

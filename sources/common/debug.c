@@ -1,6 +1,7 @@
 #include "debug.h"
 #include "stdio.h"
-#include "hardware/msr.h"
+#include "msr.h"
+#include "cpu.h"
 
 void read_core_state(struct core_gpr *gpr, struct core_cr *cr) {
   // Control registers

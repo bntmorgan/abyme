@@ -3,7 +3,8 @@
 
 #include "vmm_setup.h"
 
-#include "hardware/cpuid.h"
+#include "cpu.h"
+#include "cpuid.h"
 #include "stdio.h"
 
 EFI_SYSTEM_TABLE *systab;

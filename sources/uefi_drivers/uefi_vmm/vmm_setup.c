@@ -1,15 +1,14 @@
 #include "vmm.h"
 #include "vmm_setup.h"
 #include "vmcs.h"
-#include "vmm_info.h"
 #include "gdt.h"
 #include "mtrr.h"
 #include "ept.h"
 #include "debug.h"
 
-#include "hardware/msr.h"
-#include "hardware/cpu.h"
-#include "hardware/cpuid.h"
+#include "msr.h"
+#include "cpu.h"
+#include "cpuid.h"
 #include "stdio.h"
 
 uint32_t vmcs_revision_identifier;

@@ -1,10 +1,12 @@
 #include "vmm.h"
 #include "stdio.h"
-#include "hardware/cpu.h"
-#include "hardware/msr.h"
+#include "cpu.h"
+#include "msr.h"
 #include <efi.h>
 #include <efilib.h>
+
 #include "systab.h"
+#include "vmcs.h"
 
 void vmm_set_guest_rip(uint64_t guest_rip, uint32_t exit_instruction_length) {
   //uint64_t guest_cr0 = cpu_vmread(GUEST_CR0);

@@ -3,7 +3,8 @@
 
 #include <efi.h>
 #include "types.h"
-#include "hardware/cpu.h"
+
+//#include "hardware/cpu.h"
 
 /**
  * Proc state

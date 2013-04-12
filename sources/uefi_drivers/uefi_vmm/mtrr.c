@@ -1,5 +1,6 @@
-#include "hardware/msr.h"
-#include "hardware/cpuid.h"
+#include "msr.h"
+#include "cpuid.h"
+#include "cpu.h"
 #include "stdio.h"
 #include "mtrr.h"
 
