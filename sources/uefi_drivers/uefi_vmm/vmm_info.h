@@ -19,23 +19,25 @@ typedef struct {
 #define VMEM_PDPT_PS_1G 128
 #define VMEM_PDPT_PS_2M 128
 
+/*
 typedef struct {
   uint32_t base;
   uint32_t limit;
   uint8_t access;
   uint8_t granularity;
 } gdt_entry_t;
-
+*/
+/*
 typedef struct {
   uint16_t limit;
   uint32_t base;
 } __attribute__((packed)) gdt_pm_ptr_t;
 
-typedef struct {
+struct gdt_ptr {
   uint16_t limit;
   uint64_t base;
-} __attribute__((packed)) gdt_lm_ptr_t;
-
+} __attribute__((packed));
+*/
 typedef struct {
   uint16_t limit0;
   uint16_t base0;

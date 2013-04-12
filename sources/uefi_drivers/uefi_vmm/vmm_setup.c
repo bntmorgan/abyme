@@ -1,8 +1,8 @@
 #include "vmm.h"
 #include "vmm_setup.h"
-#include "vmm_vmcs.h"
+#include "vmcs.h"
 #include "vmm_info.h"
-#include "vmem.h"
+#include "gdt.h"
 #include "mtrr.h"
 #include "ept.h"
 #include "debug.h"
@@ -15,16 +15,13 @@
 uint32_t vmcs_revision_identifier;
 uint32_t number_bytes_regions;
 
-//TODO // Declare ept tables
-//TODO ept_info_t ept_info;
-
 // Declare the vmm stack
 uint8_t vmm_stack[VMM_STACK_SIZE];
 
 void vmm_main() {
   // Print the current virtual memory
   // configuration
-  vmem_print_info();
+  gdt_print_guest();
   // TODO test
   mtrr_initialize();
   mtrr_compute_memory_ranges();
@@ -38,10 +35,9 @@ void vmm_main() {
   INFO("Current GDT save\n");
   INFO("TODO!!!! TEST SI ID MAPPING POUR LE HOST!!!");
   INFO("TODO!!!! CREER UN NOUVEAU CR3 !!!! ON NE FAIT PAS CONFIANCE A UEFI !!!!");
-  vmem_save_gdt();
+  gdt_create_guest_gdt();
   vmm_setup();
-  ept_initialize();
-  //TODO vmm_ept_setup(&ept_info);
+  ept_create_tables();
   vmm_vm_setup_and_launch();
 }
 
@@ -115,7 +111,7 @@ void vmm_setup() {
   /*
    * 8) Execute VMXON with the physical address of the VMXON region as the operand.
    */
-  cpu_vmxon((uint8_t*) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(vmxon));
+  cpu_vmxon((uint8_t*) vmxon);
 }
 
 void vmm_create_vmxon_and_vmcs_regions(void) {
@@ -147,44 +143,6 @@ void vmm_create_vmxon_and_vmcs_regions(void) {
   *((uint32_t *) &vmcs0[0]) = vmcs_revision_identifier;
 }
 
-//TODO /*
-//TODO  * - All the physical memory is mapped using identity mapping.
-//TODO  */
-//TODO void vmm_ept_setup(ept_info_t *ept_info) {
-//TODO   /*
-//TODO    * Everything stands into the first 4GB, so we only need the first entry of PML4.
-//TODO    */
-//TODO   ept_info->PML4[0] = VMEM_ADDR_VIRTUAL_TO_PHYSICAL((uint8_t*) ept_info->PDPT_PML40) | 0x07 /* R, W, X */;
-//TODO   uint32_t i, j, k;
-//TODO   for (i = 1; i < sizeof(ept_info->PML4) / sizeof(ept_info->PML4[0]); i++) {
-//TODO     ept_info->PML4[i] = 0;
-//TODO   }
-//TODO   /*
-//TODO    * Automatically map all memory accessed with PDPT_PML40 in 2MB pages but the first entry. This first entry
-//TODO    * is mapped using 4ko pages.
-//TODO    * <<
-//TODO    */
-//TODO   for (i = 0; i < sizeof(ept_info->PDPT_PML40) / sizeof(ept_info->PDPT_PML40[0]); i++) {
-//TODO     ept_info->PDPT_PML40[i] = ((uint64_t) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&ept_info->PD_PDPT_PML40[i][0])) | 0x7 /* R, W, X */;
-//TODO     uint32_t nb_pde = sizeof(ept_info->PD_PDPT_PML40[i]) / sizeof(ept_info->PD_PDPT_PML40[i][0]);
-//TODO     for (j = 0; j < nb_pde; j++) {
-//TODO       /*
-//TODO        * Map the 2 first megabytes in 4ko pages
-//TODO        */
-//TODO       if (i == 0 && j == 0) {
-//TODO         ept_info->PD_PDPT_PML40[i][j] = ((uint64_t) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&ept_info->PT_PD0[0])) | 0x7 /* R, W, X */;
-//TODO         for (k = 0; k < sizeof(ept_info->PT_PD0); k++) {
-//TODO           const struct memory_range *memory_range = mtrr_get_memory_range(((uint64_t) k << 12));
-//TODO           ept_info->PT_PD0[k] = ((uint64_t) k << 12) | 0x7 /* R, W, X */ | (memory_range->type << 3);
-//TODO         }
-//TODO       } else {
-//TODO         const struct memory_range *memory_range = mtrr_get_memory_range((((uint64_t) (i * nb_pde + j)) << 21));
-//TODO         ept_info->PD_PDPT_PML40[i][j] = (((uint64_t) (i * nb_pde + j)) << 21) | (1 << 7) /* 2MB page */ | 0x7 /* R, W, X */ | (memory_range->type << 3);
-//TODO       }
-//TODO     }
-//TODO   }
-//TODO }
-
 /**
  * Sets up and launches a guest VM.
  * See [Intel_August_2012], volume 3, section 31.6.
@@ -206,32 +164,32 @@ void vmm_vm_setup_and_launch() {
   /*
    * 3) Execute the VMCLEAR instruction by supplying the guest-VMCS address.
    */
-  cpu_vmclear((uint8_t*) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(vmcs0));
+  cpu_vmclear((uint8_t*) vmcs0);
 
   /*
    * 4) Execute the VMPTRLD instruction by supplying the guest-VMCS address.
    */
-  cpu_vmptrld((uint8_t*) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(vmcs0));
+  cpu_vmptrld((uint8_t*) vmcs0);
 
   /*
    * 5) Issue a sequence of VMWRITEs to initialize various host-state area
    *    fields in the working VMCS.
    */
-  vmm_vmcs_fill_host_state_fields();
+  vmcs_fill_host_state_fields();
 
   /*
    * 6) Use VMWRITEs to set up the various VM-exit control fields, VM-entry
    *    control fields, and VM-execution control fields in the VMCS.
    */
-  vmm_vmcs_fill_vm_exit_control_fields();
-  vmm_vmcs_fill_vm_entry_control_fields();
-  vmm_vmcs_fill_vm_exec_control_fields();
+  vmcs_fill_vm_exit_control_fields();
+  vmcs_fill_vm_entry_control_fields();
+  vmcs_fill_vm_exec_control_fields();
 
   /*
    * 7) Use VMWRITE to initialize various guest-state area fields in the
    *    working VMCS.
    */
-  vmm_vmcs_fill_guest_state_fields();
+  vmcs_fill_guest_state_fields();
 
   /*
    * 8) Execute VMLAUNCH to launch the guest VM.
