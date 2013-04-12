@@ -1,7 +1,7 @@
 #include <efi.h>
 #include <efilib.h>
 
-#include "vmm_setup.h"
+#include "setup.h"
 
 #include "cpu.h"
 #include "cpuid.h"
