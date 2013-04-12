@@ -4,6 +4,7 @@
 #include "vmm_info.h"
 #include "vmem.h"
 #include "mtrr.h"
+#include "ept.h"
 #include "debug.h"
 
 #include "hardware/msr.h"
@@ -14,8 +15,8 @@
 uint32_t vmcs_revision_identifier;
 uint32_t number_bytes_regions;
 
-// Declare ept tables
-ept_info_t ept_info;
+//TODO // Declare ept tables
+//TODO ept_info_t ept_info;
 
 // Declare the vmm stack
 uint8_t vmm_stack[VMM_STACK_SIZE];
@@ -35,9 +36,12 @@ void vmm_main() {
   dump_core_state(&gpr, &cr);
   // Save the current GDT
   INFO("Current GDT save\n");
+  INFO("TODO!!!! TEST SI ID MAPPING POUR LE HOST!!!");
+  INFO("TODO!!!! CREER UN NOUVEAU CR3 !!!! ON NE FAIT PAS CONFIANCE A UEFI !!!!");
   vmem_save_gdt();
   vmm_setup();
-  vmm_ept_setup(&ept_info);
+  ept_initialize();
+  //TODO vmm_ept_setup(&ept_info);
   vmm_vm_setup_and_launch();
 }
 
@@ -143,43 +147,43 @@ void vmm_create_vmxon_and_vmcs_regions(void) {
   *((uint32_t *) &vmcs0[0]) = vmcs_revision_identifier;
 }
 
-/*
- * - All the physical memory is mapped using identity mapping.
- */
-void vmm_ept_setup(ept_info_t *ept_info) {
-  /*
-   * Everything stands into the first 4GB, so we only need the first entry of PML4.
-   */
-  ept_info->PML4[0] = VMEM_ADDR_VIRTUAL_TO_PHYSICAL((uint8_t*) ept_info->PDPT_PML40) | 0x07 /* R, W, X */;
-  uint32_t i, j, k;
-  for (i = 1; i < sizeof(ept_info->PML4) / sizeof(ept_info->PML4[0]); i++) {
-    ept_info->PML4[i] = 0;
-  }
-  /*
-   * Automatically map all memory accessed with PDPT_PML40 in 2MB pages but the first entry. This first entry
-   * is mapped using 4ko pages.
-   * <<
-   */
-  for (i = 0; i < sizeof(ept_info->PDPT_PML40) / sizeof(ept_info->PDPT_PML40[0]); i++) {
-    ept_info->PDPT_PML40[i] = ((uint64_t) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&ept_info->PD_PDPT_PML40[i][0])) | 0x7 /* R, W, X */;
-    uint32_t nb_pde = sizeof(ept_info->PD_PDPT_PML40[i]) / sizeof(ept_info->PD_PDPT_PML40[i][0]);
-    for (j = 0; j < nb_pde; j++) {
-      /*
-       * Map the 2 first megabytes in 4ko pages
-       */
-      if (i == 0 && j == 0) {
-        ept_info->PD_PDPT_PML40[i][j] = ((uint64_t) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&ept_info->PT_PD0[0])) | 0x7 /* R, W, X */;
-        for (k = 0; k < sizeof(ept_info->PT_PD0); k++) {
-          const struct memory_range *memory_range = mtrr_get_memory_range(((uint64_t) k << 12));
-          ept_info->PT_PD0[k] = ((uint64_t) k << 12) | 0x7 /* R, W, X */ | (memory_range->type << 3);
-        }
-      } else {
-        const struct memory_range *memory_range = mtrr_get_memory_range((((uint64_t) (i * nb_pde + j)) << 21));
-        ept_info->PD_PDPT_PML40[i][j] = (((uint64_t) (i * nb_pde + j)) << 21) | (1 << 7) /* 2MB page */ | 0x7 /* R, W, X */ | (memory_range->type << 3);
-      }
-    }
-  }
-}
+//TODO /*
+//TODO  * - All the physical memory is mapped using identity mapping.
+//TODO  */
+//TODO void vmm_ept_setup(ept_info_t *ept_info) {
+//TODO   /*
+//TODO    * Everything stands into the first 4GB, so we only need the first entry of PML4.
+//TODO    */
+//TODO   ept_info->PML4[0] = VMEM_ADDR_VIRTUAL_TO_PHYSICAL((uint8_t*) ept_info->PDPT_PML40) | 0x07 /* R, W, X */;
+//TODO   uint32_t i, j, k;
+//TODO   for (i = 1; i < sizeof(ept_info->PML4) / sizeof(ept_info->PML4[0]); i++) {
+//TODO     ept_info->PML4[i] = 0;
+//TODO   }
+//TODO   /*
+//TODO    * Automatically map all memory accessed with PDPT_PML40 in 2MB pages but the first entry. This first entry
+//TODO    * is mapped using 4ko pages.
+//TODO    * <<
+//TODO    */
+//TODO   for (i = 0; i < sizeof(ept_info->PDPT_PML40) / sizeof(ept_info->PDPT_PML40[0]); i++) {
+//TODO     ept_info->PDPT_PML40[i] = ((uint64_t) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&ept_info->PD_PDPT_PML40[i][0])) | 0x7 /* R, W, X */;
+//TODO     uint32_t nb_pde = sizeof(ept_info->PD_PDPT_PML40[i]) / sizeof(ept_info->PD_PDPT_PML40[i][0]);
+//TODO     for (j = 0; j < nb_pde; j++) {
+//TODO       /*
+//TODO        * Map the 2 first megabytes in 4ko pages
+//TODO        */
+//TODO       if (i == 0 && j == 0) {
+//TODO         ept_info->PD_PDPT_PML40[i][j] = ((uint64_t) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&ept_info->PT_PD0[0])) | 0x7 /* R, W, X */;
+//TODO         for (k = 0; k < sizeof(ept_info->PT_PD0); k++) {
+//TODO           const struct memory_range *memory_range = mtrr_get_memory_range(((uint64_t) k << 12));
+//TODO           ept_info->PT_PD0[k] = ((uint64_t) k << 12) | 0x7 /* R, W, X */ | (memory_range->type << 3);
+//TODO         }
+//TODO       } else {
+//TODO         const struct memory_range *memory_range = mtrr_get_memory_range((((uint64_t) (i * nb_pde + j)) << 21));
+//TODO         ept_info->PD_PDPT_PML40[i][j] = (((uint64_t) (i * nb_pde + j)) << 21) | (1 << 7) /* 2MB page */ | 0x7 /* R, W, X */ | (memory_range->type << 3);
+//TODO       }
+//TODO     }
+//TODO   }
+//TODO }
 
 /**
  * Sets up and launches a guest VM.

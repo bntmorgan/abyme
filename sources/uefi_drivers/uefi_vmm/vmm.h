@@ -3,7 +3,7 @@
 
 #include "vmm_info.h"
 
-extern ept_info_t ept_info;
+//TODO extern ept_info_t ept_info;
 extern uint8_t vmm_stack[VMM_STACK_SIZE];
 
 /* VMCS Encodings */

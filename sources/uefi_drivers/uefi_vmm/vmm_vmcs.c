@@ -2,6 +2,7 @@
 #include "vmm_setup.h"
 #include "vmem.h"
 #include "mtrr.h"
+#include "ept.h"
 
 #include "string.h"
 #include "stdio.h"
@@ -18,7 +19,6 @@ struct {
   uint8_t low_msrs_write_bitmap[0x400];
   uint8_t high_msrs_write_bitmap[0x400];
 } __attribute__((packed)) msr_bitmaps __attribute__((aligned(0x1000)));
-extern void *vm_entrypoint;
 
 void vmm_vmcs_fill_guest_state_fields(void) {
   uint64_t cr0 = cpu_adjust64(cpu_read_cr0(), MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1);
@@ -288,7 +288,7 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(MSR_BITMAP, (uint64_t) &msr_bitmaps & 0xFFFFFFFF);
   cpu_vmwrite(MSR_BITMAP_HIGH, ((uint64_t) &msr_bitmaps >> 32) & 0xFFFFFFFF);
 
-  uint64_t eptp = VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&ept_info.PML4[0]);
+  uint64_t eptp = ept_get_eptp();
   eptp |= (3 << 3) /* Page walk length - 1 */;
   eptp |= (0x6 << 0) /* Page walk length - 1 */;
   eptp &= ~(1 << 6) /* Desactivate accessed and dirty flag  */;

@@ -231,10 +231,12 @@ uint8_t mtrr_get_nb_variable_mtrr(void) {
 }
 
 const struct memory_range *mtrr_get_memory_range(uint64_t address) {
-  uint8_t i;
-  for (i = 0; i < nb_memory_range; i++) {
-    if (memory_range[i].range_address_begin <= address && address <= memory_range[i].range_address_end) {
-      return &memory_range[i];
+  if (cpuid_are_mtrr_supported() == 1) {
+    uint8_t i;
+    for (i = 0; i < nb_memory_range; i++) {
+      if (memory_range[i].range_address_begin <= address && address <= memory_range[i].range_address_end) {
+        return &memory_range[i];
+      }
     }
   }
   return NULL;
