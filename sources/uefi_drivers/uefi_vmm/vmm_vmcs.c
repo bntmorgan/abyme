@@ -18,7 +18,7 @@ struct {
   uint8_t low_msrs_write_bitmap[0x400];
   uint8_t high_msrs_write_bitmap[0x400];
 } __attribute__((packed)) msr_bitmaps __attribute__((aligned(0x1000)));
-extern void *vmm_setup_vm_launched;
+extern void *vm_entrypoint;
 
 void vmm_vmcs_fill_guest_state_fields(void) {
   uint64_t cr0 = cpu_adjust64(cpu_read_cr0(), MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1);
@@ -37,7 +37,6 @@ void vmm_vmcs_fill_guest_state_fields(void) {
   INFO("DR7 : %X\n", dr7);
   cpu_vmwrite(GUEST_DR7, dr7);
 
-  cpu_vmwrite(GUEST_RIP, (uint32_t)((uint64_t)&vmm_setup_vm_launched));
   uint64_t rflags = cpu_read_flags();
   INFO("RFLAGS : %X\n", rflags);
   cpu_vmwrite(GUEST_RFLAGS, rflags);
@@ -124,19 +123,19 @@ void vmm_vmcs_fill_guest_state_fields(void) {
   cpu_vmwrite(GUEST_IDTR_BASE, idt_ptr.base);
   cpu_vmwrite(GUEST_IDTR_LIMIT, idt_ptr.limit);
 
-  cpu_vmwrite(GUEST_IA32_DEBUGCTL, msr_read32(MSR_ADDRESS_IA32_DEBUGCTL));
-  cpu_vmwrite(GUEST_IA32_DEBUGCTL_HIGH, msr_read64(MSR_ADDRESS_IA32_DEBUGCTL) >> 32);
-  cpu_vmwrite(GUEST_SYSENTER_CS, msr_read32(MSR_ADDRESS_IA32_SYSENTER_CS));
+  cpu_vmwrite(GUEST_IA32_DEBUGCTL, msr_read(MSR_ADDRESS_IA32_DEBUGCTL));
+  cpu_vmwrite(GUEST_IA32_DEBUGCTL_HIGH, msr_read(MSR_ADDRESS_IA32_DEBUGCTL) >> 32);
+  cpu_vmwrite(GUEST_SYSENTER_CS, msr_read(MSR_ADDRESS_IA32_SYSENTER_CS));
   uint32_t msr;
-  msr = msr_read32(MSR_ADDRESS_IA32_SYSENTER_ESP);
+  msr = msr_read(MSR_ADDRESS_IA32_SYSENTER_ESP);
   cpu_vmwrite(GUEST_SYSENTER_ESP, msr);
   INFO("GUEST_SYSENTER_ESP : %x\n", msr);
-  msr = msr_read32(MSR_ADDRESS_IA32_SYSENTER_ESP);
+  msr = msr_read(MSR_ADDRESS_IA32_SYSENTER_ESP);
   cpu_vmwrite(GUEST_SYSENTER_EIP, msr);
   INFO("GUEST_SYSENTER_EIP : %x\n", msr);
   uint64_t msr64;
 
-  msr64 = msr_read64(MSR_ADDRESS_IA32_EFER);
+  msr64 = msr_read(MSR_ADDRESS_IA32_EFER);
   cpu_vmwrite(GUEST_IA32_EFER, msr64 & 0xFFFFFFFF),
   cpu_vmwrite(GUEST_IA32_EFER_HIGH, (msr64 >> 32) & 0xFFFFFFFF);
   INFO("IA32_EFER %X\n", msr64);
@@ -146,15 +145,12 @@ void vmm_vmcs_fill_guest_state_fields(void) {
   cpu_vmwrite(GUEST_PENDING_DBG_EXCEPTIONS, 0);
   cpu_vmwrite(VMCS_LINK_POINTER, 0xFFFFFFFF);
   cpu_vmwrite(VMCS_LINK_POINTER_HIGH, 0xFFFFFFFF);
-
-  // GRUB cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, 70000000); 
-  // cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE,  99000000); 
 }
 
 void vmm_vmcs_fill_host_state_fields(void) {
   uint64_t sel;
-  uint64_t cr0 = cpu_adjust64(cpu_read_cr0(), MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1    );
-  uint64_t cr4 = cpu_adjust64(cpu_read_cr4(), MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1    );
+  uint64_t cr0 = cpu_adjust64(cpu_read_cr0(), MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1);
+  uint64_t cr4 = cpu_adjust64(cpu_read_cr4(), MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1);
   cpu_vmwrite(HOST_CR0, cr0);
   cpu_vmwrite(HOST_CR3, cpu_read_cr3());
   cpu_vmwrite(HOST_CR4, cr4);
@@ -196,19 +192,19 @@ void vmm_vmcs_fill_host_state_fields(void) {
   VMEM_GET_SAVED_GDT_ENTRY(sel, &entry);
   VMEM_PRINT_GDT_ENTRY(&entry);
   cpu_vmwrite(HOST_TR_BASE, entry.base);
-  // We put our saved GDT base
+
   cpu_vmwrite(HOST_GDTR_BASE, saved_gdt_ptr.base);
   cpu_vmwrite(HOST_IDTR_BASE, idt_ptr.base);
-  cpu_vmwrite(HOST_IA32_SYSENTER_CS, msr_read32(MSR_ADDRESS_IA32_SYSENTER_CS));
+  cpu_vmwrite(HOST_IA32_SYSENTER_CS, msr_read(MSR_ADDRESS_IA32_SYSENTER_CS));
   uint32_t msr;
-  msr = msr_read32(MSR_ADDRESS_IA32_SYSENTER_ESP);
+  msr = msr_read(MSR_ADDRESS_IA32_SYSENTER_ESP);
   cpu_vmwrite(HOST_IA32_SYSENTER_ESP, msr);
   INFO("HOST_IA32_SYSENTER_ESP : %x\n", msr);
-  msr = msr_read32(MSR_ADDRESS_IA32_SYSENTER_ESP);
+  msr = msr_read(MSR_ADDRESS_IA32_SYSENTER_ESP);
   cpu_vmwrite(HOST_IA32_SYSENTER_EIP, msr);
   INFO("HOST_IA32_SYSENTER_EIP : %x\n", msr);
-  cpu_vmwrite(HOST_IA32_EFER, msr_read32(MSR_ADDRESS_IA32_EFER)),
-  cpu_vmwrite(HOST_IA32_EFER_HIGH, msr_read64(MSR_ADDRESS_IA32_EFER) >> 32);
+  cpu_vmwrite(HOST_IA32_EFER, msr_read(MSR_ADDRESS_IA32_EFER)),
+  cpu_vmwrite(HOST_IA32_EFER_HIGH, msr_read(MSR_ADDRESS_IA32_EFER) >> 32);
 }
 
 void vmm_vmcs_fill_vm_exec_control_fields(void) {
@@ -217,20 +213,16 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS /*| USE_IO_BITMAPS | MONITOR_TRAP_FLAG*/; // Monitor trap flag : Debug porpose
   procbased_ctls = cpu_adjust32(procbased_ctls, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS);
   procbased_ctls &= ~(CR3_LOAD_EXITING | CR3_STORE_EXITING);
-  INFO("Bit 55 of IA32_VMX_BASIC allowing bits default1 bits procbase exec control 1, 4-6, 8, 13-16, and 26 to be zero if 1 : %d\n", !((msr_read64(MSR_ADDRESS_IA32_VMX_BASIC) & ((uint64_t)0x1 << 55)) == 0));
+  INFO("Bit 55 of IA32_VMX_BASIC allowing bits default1 bits procbase exec control 1, 4-6, 8, 13-16, and 26 to be zero if 1 : %d\n", !((msr_read(MSR_ADDRESS_IA32_VMX_BASIC) & ((uint64_t)0x1 << 55)) == 0));
   cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
 
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST;
-  // 26.2.1.1: Secondary processor-based VM-Execution Control is activated 
-  // We need to clear the bits with cpu_adjust32
   cpu_vmwrite(SECONDARY_VM_EXEC_CONTROL, cpu_adjust32(procbased_ctls_2, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2));
-  
-  // 24.6.3: Exception Bitmap
+
   cpu_vmwrite(EXCEPTION_BITMAP, 0);
   cpu_vmwrite(PAGE_FAULT_ERROR_CODE_MASK, 0);
   cpu_vmwrite(PAGE_FAULT_ERROR_CODE_MATCH, 0);
 
-  // 24.6.4: I/O-Bitmap Addresses
   memset(&io_bitmap_a[0], 0, 0x1000);
   memset(&io_bitmap_b[0], 0, 0x1000);
   //io_bitmap_a[0x70 / 8] = io_bitmap_a[0x70 / 8] | (1 << (0x70 % 8));
@@ -256,7 +248,7 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
 
   memset(&msr_bitmaps, 0, sizeof(msr_bitmaps));
   uint64_t msr_base = MSR_ADDRESS_IA32_MTRR_PHYBASE0;
-  uint64_t i, count = mtrr_variable_count();
+  uint64_t i, count = mtrr_get_nb_variable_mtrr();
   for (i = 0; i < count; i++) {
     msr_bitmaps.low_msrs_read_bitmap[msr_base / 8] |= (1 << (msr_base % 8));
     msr_bitmaps.low_msrs_write_bitmap[msr_base / 8] |= (1 << (msr_base % 8));
@@ -304,46 +296,19 @@ void vmm_vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(EPT_POINTER, eptp & 0xFFFFFFFF);
   cpu_vmwrite(EPT_POINTER_HIGH, (eptp >> 32) & 0xFFFFFFFF);
   INFO("Eptp : high : %x, low : %x\n", (eptp >> 32) & 0xFFFFFFFF, eptp & 0xFFFFFFFF);
-
-  // 24.6.12: Virtual-Processor Identifier (VPID) (optional, unused)
-  // VIRTUAL_PROCESSOR_ID unused
   cpu_vmwrite(VIRTUAL_PROCESSOR_ID, 0xff);
-
-  // 24.6.13: Controls for PAUSE-Loop Exiting (optional, unused)
-  // PLE_GAP, PLE_WINDOW unused
-
-  // 24.6.14: VM-Function Controls (optional, unused)
-  // VM_FUNCTION_CONTROLS{,_HIGH}, EPTP_LIST_ADDR{,_HIGH} unused
 }
 
 void vmm_vmcs_fill_vm_exit_control_fields(void) {
-  /**
-   * 24.7: VM-Exit Control Fields.
-   */
-  // 24.7.1: VM-Exit Controls
   uint32_t exit_controls = SAVE_IA32_EFER | LOAD_IA32_EFER | HOST_ADDR_SPACE_SIZE /* x86_64 host */;
   cpu_vmwrite(VM_EXIT_CONTROLS, cpu_adjust32(exit_controls, MSR_ADDRESS_IA32_VMX_EXIT_CTLS));
-
-  // 24.7.2: VM-Exit Controls for MSRs
   cpu_vmwrite(VM_EXIT_MSR_STORE_COUNT, 0);
-  // VM_EXIT_MSR_STORE_ADDR{,_HIGH} unused
   cpu_vmwrite(VM_EXIT_MSR_LOAD_COUNT, 0);
-  // VM_EXIT_MSR_LOAD_ADDR{,_HIGH} unused
 }
 
 void vmm_vmcs_fill_vm_entry_control_fields(void) {
-  /**
-   * 24.8: VM-Entry Control fields.
-   */
-  // 24.8.1: VM-Entry Controls
   uint32_t entry_controls = ENTRY_LOAD_IA32_EFER | IA32E_MODE_GUEST;
   cpu_vmwrite(VM_ENTRY_CONTROLS, cpu_adjust32(entry_controls, MSR_ADDRESS_IA32_VMX_ENTRY_CTLS));
-
-  // 24.8.2: VM-Entry Controls for MSRs.
   cpu_vmwrite(VM_ENTRY_MSR_LOAD_COUNT, 0);
-  // VM_ENTRY_MSR_LOAD_ADDR{,_HIGH} unused
-
-  // 24.8.3: VM-Entry Controls for Event Injection
   cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, 0);
-  // VM_ENTRY_EXCEPTION_ERROR_CODE and VM_ENTRY_INSTRUCTION_LEN unused
 }

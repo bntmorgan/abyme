@@ -27,8 +27,7 @@ void vmm_main() {
   // TODO test
   mtrr_initialize();
   mtrr_compute_memory_ranges();
-print_ranges();
-  while(1);
+  mtrr_print_ranges();
   // Dump the core state
   struct core_gpr gpr;
   struct core_cr cr;
@@ -116,24 +115,20 @@ void vmm_setup() {
 }
 
 void vmm_create_vmxon_and_vmcs_regions(void) {
-  uint32_t eax;
-  uint32_t edx;
-
   uint32_t i;
   for (i = 0; i < 4096; i++) {
     vmxon[i] = 0;
     vmcs0[i] = 0;
   }
-
   /*
    * We ignore bit 48 b because everything must stand into the first giga bytes
    * of memory.
    * See [Intel_August_2012], volume 3, section A.1.
    */
-  msr_read(MSR_ADDRESS_IA32_VMX_BASIC, &eax, &edx);
-  vmcs_revision_identifier = eax;
-  number_bytes_regions = edx & 0x1fff;
-  INFO("MSR_ADDRESS_IA32_VMX_BASIC: eax : %08x edx : %08x\n", eax, edx);
+  uint64_t msr_value = msr_read(MSR_ADDRESS_IA32_VMX_BASIC);
+  vmcs_revision_identifier = msr_value & 0xffffffff;
+  number_bytes_regions = (msr_value >> 32) & 0x1fff;
+  INFO("MSR_ADDRESS_IA32_VMX_BASIC: %X\n", msr_value);
   INFO("  vmxon region at %08x\n", (uint32_t) (uint64_t) &vmxon[0]);
   INFO("  vmcs0 region at %08x\n", (uint32_t) (uint64_t) &vmcs0[0]);
   INFO("  vmcs_revision_identifier=%08x, number_bytes_regions=%04x\n", vmcs_revision_identifier, number_bytes_regions);
@@ -160,31 +155,9 @@ void vmm_ept_setup(ept_info_t *ept_info) {
   for (i = 1; i < sizeof(ept_info->PML4) / sizeof(ept_info->PML4[0]); i++) {
     ept_info->PML4[i] = 0;
   }
-
   /*
-   * Read the mtrr to configure ept default cache
-   */
-
-  uint64_t mtrr_cap = msr_read64(MSR_ADDRESS_IA32_MTRRCAP);
-  uint64_t mtrr_def_type = msr_read64(MSR_ADDRESS_A32_MTRR_DEF_TYPE);
-  uint8_t mtrr_default_type = 0;
-  uint8_t mtrr_active = 0;
-  printk("-> %X <-\n", mtrr_cap);
-  printk("-> %X <-\n", mtrr_def_type);
-  mtrr_active = (mtrr_def_type & (1 << 11)) && mtrr_support();
-  printk("ioezjiozef %d\n", mtrr_active);
-  if (mtrr_active) {
-    mtrr_default_type = mtrr_def_type & 0xff;
-    printk("%x\n", mtrr_default_type);
-    if (!MTRR_VALID_TYPE(mtrr_default_type)) {
-      //TODO: must be an error???
-      ERROR("bad value for mtrr_def_type...\n");
-      while (1);
-    }
-  }
-
-  /*
-   * Automatically map all memory accessed with PDPT_PML40 in 2MB pages.
+   * Automatically map all memory accessed with PDPT_PML40 in 2MB pages but the first entry. This first entry
+   * is mapped using 4ko pages.
    * <<
    */
   for (i = 0; i < sizeof(ept_info->PDPT_PML40) / sizeof(ept_info->PDPT_PML40[0]); i++) {
@@ -197,117 +170,15 @@ void vmm_ept_setup(ept_info_t *ept_info) {
       if (i == 0 && j == 0) {
         ept_info->PD_PDPT_PML40[i][j] = ((uint64_t) VMEM_ADDR_VIRTUAL_TO_PHYSICAL(&ept_info->PT_PD0[0])) | 0x7 /* R, W, X */;
         for (k = 0; k < sizeof(ept_info->PT_PD0); k++) {
-          ept_info->PT_PD0[k] = ((uint64_t) k << 12) | 0x7 /* R, W, X */ | (mtrr_default_type << 3);
+          const struct memory_range *memory_range = mtrr_get_memory_range(((uint64_t) k << 12));
+          ept_info->PT_PD0[k] = ((uint64_t) k << 12) | 0x7 /* R, W, X */ | (memory_range->type << 3);
         }
       } else {
-        ept_info->PD_PDPT_PML40[i][j] = (((uint64_t) (i * nb_pde + j)) << 21) | (1 << 7) /* 2MB page */ | 0x7 /* R, W, X */ | (mtrr_default_type << 3);
+        const struct memory_range *memory_range = mtrr_get_memory_range((((uint64_t) (i * nb_pde + j)) << 21));
+        ept_info->PD_PDPT_PML40[i][j] = (((uint64_t) (i * nb_pde + j)) << 21) | (1 << 7) /* 2MB page */ | 0x7 /* R, W, X */ | (memory_range->type << 3);
       }
     }
   }
-
-  if (mtrr_active) {
-    mtrr_fixed_read();
-    mtrr_print();
-
-    uint8_t fixed_step;
-    uint64_t index;
-    uint64_t types;
-
-    index = 0;
-    fixed_step = 16;
-    types = mtrr_fixed.fix64K_00000.q;
-#define TODO \
-    for (i = 0; i < 8; i++) {\
-      for (j = 0; j < fixed_step; j++) {\
-        uint8_t type = (types >> (8 * i)) & 0xff;\
-        ept_info->PT_PD0[index] |= type << 3;\
-        index++;\
-      }\
-    }
-    TODO
-      printk("index MTRR fixed: %d\n", index);
-    fixed_step = 4;
-    types = mtrr_fixed.fix16K_80000.q;
-    TODO
-    types = mtrr_fixed.fix16K_A0000.q;
-    TODO
-    fixed_step = 1;
-    types = mtrr_fixed.fix4K_C0000.q;
-    TODO
-    types = mtrr_fixed.fix4K_C8000.q;
-    TODO
-    types = mtrr_fixed.fix4K_D0000.q;
-    TODO
-    types = mtrr_fixed.fix4K_D8000.q;
-    TODO
-    types = mtrr_fixed.fix4K_E0000.q;
-    TODO
-    types = mtrr_fixed.fix4K_E8000.q;
-    TODO
-    types = mtrr_fixed.fix4K_F0000.q;
-    TODO
-    types = mtrr_fixed.fix4K_F8000.q;
-    TODO
-    for (j = 0; j < 256; j++) {
-      ept_info->PT_PD0[index] |= 6 << 3;
-      index++;
-    }
-
-    printk("index MTRR fixed: %d\n", index);
-    printk("ioezjiozef %d\n", mtrr_active);
-
-    /* Variable MTRR: TODO */
-    // TODO: check if these mttr are always closed together.
-    uint64_t msr_base = MSR_ADDRESS_IA32_MTRR_PHYBASE0;
-    uint64_t msr_mask = MSR_ADDRESS_IA32_MTRR_PHYBASE0 + 1;
-    //CPUID.80000008H:EAX
-    uint8_t maxphyaddr = cpuid_get_maxphyaddr();
-    printk("%X\n", maxphyaddr);
-    for (i = 0; i < (mtrr_cap & 0xff); i++) {
-      uint64_t value_base = msr_read64(msr_base);
-      uint64_t value_mask = msr_read64(msr_mask);
-      if ((value_mask & (((uint64_t) 1) << 11)) != 0) {
-        uint8_t type = value_base & 0x7;
-        if (!MTRR_VALID_TYPE(type)) {
-          INFO("Bad value ???");
-          while(1);
-        }
-        uint64_t addr_base = value_base & 0xfffffffffffff000;
-        //uint64_t addr_base_save = value_base & 0xfffffffffffff000;
-        uint64_t addr_mask = (~(value_mask & 0xfffffffffffff000)) & (((uint64_t) 1 << maxphyaddr) - 1);
-        //printk("      %016X       %016X\n", addr_base, addr_mask);
-        uint64_t addr_limit = addr_base + addr_mask;
-        printk("B: %010X M: %010X L: %010X E: %010X\n", value_base, value_mask, addr_mask, addr_limit);
-        //uint64_t pdpt = addr_base >> 30;
-        //uint64_t pd = addr_base >> 21;
-        //printk("- %04x %04x\n", pdpt, pd);
-          // TODO verifier que limit est multiple de 2mb
-        uint64_t pdpt = addr_base >> 30;
-        uint64_t pd = (addr_base >> 21) - (pdpt << (30 - 21));
-        while (addr_base < addr_limit) {
-          pdpt = addr_base >> 30;
-          pd = (addr_base >> 21) - (pdpt << (30 - 21));
-          if (addr_base > 0) {
-            ept_info->PD_PDPT_PML40[pdpt][pd] &= ~(((uint64_t) 0x7) << 3);
-            ept_info->PD_PDPT_PML40[pdpt][pd] |= type << 3;
-          }
-          //printk("- %04x %04x\n", pdpt, pd);
-          addr_base += 1024 * 1024 * 2;
-        }
-        //pdpt = addr_base >> 30;
-        //pd = addr_base >> 21;
-        //printk("- %04x %04x\n", pdpt, pd);
-      }
-      msr_base += 2;
-      msr_mask += 2;
-    }
-  }
-  uint64_t vv = (uint64_t) &(ept_info->PD_PDPT_PML40[0]);
-  printk("%X\n", vv);
-  uint64_t pdpt = vv >> 30;
-  uint64_t pd = (vv >> 21) - (pdpt << (30 - 21));
-  vv = ept_info->PD_PDPT_PML40[pdpt][pd];
-  printk("%X %x %x!!!!\n", vv, pdpt, pd);
 }
 
 /**

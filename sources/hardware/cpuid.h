@@ -18,4 +18,6 @@ uint8_t cpuid_has_local_apic(void);
 
 uint8_t cpuid_get_maxphyaddr(void);
 
+uint8_t cpuid_are_mtrr_supported(void);
+
 #endif

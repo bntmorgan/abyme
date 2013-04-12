@@ -4,6 +4,7 @@
 #include <efi.h>
 #include "types.h"
 
+/*
 typedef union {
   uint64_t q;
   struct {
@@ -31,6 +32,7 @@ typedef struct {
   mtrr_qw fix4K_F0000;
   mtrr_qw fix4K_F8000;
 } __attribute__((packed)) mtrr_fixed_t;
+*/
 
 typedef struct {
   uint32_t size;

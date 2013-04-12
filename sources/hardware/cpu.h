@@ -4,9 +4,6 @@
 #include <efi.h>
 #include "types.h"
 
-/* BOCHS magic breakpoint */
-//#define BREAKPOINT() __asm__ __volatile__("xchg %bx, %bx")
-
 typedef struct {
   uint64_t rip;
   uint64_t r15;
@@ -25,11 +22,7 @@ typedef struct {
   uint64_t rdx;
   uint64_t rcx;
   uint64_t rax;
-} __attribute__((packed)) gpr64_t;
-
-void cpu_outportb(uint32_t port, uint8_t value);
-
-uint8_t cpu_inportb(uint32_t port);
+} __attribute__((packed)) vm_registers_t;
 
 void cpu_read_gdt(uint8_t *gdt_ptr);
 
@@ -65,10 +58,6 @@ void cpu_write_cr0(uint64_t reg);
 
 void cpu_write_cr4(uint64_t reg);
 
-void cpu_write_cr3(uint64_t reg);
-
-uint32_t cpu_get_seg_desc_base(uint64_t gdt_base, uint16_t seg_sel);
-
 void cpu_enable_vmxe(void);
 
 void cpu_enable_ne(void);
@@ -81,38 +70,32 @@ void cpu_vmptrld(uint8_t *region);
 
 void cpu_vmlaunch(void);
 
-void cpu_vmresume(void);
-
 void cpu_vmwrite(uint64_t field, uint64_t value);
 
-uint32_t cpu_vmread(uint32_t field);
+uint64_t cpu_vmread(uint64_t field);
 
 void cpu_stop(void);
 
 uint32_t cpu_adjust32(uint32_t value, uint32_t msr);
 
-uint64_t cpu_adjust64(uint64_t value, uint32_t fixed0_msr, uint32_t fixed1_msr);
+uint64_t cpu_adjust64(uint64_t value, uint32_t msr_fixed0, uint32_t msr_fixed1);
 
-void cpu_write_gdt(uint32_t gdt_ptr, uint32_t code_seg, uint32_t data_seg);
+uint64_t cpu_read_flags(void);
 
-void cpu_stop(void);
-
-uint8_t cpu_is_paging_enabled(void);
-
-uint8_t cpu_is_protected_mode_enabled(void);
-
-void cpu_enable_pae(void);
-
-void cpu_enable_paging(void);
-
-void cpu_enable_long_mode(void);
-
-uint8_t cpu_is_ept_supported(void);
-
-uint8_t cpu_is_unrestricted_guest_supported(void);
-
-uint64_t cpu_read_rsp(void);
-
-uint32_t cpu_read_flags(void);
+///* BOCHS magic breakpoint */
+////#define BREAKPOINT() __asm__ __volatile__("xchg %bx, %bx")
+//void cpu_outportb(uint32_t port, uint8_t value);
+//uint8_t cpu_inportb(uint32_t port);
+//void cpu_write_cr3(uint64_t reg);
+//uint32_t cpu_get_seg_desc_base(uint64_t gdt_base, uint16_t seg_sel);
+//void cpu_vmresume(void);
+//uint8_t cpu_is_paging_enabled(void);
+//uint8_t cpu_is_protected_mode_enabled(void);
+//void cpu_enable_pae(void);
+//void cpu_enable_paging(void);
+//void cpu_enable_long_mode(void);
+//uint8_t cpu_is_ept_supported(void);
+//uint8_t cpu_is_unrestricted_guest_supported(void);
+//uint64_t cpu_read_rsp(void);
 
 #endif

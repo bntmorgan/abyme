@@ -28,7 +28,7 @@ uint64_t vmm_get_guest_rip(void) {
   }
 }
 
-void vmm_handle_vm_exit(gpr64_t guest_gpr) {
+void vmm_handle_vm_exit(vm_registers_t guest_gpr) {
   guest_gpr.rsp = cpu_vmread(GUEST_RSP);
   guest_gpr.rip = vmm_get_guest_rip();
   static uint64_t msr_exit = 0;

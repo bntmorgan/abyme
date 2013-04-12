@@ -7,8 +7,6 @@
 
 #define MTRR_VALID_TYPE(type) ((type == 0) || (type == 1) || (type == 4) || (type == 5) || (type == 6))
 
-extern mtrr_fixed_t mtrr_fixed;
-
 uint8_t mtrr_support(void);
 
 void mtrr_fixed_read(void);
@@ -21,6 +19,17 @@ uint8_t mtrr_initialize(void);
 
 uint8_t mtrr_compute_memory_ranges(void);
 
-void print_ranges();
+void mtrr_print_ranges(void);
+
+struct memory_range {
+  uint8_t type;
+  uint64_t range_address_begin;
+  uint64_t range_address_end;
+  struct memory_range *next;
+};
+
+uint8_t mtrr_get_nb_variable_mtrr(void);
+
+const struct memory_range *mtrr_get_memory_range(uint64_t address);
 
 #endif

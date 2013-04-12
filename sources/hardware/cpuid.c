@@ -246,3 +246,13 @@ void cpuid_setup(void) {
   cpuid_print_0xx1_ecx();
 */
 }
+
+uint8_t cpuid_are_mtrr_supported(void) {
+  uint64_t rdx;
+  __asm__ __volatile__(
+    "cpuid;"
+  : "=d"(rdx) : "a"(0x1));
+  INFO("rdx : %x, bit 12 support ? %d\n", rdx, (rdx >> 12) & 0x1);
+  return (rdx >> 12) & 0x1;
+}
+

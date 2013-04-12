@@ -55,13 +55,15 @@
 #define MSR_ADDRESS_IA32_MTRR_FIX4K_F8000           0x26f
 #define MSR_ADDRESS_IA32_MTRR_PHYBASE0              0x200
 
-void msr_read(uint32_t address, uint32_t *eax, uint32_t *edx);
+//void msr_read(uint32_t address, uint32_t *eax, uint32_t *edx);
 
-uint32_t msr_read32(uint32_t address);
+//uint32_t msr_read32(uint32_t address);
 
-uint64_t msr_read64(uint32_t address);
+//uint64_t msr_read64(uint32_t address);
 
-void msr_write(uint32_t address, uint32_t eax, uint32_t edx);
+uint64_t msr_read(uint64_t msr_address);
+
+void msr_write(uint64_t msr_address, uint64_t msr_value);
 
 void msr_check_feature_control_msr_lock(void);
 

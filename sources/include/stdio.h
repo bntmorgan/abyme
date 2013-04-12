@@ -27,4 +27,7 @@ void printk_string(int8_t *string, int8_t minimum_length, int8_t padding);
 void printk(char *format, ...);
 
 int getchar();
+
+#define panic ERROR
+
 #endif

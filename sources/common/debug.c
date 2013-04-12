@@ -32,8 +32,6 @@ void read_core_state(struct core_gpr *gpr, struct core_cr *cr) {
 }   
 
 void dump_core_state(struct core_gpr *gpr, struct core_cr *cr) {
-  uint32_t msr_low, msr_high;
-
   printk("cr0 : %08x, cr2 : %08x, cr3 : %08x, cr4 : %08x\n", cr->cr0, cr->cr2, cr->cr3, cr->cr4);
   printk("rax : %08x, rbx : %08x, rcx : %08x, rdx : %08x\n", gpr->rax, gpr->rbx, gpr->rcx, gpr->rdx);
   printk("rsp : %08x, rbp : %08x, rsi : %08x, rdi : %08x\n", gpr->rsp, gpr->rbp, gpr->rsi, gpr->rdi);
@@ -41,18 +39,12 @@ void dump_core_state(struct core_gpr *gpr, struct core_cr *cr) {
   printk("tr : %08x, gs : %08x, fs : %08x, es : %08x\n", gpr->tr, gpr->gs, gpr->fs, gpr->es);
   printk("ds : %08x, ss : %08x, cs : %08x\n", gpr->ds, gpr->ss, gpr->cs);
 
-  msr_read(MSR_ADDRESS_IA32_EFER, &msr_low, &msr_high);
-  printk("IA32_EFER low : %08x, high : %08x\n", msr_low, msr_high);
-  msr_read(MSR_ADDRESS_IA32_VMX_BASIC, &msr_low, &msr_high);
-  printk("IA32_VMX_BASIC low : %08x, high : %08x\n", msr_low, msr_high);
-  msr_read(MSR_ADDRESS_IA32_VMX_PINBASED_CTLS, &msr_low, &msr_high);
-  printk("IA32_VMX_PINBASED_CTLS low : %08x, high : %08x\n", msr_low, msr_high);
-  msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS, &msr_low, &msr_high);
-  printk("IA32_VMX_PROCBASED_CTLS low : %08x, high : %08x\n", msr_low, msr_high);
-  msr_read(MSR_ADDRESS_IA32_VMX_EXIT_CTLS, &msr_low, &msr_high);
-  printk("IA32_VMX_EXIT_CTLS low : %08x, high : %08x\n", msr_low, msr_high);
-  msr_read(MSR_ADDRESS_IA32_VMX_ENTRY_CTLS, &msr_low, &msr_high);
-  printk("IA32_VMX_ENTRY_CTLS low : %08x, high : %08x\n", msr_low, msr_high);
+  printk("IA32_EFER: %016X\n", msr_read(MSR_ADDRESS_IA32_EFER));
+  printk("IA32_VMX_BASIC: %016X\n", msr_read(MSR_ADDRESS_IA32_VMX_BASIC));
+  printk("IA32_VMX_PINBASED_CTLS: %016X\n", msr_read(MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
+  printk("IA32_VMX_PROCBASED_CTLS: %016X\n", msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS));
+  printk("IA32_VMX_EXIT_CTLS: %016X\n", msr_read(MSR_ADDRESS_IA32_VMX_EXIT_CTLS));
+  printk("IA32_VMX_ENTRY_CTLS: %016X\n", msr_read(MSR_ADDRESS_IA32_VMX_ENTRY_CTLS));
 }
 
 void dump(void *fields, uint32_t fds, uint32_t fdss, uint32_t offset, uint32_t step) { \
