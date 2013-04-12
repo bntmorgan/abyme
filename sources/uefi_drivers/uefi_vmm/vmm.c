@@ -8,35 +8,11 @@
 #include "systab.h"
 #include "vmcs.h"
 
-void vmm_set_guest_rip(uint64_t guest_rip, uint32_t exit_instruction_length) {
-  //uint64_t guest_cr0 = cpu_vmread(GUEST_CR0);
-  //if ((guest_cr0 & 0x1) == 0x0) {
-  //  cpu_vmwrite(GUEST_RIP, (guest_rip + exit_instruction_length) % 0x10000);
-  //} else {
-    cpu_vmwrite(GUEST_RIP, guest_rip + exit_instruction_length);
-  //}
-}
-
-uint64_t vmm_get_guest_rip(void) {
-  uint64_t guest_rip = cpu_vmread(GUEST_RIP);
-  uint64_t guest_cr0 = cpu_vmread(GUEST_CR0);
-  if ((guest_cr0 & 0x1) == 0x0) {
-    //uint64_t guest_cs = cpu_vmread(GUEST_CS_SELECTOR);
-    /* TODO: if a20, don't wrap! */
-    return guest_rip;
-    //return ((guest_cs << 4) + guest_rip) & 0xfffff;
-  } else {
-    return guest_rip;
-  }
-}
-
 void vmm_handle_vm_exit(vm_registers_t guest_gpr) {
   guest_gpr.rsp = cpu_vmread(GUEST_RSP);
-  guest_gpr.rip = vmm_get_guest_rip();
+  guest_gpr.rip = cpu_vmread(GUEST_RIP);
   static uint64_t msr_exit = 0;
 
-  ////INFO("Vm exit\n");
-  //uint64_t guest_rip = vmm_get_guest_rip();
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
   //uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
   //  printk("VMEXIT REASON: %x\n", VM_EXIT_REASON);
@@ -85,7 +61,8 @@ void vmm_handle_vm_exit(vm_registers_t guest_gpr) {
   printk("GUEST_RFLAGS: %x\n", cpu_vmread(GUEST_RFLAGS));
   printk("VM_INSTRUCTION_ERROR: %x\n", cpu_vmread(VM_INSTRUCTION_ERROR));
   if (exit_reason != EXIT_REASON_MONITOR_TRAP_FLAG) {
-    vmm_set_guest_rip(guest_gpr.rip, exit_instruction_length);
+    //TODO vmm_set_guest_rip(guest_gpr.rip, exit_instruction_length);
+    cpu_vmwrite(GUEST_RIP, guest_rip + exit_instruction_length);
   }
   switch (exit_reason) {
     case EXIT_REASON_CPUID: {
@@ -129,7 +106,7 @@ void vmm_handle_vm_exit(vm_registers_t guest_gpr) {
     }
   }
   if (exit_reason != EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED) {
-    vmm_set_guest_rip(guest_gpr.rip, exit_instruction_length);
+    cpu_vmwrite(GUEST_RIP, guest_gpr.rip + exit_instruction_length);
   }
 
 
@@ -139,5 +116,4 @@ void vmm_handle_vm_exit(vm_registers_t guest_gpr) {
     uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER;
     cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
   }
-  // vmm_set_guest_rip(guest_gpr.rip, exit_instruction_length);
 }

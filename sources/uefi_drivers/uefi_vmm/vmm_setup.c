@@ -41,16 +41,7 @@ void vmm_main() {
 }
 
 /*
- * We need a VMXON region and at least one VMCS region in non-pageable memory,
- * of a size specified by IA32_VMX_BASIC MSR and aligned to a 4-KByte boundary.
- * See [Intel_August_2012], volume 3, section 31.5.
- * See [Intel_August_2012], volume 3, section 31.6.
- * See [Intel_August_2012], volume 3, section A.1.
- * See [Intel_August_2012], volume 3, section 11.11.
- */
-/*
  * TODO: adapt memory type using MTRR.
- * See [Intel_August_2012], volume 3, section 11.11.
  */
 uint8_t vmxon[4096] __attribute((aligned(0x1000)));
 uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
