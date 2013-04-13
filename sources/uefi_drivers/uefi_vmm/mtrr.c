@@ -87,6 +87,8 @@ struct msr_mtrr_def_type {
 struct memory_range memory_range[MAX_NB_MTRR_VARIABLE * 2 + 1];
 uint8_t nb_memory_range;
 
+struct memory_range memory_range_fixed[11];
+
 struct msr_mtrr_variable mtrr_variable[MAX_NB_MTRR_VARIABLE];
 struct msr_mtrr_fixed mtrr_fixed[11] = {
   {.msr= {.address=MSR_ADDRESS_IA32_MTRR_FIX64K_00000}, 0x00000, 0x7ffff, 0x10000},
@@ -106,6 +108,8 @@ uint8_t max_phyaddr;
 
 struct msr_mtrrcap mtrr_cap;
 struct msr_mtrr_def_type mtrr_def_type;
+
+struct memory_range default_memory_range = {MEMORY_TYPE_UC, 0, 0xffffffffffffffff, NULL};
 
 uint8_t check_memory_type(uint8_t type) {
   if ((type != 0) && (type != 1) && (type != 4) && (type != 5) && (type != 6)) {
@@ -149,13 +153,38 @@ uint8_t mtrr_initialize(void) {
 }
 
 uint8_t mtrr_compute_memory_ranges(void) {
+  uint8_t i;
+  uint8_t j;
+  uint8_t k;
+  /* Compute for fixed MTRR. */
+  /* k is the index of the range being computed. */
+  /* i and j are indexes used to swap through the fixed MTRR. */
+  k = 0;
+  memory_range[k].type = mtrr_fixed[0].msr.value & 0xff;
+  memory_range_fixed[k].range_address_begin = 0;
+  memory_range_fixed[k].range_address_end = mtrr_fixed[0].sub_range_size - 1;
+  memory_range_fixed[k].next = NULL;
+  for (i = 0; i < 11; i++) {
+    for (j = 0; j < 8; j++) {
+      if (memory_range[k].type == (mtrr_fixed[i].msr.value >> (j * 8)) & 0xff) {
+        memory_range_fixed[k].range_address_end += mtrr_fixed[i].sub_range_size;
+      } else {
+        memory_range_fixed[k].next = &memory_range_fixed[k + 1];
+        k++;
+        memory_range[k].type = (mtrr_fixed[i].msr.value >> (j * 8)) & 0xff;
+        memory_range_fixed[k].range_address_begin = memory_range_fixed[k + 1].range_address_end + 1;
+        memory_range_fixed[k].range_address_end = mtrr_fixed[i].sub_range_size - 1;
+        memory_range_fixed[k].next = NULL;
+      }
+    }
+  }
+  /* Compute for variable MTRR. */
   memory_range[0].type = 0;
   memory_range[0].range_address_begin = 0x0000000000000000;
   memory_range[0].range_address_end = 0xffffffffffffffff;
   memory_range[0].next = NULL;
   nb_memory_range = 0;
   /* Split all the memory according to MTRR. */
-  uint8_t i;
   for (i = 0; i < mtrr_cap.msr.vcnt; i++) {
     if (mtrr_variable[i].msr_mask.valid == 1) {
       struct memory_range *ptr = &memory_range[0];
@@ -232,21 +261,29 @@ uint8_t mtrr_get_nb_variable_mtrr(void) {
 }
 
 const struct memory_range *mtrr_get_memory_range(uint64_t address) {
-  if (cpuid_are_mtrr_supported() == 1) {
+  if (cpuid_are_mtrr_supported() == 1 && mtrr_def_type.e == 1) {
+    struct memory_range *ptr = &memory_range[0];
     uint8_t i;
-    for (i = 0; i < nb_memory_range; i++) {
-      if (memory_range[i].range_address_begin <= address && address <= memory_range[i].range_address_end) {
-        return &memory_range[i];
-      }
+    if (address < 0x100000 && mtrr_cap.fix == 1 && mtrr_def_type.fe == 1) {
+      ptr = &memory_range_fixed[0];
     }
+    while (ptr->range_address_begin > address) {
+      ptr = ptr->next;
+    }
+    return ptr;
   }
-  return NULL;
+  return &default_memory_range;
 }
 
 void mtrr_print_ranges(void) {
-  struct memory_range *ptr = &memory_range[0];
+  struct memory_range *ptr = &memory_range_fixed[0];
   while (ptr != NULL) {
-    printk("0x%016X-0x%016X %d\n", ptr->range_address_begin, ptr->range_address_end, ptr->type);
+    printk("F 0x%016X-0x%016X %d\n", ptr->range_address_begin, ptr->range_address_end, ptr->type);
+    ptr = ptr->next;
+  }
+  ptr = &memory_range[0];
+  while (ptr != NULL) {
+    printk("V 0x%016X-0x%016X %d\n", ptr->range_address_begin, ptr->range_address_end, ptr->type);
     ptr = ptr->next;
   }
 }
