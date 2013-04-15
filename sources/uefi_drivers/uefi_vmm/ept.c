@@ -25,36 +25,46 @@ void ept_create_tables(void) {
   }
   /* Map all memory with 2mb pages but the first entry. This first entry is mapped using 4ko pages. */
   uint64_t address = 0;
-  const struct memory_range *memory_range = mtrr_get_memory_range(address);
+  const struct memory_range *memory_range = NULL;
   for (i = 0; i < 512; i++) {
     ept_tables.PDPT_PML40[i] = ((uint64_t) &ept_tables.PD_PDPT_PML40[i][0]) | 0x7;
     for (j = 0; j < 512; j++) {
-      if (address < memory_range->range_address_begin || memory_range->range_address_end < address) {
-        memory_range = mtrr_get_memory_range(address);
+      if (i > 0  || j > 0) {
+        if (memory_range == NULL || address < memory_range->range_address_begin || memory_range->range_address_end < address) {
+          memory_range = mtrr_get_memory_range(address);
+        }
+        //if (memory_range->range_address_end < address + 0x200000) {
+        if (memory_range == NULL) {
+          panic("!#EPT MR2MB [NULL]");
+        }
+        if (memory_range->range_address_end < address + 0x1fffff) {
+          panic("!#EPT MR2MB [?%X<%X<%X:%d]", memory_range->range_address_begin, address, memory_range->range_address_end, memory_range->type);
+        }
+        ept_tables.PD_PDPT_PML40[i][j] = (((uint64_t) (i * 512 + j)) << 21) | (1 << 7) | 0x7 | (memory_range->type << 3);
       }
-      if (memory_range->range_address_end < address + 0x200000) {
-        panic("!#EPT MR");
-      }
-      ept_tables.PD_PDPT_PML40[i][j] = (((uint64_t) (i * 512 + j)) << 21) | (1 << 7) | 0x7 | (memory_range->type << 3);
       address += ((uint64_t) 1 << 21);
     }
   }
+//while (1);
   /* Map the first 2mb with 4ko pages. */
   ept_tables.PD_PDPT_PML40[0][0] = ((uint64_t) &ept_tables.PT_PD0[0]) | 0x7;
   address = 0;
-  memory_range = mtrr_get_memory_range(address);
+  memory_range = NULL;
   for (i = 0; i < 512; i++) {
-    if (address < memory_range->range_address_begin || memory_range->range_address_end < address) {
+    if (memory_range == NULL || address < memory_range->range_address_begin || memory_range->range_address_end < address) {
       memory_range = mtrr_get_memory_range(address);
     }
-    if (memory_range->range_address_end < address + 0x1000) {
-      panic("!#EPT MR");
+    if (memory_range == NULL) {
+      panic("!#EPT MR4KB [NULL]");
+    }
+    if (memory_range->range_address_end < address + 0xfff) {
+      panic("!#EPT MR4KB [?%x<%X<0x%X:%d]", memory_range->range_address_begin, address, memory_range->range_address_end, memory_range->type);
     }
     ept_tables.PT_PD0[i] = ((uint64_t) i << 12) | 0x7 | (memory_range->type << 3);
-    address += ((uint64_t) i << 12);
+    address = (((uint64_t) i) << 12);
   }
 }
 
 uint64_t ept_get_eptp(void) {
-  return (uint64_t) &ept_tables.PML4[0];
+  return ((uint64_t) &ept_tables.PML4[0]) | (3 << 3) | (0x6 << 0);
 }

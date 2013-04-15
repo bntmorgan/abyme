@@ -87,7 +87,7 @@ pre-launch:
 	cp -r binary/ qemu/hda-contents
 
 launch: pre-launch
-	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,model=6,+vmx -monitor stdio -S
+	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,model=6,+vmx,+pdpe1gb -monitor stdio -S
 #qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,+sse2 -D /tmp/gg
 ###qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,model=3
 ###qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666

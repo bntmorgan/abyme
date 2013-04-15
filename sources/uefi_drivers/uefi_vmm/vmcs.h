@@ -215,8 +215,8 @@ enum vm_exit_control {
   ACK_INTR_ON_EXIT            = (1 << 15),
   SAVE_IA32_PAT               = (1 << 18),
   LOAD_IA32_PAT               = (1 << 19),
-  SAVE_IA32_EFER              = (1 << 20),
-  LOAD_IA32_EFER              = (1 << 21),
+  EXIT_SAVE_IA32_EFER         = (1 << 20),
+  EXIT_LOAD_IA32_EFER         = (1 << 21),
   SAVE_VMX_PREEMPT_TIMER_VAL  = (1 << 22),
 };
 

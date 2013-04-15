@@ -1,8 +1,8 @@
 #ifndef __CPUID_H__
 #define __CPUID_H__
 
-#include "vmm.h"
-//#include "types.h"
+#include <efi.h>
+#include "types.h"
 
 void cpuid_setup(void);
 

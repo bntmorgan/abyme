@@ -118,62 +118,58 @@ uint8_t check_memory_type(uint8_t type) {
   return type;
 }
 
-uint8_t mtrr_initialize(void) {
-  if (cpuid_are_mtrr_supported() == 1) {
-    uint8_t i;
-    mtrr_cap.msr.address = MSR_ADDRESS_IA32_MTRRCAP;
-    mtrr_cap.msr.value = msr_read(MSR_ADDRESS_IA32_MTRRCAP);
-    mtrr_def_type.msr.address = MSR_ADDRESS_A32_MTRR_DEF_TYPE;
-    mtrr_def_type.msr.value = msr_read(MSR_ADDRESS_A32_MTRR_DEF_TYPE);
-    /* Retrieve fixed MTRRs corresponding to the range 0x000000:0x100000. */
-    for (i = 0; i < 11; i++) {
-      mtrr_fixed[i].msr.value = msr_read(mtrr_fixed[i].msr.address);
-    }
-    /* Retrieve variable MTRRs. */
-    if (mtrr_cap.msr.vcnt > MAX_NB_MTRR_VARIABLE) {
-      panic("!#MTRR VCNT [%d]", mtrr_cap.msr.vcnt);
-    }
-    uint64_t msr_base_address = MSR_ADDRESS_IA32_MTRR_PHYBASE0;
-    uint64_t msr_mask_address = MSR_ADDRESS_IA32_MTRR_PHYBASE0 + 1;
-    max_phyaddr = cpuid_get_maxphyaddr();
-    for (i = 0; i < mtrr_cap.msr.vcnt; i++) {
-      mtrr_variable[i].msr_base.address = msr_base_address;
-      mtrr_variable[i].msr_mask.address = msr_mask_address;
-      mtrr_variable[i].msr_base.value = msr_read(mtrr_variable[i].msr_base.address);
-      mtrr_variable[i].msr_mask.value = msr_read(mtrr_variable[i].msr_mask.address);
-      mtrr_variable[i].range_address_begin = ((uint64_t) mtrr_variable[i].msr_base.phybase) << 12;
-      uint64_t mask = ((uint64_t) mtrr_variable[i].msr_mask.phymask) << 12;
-      uint64_t len = (~(mask & 0xfffffffffffff000)) & (((uint64_t) 1 << max_phyaddr) - 1);
-      mtrr_variable[i].range_address_end = mtrr_variable[i].range_address_begin + len;
-      msr_base_address += 2;
-      msr_mask_address += 2;
-    }
-  }
-  return 0;
-}
-
-uint8_t mtrr_compute_memory_ranges(void) {
+uint8_t mtrr_create_ranges(void) {
   uint8_t i;
   uint8_t j;
   uint8_t k;
+  if (cpuid_are_mtrr_supported() != 1) {
+    return 1;
+  }
+  mtrr_cap.msr.address = MSR_ADDRESS_IA32_MTRRCAP;
+  mtrr_cap.msr.value = msr_read(MSR_ADDRESS_IA32_MTRRCAP);
+  mtrr_def_type.msr.address = MSR_ADDRESS_A32_MTRR_DEF_TYPE;
+  mtrr_def_type.msr.value = msr_read(MSR_ADDRESS_A32_MTRR_DEF_TYPE);
+  /* Retrieve fixed MTRRs corresponding to the range 0x000000:0x100000. */
+  for (i = 0; i < 11; i++) {
+    mtrr_fixed[i].msr.value = msr_read(mtrr_fixed[i].msr.address);
+  }
+  /* Retrieve variable MTRRs. */
+  if (mtrr_cap.msr.vcnt > MAX_NB_MTRR_VARIABLE) {
+    panic("!#MTRR VCNT [%d]", mtrr_cap.msr.vcnt);
+  }
+  uint64_t msr_base_address = MSR_ADDRESS_IA32_MTRR_PHYBASE0;
+  uint64_t msr_mask_address = MSR_ADDRESS_IA32_MTRR_PHYBASE0 + 1;
+  max_phyaddr = cpuid_get_maxphyaddr();
+  for (i = 0; i < mtrr_cap.msr.vcnt; i++) {
+    mtrr_variable[i].msr_base.address = msr_base_address;
+    mtrr_variable[i].msr_mask.address = msr_mask_address;
+    mtrr_variable[i].msr_base.value = msr_read(mtrr_variable[i].msr_base.address);
+    mtrr_variable[i].msr_mask.value = msr_read(mtrr_variable[i].msr_mask.address);
+    mtrr_variable[i].range_address_begin = ((uint64_t) mtrr_variable[i].msr_base.phybase) << 12;
+    uint64_t mask = ((uint64_t) mtrr_variable[i].msr_mask.phymask) << 12;
+    uint64_t len = (~(mask & 0xfffffffffffff000)) & (((uint64_t) 1 << max_phyaddr) - 1);
+    mtrr_variable[i].range_address_end = mtrr_variable[i].range_address_begin + len;
+    msr_base_address += 2;
+    msr_mask_address += 2;
+  }
   /* Compute for fixed MTRR. */
   /* k is the index of the range being computed. */
   /* i and j are indexes used to swap through the fixed MTRR. */
   k = 0;
   memory_range[k].type = mtrr_fixed[0].msr.value & 0xff;
   memory_range_fixed[k].range_address_begin = 0;
-  memory_range_fixed[k].range_address_end = mtrr_fixed[0].sub_range_size - 1;
+  memory_range_fixed[k].range_address_end = -1;
   memory_range_fixed[k].next = NULL;
   for (i = 0; i < 11; i++) {
     for (j = 0; j < 8; j++) {
-      if (memory_range[k].type == (mtrr_fixed[i].msr.value >> (j * 8)) & 0xff) {
+      if (memory_range[k].type == ((mtrr_fixed[i].msr.value >> (j * 8)) & 0xff)) {
         memory_range_fixed[k].range_address_end += mtrr_fixed[i].sub_range_size;
       } else {
         memory_range_fixed[k].next = &memory_range_fixed[k + 1];
         k++;
         memory_range[k].type = (mtrr_fixed[i].msr.value >> (j * 8)) & 0xff;
-        memory_range_fixed[k].range_address_begin = memory_range_fixed[k + 1].range_address_end + 1;
-        memory_range_fixed[k].range_address_end = mtrr_fixed[i].sub_range_size - 1;
+        memory_range_fixed[k].range_address_begin = memory_range_fixed[k - 1].range_address_end + 1;
+        memory_range_fixed[k].range_address_end = memory_range_fixed[k - 1].range_address_end + mtrr_fixed[i].sub_range_size;
         memory_range_fixed[k].next = NULL;
       }
     }
@@ -261,13 +257,12 @@ uint8_t mtrr_get_nb_variable_mtrr(void) {
 }
 
 const struct memory_range *mtrr_get_memory_range(uint64_t address) {
-  if (cpuid_are_mtrr_supported() == 1 && mtrr_def_type.e == 1) {
+  if ((cpuid_are_mtrr_supported() == 1) && (mtrr_def_type.msr.e == 1)) {
     struct memory_range *ptr = &memory_range[0];
-    uint8_t i;
-    if (address < 0x100000 && mtrr_cap.fix == 1 && mtrr_def_type.fe == 1) {
+    if ((address < 0x100000) && (mtrr_cap.msr.fix == 1) && (mtrr_def_type.msr.fe == 1)) {
       ptr = &memory_range_fixed[0];
     }
-    while (ptr->range_address_begin > address) {
+    while (ptr != NULL && (ptr->range_address_begin > address || ptr->range_address_end < address)) {
       ptr = ptr->next;
     }
     return ptr;
