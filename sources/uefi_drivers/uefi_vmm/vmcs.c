@@ -63,13 +63,11 @@ void vmcs_fill_guest_state_fields(void) {
   cpu_vmwrite(GUEST_GS_LIMIT, gdt_entry.limit);
   cpu_vmwrite(GUEST_GS_AR_BYTES, (gdt_entry.granularity << 8) | (gdt_entry.access << 0));
 
-  sel = cpu_read_ldtr();
-  gdt_get_guest_entry(sel, &gdt_entry);
+  /* TODO Verify if these values are correct. */
   cpu_vmwrite(GUEST_LDTR_SELECTOR, 0);
   cpu_vmwrite(GUEST_LDTR_BASE, 0);
   cpu_vmwrite(GUEST_LDTR_LIMIT, 0xffff);
   cpu_vmwrite(GUEST_LDTR_AR_BYTES, 0x82);
-
   cpu_vmwrite(GUEST_TR_SELECTOR, 0);
   cpu_vmwrite(GUEST_TR_BASE, 0);
   cpu_vmwrite(GUEST_TR_LIMIT, 0xffff);
@@ -103,8 +101,8 @@ void vmcs_fill_host_state_fields(void) {
   struct idt_ptr idt_ptr;
 
   cpu_vmwrite(HOST_CR0, cpu_adjust64(cpu_read_cr0(), MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1));
-  //TODO cpu_vmwrite(HOST_CR3, cpu_read_cr3());
-  cpu_vmwrite(HOST_CR3, paging_get_host_cr3());
+  cpu_vmwrite(HOST_CR3, cpu_read_cr3());
+  /* TODO cpu_vmwrite(HOST_CR3, paging_get_host_cr3()); */
   cpu_vmwrite(HOST_CR4, cpu_adjust64(cpu_read_cr4(), MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
   cpu_vmwrite(HOST_RSP, (uint64_t) &vmm_stack[VMM_STACK_SIZE]);
   cpu_vmwrite(HOST_RIP, (uint64_t) vmm_vm_exit_handler);
@@ -133,7 +131,6 @@ void vmcs_fill_host_state_fields(void) {
   cpu_vmwrite(HOST_IDTR_BASE, idt_ptr.base);
 
   cpu_vmwrite(HOST_IA32_SYSENTER_CS, msr_read(MSR_ADDRESS_IA32_SYSENTER_CS));
-
   cpu_vmwrite(HOST_IA32_SYSENTER_ESP, msr_read(MSR_ADDRESS_IA32_SYSENTER_ESP));
   cpu_vmwrite(HOST_IA32_SYSENTER_EIP, msr_read(MSR_ADDRESS_IA32_SYSENTER_EIP));
   cpu_vmwrite(HOST_IA32_EFER, msr_read(MSR_ADDRESS_IA32_EFER) & 0xffffffff),
@@ -141,7 +138,7 @@ void vmcs_fill_host_state_fields(void) {
 }
 
 void vmcs_fill_vm_exec_control_fields(void) {
-  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS /*| USE_IO_BITMAPS | MONITOR_TRAP_FLAG*/;
+  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS | USE_IO_BITMAPS /*| MONITOR_TRAP_FLAG*/;
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST;
   uint64_t msr_bitmap_ptr;
   uint64_t eptp;

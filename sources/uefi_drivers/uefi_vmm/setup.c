@@ -11,6 +11,8 @@
 #include "cpuid.h"
 #include "stdio.h"
 #include "string.h"
+#include "msr_bitmap.h"
+#include "io_bitmap.h"
 
 uint32_t vmcs_revision_identifier;
 uint32_t number_bytes_regions;
@@ -33,11 +35,15 @@ void vmm_main() {
   mtrr_create_ranges();
   mtrr_print_ranges();
   ept_create_tables();
-  // Dump the core state
+  msr_bitmap_setup();
+  io_bitmap_setup();
+
+  /* TODO Dump the core state
   struct core_gpr gpr;
   struct core_cr cr;
   read_core_state(&gpr, &cr);
-  dump_core_state(&gpr, &cr);
+  dump_core_state(&gpr, &cr);*/
+
   vmm_setup();
   vmm_vm_setup_and_launch();
 }
