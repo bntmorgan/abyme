@@ -14,6 +14,12 @@
 #include "msr_bitmap.h"
 #include "io_bitmap.h"
 
+//extern char __text;
+extern uint8_t _padding_begin_a;
+extern uint8_t _padding_begin_b;
+extern uint8_t _padding_end_a;
+extern uint8_t _padding_end_b;
+
 uint32_t vmcs_revision_identifier;
 uint32_t number_bytes_regions;
 uint8_t vmm_stack[VMM_STACK_SIZE];
@@ -28,6 +34,13 @@ void vmm_main() {
   /*if (cpuid_is_page1g_supported() == 0) {
     panic("!#SETUP PG1");
   }*/
+
+  INFO("VMCS addresses %X %X\n", vmxon, vmcs0);
+  INFO("_padding_begin_a %X\n", &_padding_begin_a);
+  INFO("_padding_begin_b %X\n", &_padding_begin_b);
+  INFO("_padding_end_a   %X\n", &_padding_end_a);
+  INFO("_padding_end_b   %X\n", &_padding_end_b);
+
 
   gdt_setup_guest_gdt();
   gdt_setup_host_gdt();
@@ -46,6 +59,7 @@ void vmm_main() {
 
   vmm_setup();
   vmm_vm_setup_and_launch();
+  extern uint8_t _padding_begin_b;
 }
 
 void vmm_setup() {

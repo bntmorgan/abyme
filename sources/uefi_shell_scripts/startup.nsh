@@ -1,3 +1,5 @@
+echo changing terminal mode
+mode 100 31
 echo Startup !
 fs0:
 cd EFI

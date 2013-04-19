@@ -2,6 +2,8 @@ sp 		:= $(sp).x
 dirstack_$(sp)	:= $(d)
 d		:= $(dir)
 
+#dir	:= $(d)/smm
+#include	$(dir)/rules.mk
 dir	:= $(d)/hello_world
 include	$(dir)/rules.mk
 dir	:= $(d)/locate

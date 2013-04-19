@@ -13,7 +13,7 @@ LIB_GCC	 				:= $(shell $(CC) -print-libgcc-file-name)
 EFI_LIBS 				:= -lefi -lgnuefi $(LIB_GCC)
 
 EFI_CRT_OBJS 		:= $(EFI_PATH)/crt0-efi-$(ARCH).o
-EFI_LDS 				:= $(EFI_PATH)/elf_$(ARCH)_efi.lds
+EFI_LDS 				:= efi.ld
 
 CC_FLAGS_ALL		:= -Wall -Werror -Werror -O2 -fno-stack-protector -fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC -O0
 
@@ -50,15 +50,25 @@ build/%.o: sources/%.c
 	@mkdir -p $(dir $@)
 	@$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_TARGET) -o $@ -c $<
 
-binary/%.efi:
+binary/%.efi: binary/%.elf
+	@objcopy -j .padding_begin -j .text -j .sdata -j .data \
+		-j .dynamic -j .dynsym  -j .rel \
+		-j .rela -j .reloc -j .padding_end \
+		$(OBJCPY_FLAGS_TARGET) \
+	  $< $@
+		cp $< $<.toto
+		
+	@#strip $@
+
+binary/%.elf:
 	@echo "  [LD]    $< -> $@"
 	@mkdir -p $(dir $@)
 	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_TARGET) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
-	@objcopy -j .text -j .sdata -j .data \
-		-j .dynamic -j .dynsym  -j .rel \
-		-j .rela -j .reloc \
-		$(OBJCPY_FLAGS_TARGET) $@
-	@#strip $@
+
+tests/%:
+	@echo "  [LD]    $< -> $@"
+	@mkdir -p $(dir $@)
+	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_TARGET) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
 
 targets: $(patsubst sources/%, binary/%, $(TARGETS))
 
@@ -84,10 +94,27 @@ pre-launch:
 	rm qemu/roms/OVMF-X64-r11337-alpha.zip
 	mv qemu/roms/CirrusLogic5446.rom qemu/roms/vgabios-cirrus.bin
 	mv qemu/roms/OVMF.fd qemu/roms/bios.bin
+#	cp qemu/edk2/Build/OvmfX64/DEBUG_GCC46/FV/OVMF.fd qemu/roms/bios.bin
+	cp /usr/share/qemu/kvmvapic.bin qemu/roms
+	cp /usr/share/qemu/pxe-rtl8139.rom qemu/roms
 	cp -r binary/ qemu/hda-contents
 
 launch: pre-launch
-	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,model=6,+vmx,+pdpe1gb -monitor stdio -S
+	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,model=6,+vmx -monitor stdio -S
+
+#pre-launch:
+#	rm -rf qemu/roms/*
+#	cp qemu/packages/OVMF-X64-r11337-alpha.zip qemu/roms
+#	cd qemu/roms ; unzip OVMF-X64-r11337-alpha.zip
+#	rm qemu/roms/OVMF-X64-r11337-alpha.zip
+#	mv qemu/roms/CirrusLogic5446.rom qemu/roms/vgabios-cirrus.bin
+#	mv qemu/roms/OVMF.fd qemu/roms/bios.bin
+#	cp /usr/share/qemu/kvmvapic.bin qemu/roms
+#	cp /usr/share/qemu/pxe-rtl8139.rom qemu/roms
+#	cp -r binary/ qemu/hda-contents
+
+#launch: pre-launch
+#	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,model=6,+vmx,+pdpe1gb -monitor stdio -S
 #qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,+sse2 -D /tmp/gg
 ###qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,model=3
 ###qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666

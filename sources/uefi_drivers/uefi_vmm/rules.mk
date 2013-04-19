@@ -22,5 +22,9 @@ $(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-rtdrv-$(ARCH)
 #$(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-app-$(ARCH)
 $(TARGET)				:  $(OBJS_$(d))
 
+# Debugger
+dir	:= $(d)/debug
+include	$(dir)/rules.mk
+
 d               := $(dirstack_$(sp))
 sp              := $(basename $(sp))

@@ -1,6 +1,7 @@
 #include "io_bitmap.h"
 
 #include "string.h"
+#include "debug.h"
 
 uint8_t io_bitmap_a[0x1000] __attribute__((aligned(0x1000)));
 uint8_t io_bitmap_b[0x1000] __attribute__((aligned(0x1000)));

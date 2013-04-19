@@ -7,6 +7,13 @@
 #include "cpuid.h"
 #include "stdio.h"
 
+#include "efi/efiapi_1_1.h"
+#include "efi/efi_1_1.h"
+
+#define EFI_LOADED_IMAGE_PROTOCOL_GUID \
+    {0x5B1B31A1, 0x9562, 0x11d2, {0x8E, 0x3F, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B }}
+
+
 EFI_SYSTEM_TABLE *systab;
 
 // EFI_STATUS vmm_rt_unload (IN EFI_HANDLE image); 
@@ -24,7 +31,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
   InitializeLib(image_handle, st);
   INFO("VMM driver startup\n");
   INFO("main at %X\n", efi_main);
-
+  
   // Add an unload handler
   
   /*status = BS->HandleProtocol (image_handle, &LoadedImageProtocol, (void*)&image); 
@@ -37,7 +44,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
 
   // Save the current GDT
   //INFO("Current GDT save\n");
-cpuid_setup();
+  cpuid_setup();
 /*  vmem_save_gdt();
   
   vmm_setup();
@@ -50,6 +57,22 @@ cpuid_setup();
   vmm_main();
   INFO("CR0 before : %X\n", cpu_read_cr0());
   INFO("CR4 before : %X\n", cpu_read_cr4());
+
+  EFI_GUID li_guid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
+  EFI_LOADED_IMAGE *efi_loaded_image = 0; 
+  EFI_STATUS status = uefi_call_wrapper(GET_EFI_BOOT_SERVICES_1_1(systab->BootServices)->LocateProtocol,
+      3,
+      &li_guid,
+      NULL,
+      (void **)&efi_loaded_image);
+  if (status == 0) {
+    INFO("EFI_LOADED_IMAGE->ImageBase %X\n", efi_loaded_image->ImageBase);
+    INFO("EFI_LOADED_IMAGE->ImageSize %X\n", efi_loaded_image->ImageSize);
+    INFO("EFI_LOADED_IMAGE->ImageCodeType %X\n", efi_loaded_image->ImageCodeType);
+    INFO("EFI_LOADED_IMAGE->ImageDataType %X\n", efi_loaded_image->ImageDataType);
+  } else {
+    INFO("LOLZ error code %X\n", status);
+  }
 
   return EFI_SUCCESS;
 }

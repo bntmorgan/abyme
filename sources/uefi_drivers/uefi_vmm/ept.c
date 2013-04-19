@@ -14,6 +14,11 @@ struct ept_tables {
 
 struct ept_tables ept_tables;
 
+extern uint8_t _padding_begin_a;
+extern uint8_t _padding_begin_b;
+extern uint8_t _padding_end_a;
+extern uint8_t _padding_end_b;
+
 /* All the physical memory is mapped using identity mapping. */
 void ept_create_tables(void) {
   uint64_t i;
@@ -41,6 +46,12 @@ void ept_create_tables(void) {
           panic("!#EPT MR2MB [?%X<%X<%X:%d]", memory_range->range_address_begin, address, memory_range->range_address_end, memory_range->type);
         }
         ept_tables.PD_PDPT_PML40[i][j] = (((uint64_t) (i * 512 + j)) << 21) | (1 << 7) | 0x7 | (memory_range->type << 3);
+        uint64_t Tmp = (((uint64_t) (i * 512 + j)) << 21);
+        uint64_t bound_a = ((uint64_t) &_padding_begin_b) & ~((uint64_t) 0x200000);
+        uint64_t bound_b = ((uint64_t) &_padding_end_b) & ~((uint64_t) 0x200000);
+        if (Tmp >= bound_a && Tmp <= bound_b) {
+          ept_tables.PD_PDPT_PML40[i][j] = (((uint64_t) (i * 512 + j)) << 21) | (1 << 7) | 0x1 | (memory_range->type << 3);
+        }
       }
       address += ((uint64_t) 1 << 21);
     }

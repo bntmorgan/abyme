@@ -48,7 +48,7 @@ void dump_core_state(struct core_gpr *gpr, struct core_cr *cr) {
   printk("IA32_VMX_ENTRY_CTLS: %016X\n", msr_read(MSR_ADDRESS_IA32_VMX_ENTRY_CTLS));
 }
 
-void dump(void *fields, uint32_t fds, uint32_t fdss, uint32_t offset, uint32_t step) { \
+void dump(void *fields, uint32_t fds, uint32_t fdss, uint64_t offset, uint32_t step) {
   uint32_t i, j;
   uint32_t cycles = fdss / fds;
   for (i = 0; i < cycles; i++) {
