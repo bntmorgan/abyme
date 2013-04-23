@@ -44,7 +44,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 
   switch (exit_reason) {
     case EXIT_REASON_CPUID: {
-      beep(100);
       //vmm_print_guest_regs(&guest_regs);
       __asm__ __volatile__("cpuid"
           : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
