@@ -11,7 +11,7 @@ uint8_t eth_setup() {
     Print(L"LOLZ owned no ethernet controller found\n");
     return 0;
   } else {
-    Print(L"LOLZY Intel 82579LM ethernet controller found at \n %x:%x:%x\n", addr.bus, addr.device, addr.function);
+    Print(L"LOLZY Intel 82579LM ethernet controller found at %02x:%02x:%02x\n", addr.bus, addr.device, addr.function);
     return 1;
   }
 }

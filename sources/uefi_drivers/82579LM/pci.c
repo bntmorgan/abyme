@@ -36,9 +36,9 @@ uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_info *
         uint32_t vid = pci_readw(id, PCI_CONFIG_VENDOR_ID);
         uint32_t did = pci_readw(id, PCI_CONFIG_DEVICE_ID);
         if (vid != 0xffff) {
-          Print(L"[%04x:%04x]\n", vid, did);
+          Print(L"[%04x:%04x] %02x:%02x:%02x\n", vid, did, bus, dev, func);
         }
-        if (vid == 0xffff || (vid != vendor_id && did != device_id)) {
+        if (vid == 0xffff || vid != vendor_id || did != device_id) {
           continue;
         } else {
           info->vendor_id = vid;
