@@ -78,7 +78,7 @@
 
 #define ETH_VENDOR_ID 0x8086 // Intel
 
-#define ETH_DEVICE_ID 0x1503 // 82579LM
+#define ETH_DEVICE_ID 0x1502 // 82579LM
 
 uint8_t eth_get_device();
 uint8_t eth_setup();

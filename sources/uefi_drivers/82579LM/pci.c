@@ -1,3 +1,5 @@
+#include <efi.h>
+#include <efilib.h>
 #include "pci.h"
 #include "cpu.h"
 
@@ -33,6 +35,9 @@ uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_info *
         uint32_t id = PCI_MAKE_ID(bus, dev, func);
         uint32_t vid = pci_readw(id, PCI_CONFIG_VENDOR_ID);
         uint32_t did = pci_readw(id, PCI_CONFIG_DEVICE_ID);
+        if (vid != 0xffff) {
+          Print(L"[%04x:%04x]\n", vid, did);
+        }
         if (vid == 0xffff || (vid != vendor_id && did != device_id)) {
           continue;
         } else {
@@ -44,6 +49,7 @@ uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_info *
           addr->bus = bus;
           addr->device = dev;
           addr->function = func;
+          ok = 1;
           break;
         }
       }
