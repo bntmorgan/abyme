@@ -3,6 +3,8 @@
 
 typedef unsigned long           size_t;
 
+typedef uint64_t                uintptr_t;
+
 #if 0
 
 typedef char                    int8_t;

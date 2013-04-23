@@ -37,22 +37,51 @@
 #define PCI_CONFIG_HEADER_TYPE          0x0e
 #define PCI_CONFIG_BIST                 0x0f
 
-typedef struct _pci_device_addr
-{
-    uint8_t bus;
-    uint8_t device;
-    uint8_t function;
+//
+// Type 0x00 (Generic) Configuration Registers
+//
+
+#define PCI_CONFIG_BAR0                 0x10
+#define PCI_CONFIG_BAR1                 0x14
+#define PCI_CONFIG_BAR2                 0x18
+#define PCI_CONFIG_BAR3                 0x1c
+#define PCI_CONFIG_BAR4                 0x20
+#define PCI_CONFIG_BAR5                 0x24
+
+//
+// PCI BAR
+//
+
+#define PCI_BAR_IO                      0x01
+#define PCI_BAR_LOWMEM                  0x02
+#define PCI_BAR_64                      0x04
+#define PCI_BAR_PREFETCH                0x08
+
+typedef struct _pci_device_addr {
+  uint8_t bus;
+  uint8_t device;
+  uint8_t function;
 } pci_device_addr;
 
-typedef struct _pci_device_info
-{
-    uint16_t vendor_id;
-    uint16_t device_id;
-    uint8_t class_code;
-    uint8_t sub_class;
-    uint8_t prog_intf;
+typedef struct _pci_device_info {
+  uint16_t vendor_id;
+  uint16_t device_id;
+  uint8_t class_code;
+  uint8_t sub_class;
+  uint8_t prog_intf;
 } pci_device_info;
 
+typedef struct _pci_bar {
+  union {
+    void *address;
+    uint16_t port;
+  } u;
+  uint64_t size;
+  uint32_t flags;
+} pci_bar;
+
 uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_info *info, pci_device_addr *addr);
+void pci_read_bar(uint32_t id, uint32_t index, uint32_t *address, uint32_t *mask);
+void pci_get_bar(pci_bar *bar, uint32_t id, uint32_t index);
 
 #endif

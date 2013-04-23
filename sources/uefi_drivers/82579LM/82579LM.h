@@ -82,5 +82,6 @@
 
 uint8_t eth_get_device();
 uint8_t eth_setup();
+uint8_t eth_init();
 
 #endif

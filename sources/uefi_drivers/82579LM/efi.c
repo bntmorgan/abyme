@@ -6,9 +6,8 @@
 EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image, systab);
   Print(L"Experimental Intel 82579LM Ethernet driver initialization\n\r");
-  if(eth_setup()) {
-    return EFI_SUCCESS;
-  } else {
+  if(eth_setup() == -1) {
     return EFI_NOT_FOUND;
   }
+  return EFI_SUCCESS;
 }
