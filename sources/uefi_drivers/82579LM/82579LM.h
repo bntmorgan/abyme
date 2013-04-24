@@ -76,9 +76,91 @@
 #define TCTL_SWXOFF                     (1 << 22)   // Software XOFF Transmission
 #define TCTL_RTLC                       (1 << 24)   // Re-transmit on Late Collision
 
+//
+// Buffer Sizes
+//
+
+#define RCTL_BSIZE_256                  (3 << 16)
+#define RCTL_BSIZE_512                  (2 << 16)
+#define RCTL_BSIZE_1024                 (1 << 16)
+#define RCTL_BSIZE_2048                 (0 << 16)
+#define RCTL_BSIZE_4096                 ((3 << 16) | (1 << 25))
+#define RCTL_BSIZE_8192                 ((2 << 16) | (1 << 25))
+#define RCTL_BSIZE_16384                ((1 << 16) | (1 << 25))
+
 #define ETH_VENDOR_ID 0x8086 // Intel
 
 #define ETH_DEVICE_ID 0x1502 // 82579LM
+
+#define RX_DESC_COUNT                   1//32
+#define TX_DESC_COUNT                   1//8
+
+#define PACKET_SIZE                     2048
+
+// ------------------------------------------------------------------------------------------------
+// Receive Descriptor
+typedef struct _recv_desc
+{
+    volatile uint64_t addr;
+    volatile uint16_t len;
+    volatile uint16_t checksum;
+    volatile uint8_t status;
+    volatile uint8_t errors;
+    volatile uint16_t special;
+} __attribute__((packed)) recv_desc;
+
+//
+// Receive Status
+//
+
+#define RSTA_DD                         (1 << 0)    // Descriptor Done
+#define RSTA_EOP                        (1 << 1)    // End of Packet
+#define RSTA_IXSM                       (1 << 2)    // Ignore Checksum Indication
+#define RSTA_VP                         (1 << 3)    // Packet is 802.1Q
+#define RSTA_TCPCS                      (1 << 5)    // TCP Checksum Calculated on Packet
+#define RSTA_IPCS                       (1 << 6)    // IP Checksum Calculated on Packet
+#define RSTA_PIF                        (1 << 7)    // Passed in-exact filter
+
+// 
+// Transmit Descriptor
+//
+
+typedef struct _trans_desc
+{
+    volatile uint64_t addr;
+    volatile uint16_t len;
+    volatile uint8_t cso;
+    volatile uint8_t cmd;
+    volatile uint8_t status;
+    volatile uint8_t css;
+    volatile uint16_t special;
+} __attribute__((packed)) trans_desc;
+
+//
+// Transmit Command
+//
+
+#define CMD_EOP                         (1 << 0)    // End of Packet
+#define CMD_IFCS                        (1 << 1)    // Insert FCS
+#define CMD_IC                          (1 << 2)    // Insert Checksum
+#define CMD_RS                          (1 << 3)    // Report Status
+#define CMD_RPS                         (1 << 4)    // Report Packet Sent
+#define CMD_VLE                         (1 << 6)    // VLAN Packet Enable
+#define CMD_IDE                         (1 << 7)    // Interrupt Delay Enable
+
+//
+// Transmit Status
+//
+
+#define TSTA_DD                         (1 << 0)    // Descriptor Done
+#define TSTA_EC                         (1 << 1)    // Excess Collisions
+#define TSTA_LC                         (1 << 2)    // Late Collision
+#define LSTA_TU                         (1 << 3)    // Transmit Underrun
+
+//
+// Buffers
+//
+#define NET_BUF_SIZE                    2048
 
 uint8_t eth_get_device();
 uint8_t eth_setup();
