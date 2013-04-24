@@ -10,8 +10,8 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   if(eth_setup() == -1) {
     return EFI_NOT_FOUND;
   }
-  uint16_t len = 500;
-  uint8_t buf[500];
+  uint16_t len = 1500;
+  uint8_t buf[1500];
   uint8_t i;
   eth_header *eh = (eth_header *)&buf[0];
   eth_addr daddr = {.n = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
@@ -20,7 +20,9 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
     eh->src.n[i] = laddr->n[i];
     eh->dst.n[i] = daddr.n[i];
   }
-  eh->type = 0x1234;
+  eh->type = 0xdead;
+  eh++;
+  *((uint16_t *)eh) = 0xcaca;
   eth_send(buf, len);
   debug_print_reg_stat();
   return EFI_SUCCESS;

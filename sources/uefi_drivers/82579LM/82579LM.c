@@ -108,9 +108,12 @@ uint8_t eth_init() {
 }
 
 void eth_send(uint8_t *buf, uint16_t len) {
-  static uint8_t idx = 0;
+  // Current transmition descriptor index
+  static uint8_t cidx = 0;
+  // Get the previous index
+  uint8_t idx = (cidx - 1) & (TX_DESC_COUNT - 1);
   trans_desc *tx_desc = tx_descs + idx;
-  Print(L"tx_desc index 0x%x\n", idx);
+  Print(L"Previous tx_desc index 0x%x, current 0x%x\n", idx, cidx);
   // Wait until the packet is send
   Print(L"bwait\n");
   while (!(tx_desc->status & 0xf)) {
@@ -118,13 +121,14 @@ void eth_send(uint8_t *buf, uint16_t len) {
   }
   Print(L"ewait\n");
   // Write new tx descriptor
-  tx_desc->addr = (uint64_t)(uintptr_t)buf;
-  tx_desc->len = len;
-  tx_desc->cmd = CMD_EOP | CMD_IFCS | CMD_RS;
-  tx_desc->status = 0;
+  trans_desc *ctx_desc = tx_descs + cidx;
+  ctx_desc->addr = (uint64_t)(uintptr_t)buf;
+  ctx_desc->len = len;
+  ctx_desc->cmd = CMD_EOP | CMD_IFCS | CMD_RS;
+  ctx_desc->status = 0;
   // Increment the current tx decriptor
-  //idx = (idx + 1) & (TX_DESC_COUNT - 1);
-  cpu_mem_writed(bar0 + REG_TDT, idx);
+  cidx = (cidx + 1) & (TX_DESC_COUNT - 1);
+  cpu_mem_writed(bar0 + REG_TDT, cidx);
 }
 
 uint8_t eth_get_device() {
