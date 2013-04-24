@@ -6,14 +6,28 @@
 #include "addr.h"
 #include "cpu.h"
   
+// PCI device information
 pci_device_info info;
 pci_device_addr addr;
 
-recv_desc rx_descs[RX_DESC_COUNT];
-trans_desc tx_descs[TX_DESC_COUNT];
+// MAC address
+eth_addr laddr;
+
+// Transmission and receive descriptors
+recv_desc rx_descs[RX_DESC_COUNT] __attribute__((aligned(0x10)));
+trans_desc tx_descs[TX_DESC_COUNT] __attribute__((aligned(0x10)));
+
+// BAR0
+uint8_t *bar0;
 
 uint8_t rx_bufs[RX_DESC_COUNT * NET_BUF_SIZE];
 uint8_t tx_bufs[RX_DESC_COUNT * NET_BUF_SIZE];
+
+void wait(uint64_t time) {
+  uint64_t i;
+  for (i = 0; i < time; i++) {
+  }
+}
 
 uint8_t eth_setup() {
   // Get device info, bus address and function
@@ -34,9 +48,8 @@ uint8_t eth_init() {
     // Only Memory Mapped I/O supported
     return -1;
   }
-  uint8_t *bar0 = (uint8_t *)bar.u.address;
+  bar0 = (uint8_t *)bar.u.address;
   // Get the mac address
-  eth_addr laddr;
   uint32_t laddr_l = cpu_mem_readd(bar0 + REG_RAL);
   if (!laddr_l) {
     // We don't support EEPROM registers
@@ -53,7 +66,9 @@ uint8_t eth_init() {
   Print(L"MAC addr %02x:%02x:%02x:%02x:%02x:%02x\n", laddr.n[0], 
       laddr.n[1], laddr.n[2], laddr.n[3], laddr.n[4], laddr.n[5]);
   // Set Link Up
-  cpu_mem_writed(bar0 + REG_CTRL, cpu_mem_readd(bar0 + REG_CTRL) | CTRL_SLU);
+  Print(L"CTRL %x\n", cpu_mem_readd(bar0 + REG_CTRL));
+  Print(L"CTRL %x\n", cpu_mem_readd(bar0 + REG_STATUS));
+  // cpu_mem_writed(bar0 + REG_CTRL, cpu_mem_readd(bar0 + REG_CTRL) | CTRL_SLU);
   // Clear Multicast Table Array
   int32_t i;
   for (i = 0; i < 128; ++i) {
@@ -67,7 +82,7 @@ uint8_t eth_init() {
     recv_desc *rx_desc = rx_descs + i;
     rx_desc->addr = (uint64_t)(uintptr_t)buf;
     rx_desc->status = 0;
-    Print(L"rx_desc[0x%x]{addr: 0x%x, status: 0x%x}\n", i, rx_desc->addr, rx_desc->status);
+    //Print(L"@0x%x rx_desc[0x%x]{addr: 0x%x, status: 0x%x}\n", rx_desc, i, rx_desc->addr, rx_desc->status);
   }
   cpu_mem_writed(bar0 + REG_RDBAL, (uintptr_t)rx_descs);
   cpu_mem_writed(bar0 + REG_RDBAH, (uintptr_t)rx_descs >> 32);
@@ -80,7 +95,7 @@ uint8_t eth_init() {
   for (i = 0; i < TX_DESC_COUNT; i++) {
     trans_desc *tx_desc = tx_descs + i;
     tx_desc->status = TSTA_DD;      // mark descriptor as 'complete'
-    Print(L"tx_desc[0x%x]{status: 0x%x}\n", i, tx_desc->status);
+    //Print(L"@0x%x tx_desc[0x%x]{addr: 0x%x, status: 0x%x}\n", tx_desc, i, tx_desc->addr, tx_desc->status);
   }
   cpu_mem_writed(bar0 + REG_TDBAL, (uintptr_t)tx_descs);
   cpu_mem_writed(bar0 + REG_TDBAH, (uintptr_t)tx_descs >> 32);
@@ -90,6 +105,26 @@ uint8_t eth_init() {
   cpu_mem_writed(bar0 + REG_TCTL, TCTL_EN | TCTL_PSP | (15 << TCTL_CT_SHIFT)
       | (64 << TCTL_COLD_SHIFT) | TCTL_RTLC);
   return 0;
+}
+
+void eth_send(uint8_t *buf, uint16_t len) {
+  static uint8_t idx = 0;
+  trans_desc *tx_desc = tx_descs + idx;
+  Print(L"tx_desc index 0x%x\n", idx);
+  // Wait until the packet is send
+  Print(L"bwait\n");
+  while (!(tx_desc->status & 0xf)) {
+    wait(1000000);
+  }
+  Print(L"ewait\n");
+  // Write new tx descriptor
+  tx_desc->addr = (uint64_t)(uintptr_t)buf;
+  tx_desc->len = len;
+  tx_desc->cmd = CMD_EOP | CMD_IFCS | CMD_RS;
+  tx_desc->status = 0;
+  // Increment the current tx decriptor
+  //idx = (idx + 1) & (TX_DESC_COUNT - 1);
+  cpu_mem_writed(bar0 + REG_TDT, idx);
 }
 
 uint8_t eth_get_device() {
