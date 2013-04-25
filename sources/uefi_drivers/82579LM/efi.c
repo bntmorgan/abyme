@@ -2,7 +2,8 @@
 #include <efilib.h>
 
 #include "82579LM.h"
-#include "debug.h"
+#include "debug_eth.h"
+#include "api.h"
 
 EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image, systab);
@@ -10,20 +11,16 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   if(eth_setup() == -1) {
     return EFI_NOT_FOUND;
   }
-  uint16_t len = 1500;
-  uint8_t buf[1500];
-  uint8_t i;
-  eth_header *eh = (eth_header *)&buf[0];
-  eth_addr daddr = {.n = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
-  eth_addr *laddr = eth_get_laddr();
-  for (i = 0; i < 6; i++) {
-    eh->src.n[i] = laddr->n[i];
-    eh->dst.n[i] = daddr.n[i];
+  uint32_t i;
+  uint16_t len = 0x100;
+  uint8_t buf[0x100];
+  for (i = 0; i < len ; i++) {
+    buf[i] = 0xca;
   }
-  eh->type = 0xdead;
-  eh++;
-  *((uint16_t *)eh) = 0xcaca;
-  eth_send(buf, len);
+  uint32_t nb = 16;
+  for (i = 0; i < nb; i++) {
+    send(buf, len, 0);
+  }
   debug_print_reg_stat();
   return EFI_SUCCESS;
 }

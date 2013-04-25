@@ -5,6 +5,7 @@
 #include "pci.h"
 #include "addr.h"
 #include "cpu.h"
+#include "string.h"
   
 // PCI device information
 pci_device_info info;
@@ -21,7 +22,7 @@ trans_desc tx_descs[TX_DESC_COUNT] __attribute__((aligned(0x10)));
 uint8_t *bar0;
 
 uint8_t rx_bufs[RX_DESC_COUNT * NET_BUF_SIZE];
-uint8_t tx_bufs[RX_DESC_COUNT * NET_BUF_SIZE];
+uint8_t tx_bufs[TX_DESC_COUNT * NET_BUF_SIZE];
 
 void wait(uint64_t time) {
   uint64_t i;
@@ -107,7 +108,7 @@ uint8_t eth_init() {
   return 0;
 }
 
-void eth_send(uint8_t *buf, uint16_t len) {
+void eth_send(const void *buf, uint16_t len) {
   // Current transmition descriptor index
   static uint8_t cidx = 0;
   // Get the previous index
@@ -120,9 +121,12 @@ void eth_send(uint8_t *buf, uint16_t len) {
     wait(1000000);
   }
   Print(L"ewait\n");
+  // Copy the buf into the tx_buf
+  uint8_t *b = tx_bufs + (cidx * TX_DESC_COUNT);
+  memcpy(b, (void *)buf, len);
   // Write new tx descriptor
   trans_desc *ctx_desc = tx_descs + cidx;
-  ctx_desc->addr = (uint64_t)(uintptr_t)buf;
+  ctx_desc->addr = (uint64_t)(uintptr_t)b;
   ctx_desc->len = len;
   ctx_desc->cmd = CMD_EOP | CMD_IFCS | CMD_RS;
   ctx_desc->status = 0;

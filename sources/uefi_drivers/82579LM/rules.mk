@@ -5,7 +5,8 @@ d               := $(dir)
 TARGET					:= $(call SRC_2_BIN, $(d)/efi.efi)
 TARGETS 				+= $(call SRC_2_BIN, $(TARGET))
 OBJS_$(d)				:= $(call SRC_2_OBJ, \
-										$(d)/efi.o $(d)/82579LM.o $(d)/cpu.o $(d)/pci.o $(d)/debug.o)
+										$(d)/efi.o $(d)/82579LM.o $(d)/cpu.o $(d)/pci.o $(d)/debug_eth.o $(d)/api.o \
+										$(d)/common/string.o)
 OBJECTS 				+= $(OBJS_$(d))
 
 $(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d)

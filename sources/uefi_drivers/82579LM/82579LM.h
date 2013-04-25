@@ -206,6 +206,13 @@ typedef struct _trans_desc
 //
 #define NET_BUF_SIZE                    2048
 
+//
+// MTU
+//
+
+#define ETH_MTU 1500
+#define ETH_LEN 1516
+
 typedef struct _eth_header {
     eth_addr dst;
     eth_addr src;
@@ -215,7 +222,8 @@ typedef struct _eth_header {
 uint8_t eth_get_device();
 uint8_t eth_setup();
 uint8_t eth_init();
-void eth_send(uint8_t *buf, uint16_t len);
+
+void eth_send(const void *buf, uint16_t len);
 
 static inline eth_addr *eth_get_laddr() {
   extern eth_addr laddr;
