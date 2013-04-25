@@ -19,7 +19,7 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   }
   uint32_t nb = 16;
   for (i = 0; i < nb; i++) {
-    send(buf, len, 0);
+    send(buf, len, API_BLOCK);
   }
   debug_print_reg_stat();
   return EFI_SUCCESS;

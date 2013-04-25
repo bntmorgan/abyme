@@ -36,7 +36,7 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
   eh++;
   // Copy the payload into the frame
   memcpy(eh, (void *)buf, len);
-  eth_send(frame, size);
+  eth_send(frame, size, (flags & API_BLOCK));
   return len;
 }
 

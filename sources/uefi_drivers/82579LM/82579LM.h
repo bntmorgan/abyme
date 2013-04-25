@@ -223,7 +223,7 @@ uint8_t eth_get_device();
 uint8_t eth_setup();
 uint8_t eth_init();
 
-void eth_send(const void *buf, uint16_t len);
+void eth_send(const void *buf, uint16_t len, uint8_t block);
 
 static inline eth_addr *eth_get_laddr() {
   extern eth_addr laddr;
