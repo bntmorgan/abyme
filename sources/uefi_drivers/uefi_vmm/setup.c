@@ -13,6 +13,7 @@
 #include "string.h"
 #include "msr_bitmap.h"
 #include "io_bitmap.h"
+#include "debug_server/debug_server.h"
 
 //extern char __text;
 extern uint8_t _padding_begin_a;
@@ -28,6 +29,7 @@ uint8_t vmxon[4096] __attribute((aligned(0x1000)));
 uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
 
 void vmm_main() {
+  debug_server_init();
   cpuid_setup();
 
   /* TODO: test pagination id-map, gdt-flat, etc. */

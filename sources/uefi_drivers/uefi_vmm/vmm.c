@@ -8,6 +8,7 @@
 #include "systab.h"
 #include "vmcs.h"
 #include "debug.h"
+#include "debug_server/debug_server.h"
 
 void vmm_print_guest_regs(struct registers *guest_regs) {
   INFO("rax=%X\n", guest_regs->rax);
@@ -28,6 +29,9 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   guest_regs.rip = cpu_vmread(GUEST_RIP);
   static uint64_t msr_exit = 0;
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
+
+  debug_server_send(&exit_reason, sizeof(exit_reason));
+
   uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
   //printk("VM_EXIT_REASON: %x\n", exit_reason);
   //printk("EXIT_QUALIFICATION: %x\n", cpu_vmread(EXIT_QUALIFICATION));
@@ -75,6 +79,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       printk("rax %X, rbx %X, rcx %X, rdx %X\n", guest_regs.rax, guest_regs.rbx, guest_regs.rcx, guest_regs.rdx);
       printk("cr0 %X\n", cpu_vmread(GUEST_CR0));
       //dump((void *)0, exit_instruction_length, 1, guest_regs.rip, 1);
+
       dump((void *)guest_regs.rip, 1, exit_instruction_length, guest_regs.rip, 1);
       while(1);
     }

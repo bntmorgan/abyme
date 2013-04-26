@@ -110,13 +110,10 @@ uint8_t eth_init() {
 
 inline void eth_wait(uint8_t idx) {
   trans_desc *tx_desc = tx_descs + idx;
-  Print(L"tx_desc index 0x%x\n", idx);
   // Wait until the packet is send
-  Print(L"bwait\n");
   while (!(tx_desc->status & 0xf)) {
     wait(1000000);
   }
-  Print(L"ewait\n");
 }
 
 void eth_send(const void *buf, uint16_t len, uint8_t block) {
