@@ -3,6 +3,7 @@
 
 #include "api.h"
 #include "82579LM.h"
+#include "efi/efi_82579LM.h"
 #include "string.h"
 #include "debug.h"
   
@@ -36,7 +37,7 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
   eh++;
   // Copy the payload into the frame
   memcpy(eh, (void *)buf, len);
-  eth_send(frame, size, (flags & API_BLOCK));
+  eth_send(frame, size, (flags & EFI_82579LM_API_BLOCK));
   return len;
 }
 
