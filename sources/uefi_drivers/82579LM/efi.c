@@ -4,6 +4,7 @@
 #include "82579LM.h"
 #include "debug_eth.h"
 #include "api.h"
+#include "pci.h"
 #include "efi/efi_82579LM.h"
 
 //
@@ -11,7 +12,12 @@
 //
 protocol_82579LM proto = {
   send,
-  recv
+  recv,
+  .pci_addr = {
+    0,
+    0,
+    0
+  }
 };
 
 EFI_STATUS vmm_rt_unload (IN EFI_HANDLE image); 
@@ -32,6 +38,12 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   image->Unload = vmm_rt_unload;
 
   Print(L"Unload handler added %x\n", (uint64_t)image_handle);
+
+  // Share the pci address in the uefi protocol
+  pci_device_addr *pci_addr = eth_get_pci_addr();
+  proto.pci_addr.bus = pci_addr->bus;
+  proto.pci_addr.device = pci_addr->device;
+  proto.pci_addr.function = pci_addr->function;
 
   // Add a protocol so someone can locate us 
   status = uefi_call_wrapper(BS->InstallProtocolInterface, 4, &image_handle, &guid_82579LM, NULL, &proto);

@@ -11,6 +11,11 @@
 typedef struct _protocol_82579LM {
   uint32_t (*send)(const void *, uint32_t, uint8_t);
   uint32_t (*revc)(void *, uint32_t, uint8_t);
+  struct {
+    uint8_t bus;
+    uint8_t device;
+    uint8_t function;
+  } pci_addr;
 } protocol_82579LM;
 
 #endif

@@ -2,7 +2,6 @@
 #include <efilib.h>
 
 #include "82579LM.h"
-#include "pci.h"
 #include "addr.h"
 #include "cpu.h"
 #include "string.h"
