@@ -145,24 +145,34 @@ inline void eth_wait_rx(uint8_t idx) {
   }
 }
 
-void eth_recv(const void *buf, uint16_t len, uint8_t block) {
+uint32_t eth_recv(const void *buf, uint32_t len, uint8_t block) {
   // Current receive descriptor index
   static uint8_t idx = 0;
   // Wait for a packet
-  eth_wait_rx(idx);
+  if (block) {
+    eth_wait_rx(idx);
+  }
   // Copy the buf into the rx_buf
   recv_desc *rx_desc = rx_descs + idx;
-  if (rx_desc->errors) {
-    Print(L"Packet Error: (0x%x)\n", rx_desc->errors);
-  } else {
-    uint8_t __attribute__((__unused__)) *b = rx_bufs + (idx * NET_BUF_SIZE);
-    uint32_t __attribute__((__unused__)) len = rx_desc->len;
-    memcpy((void *)buf, b, len);
-    // desc->addr = (u64)(uintptr_t)buf->start;
+  uint32_t l = 0;
+  while ((rx_desc->status & RSTA_DD) && (l < len)) {
+    if (rx_desc->errors) {
+      Print(L"Packet Error: (0x%x)\n", rx_desc->errors);
+    } else {
+      uint8_t *b = rx_bufs + (idx * NET_BUF_SIZE);
+      uint32_t len = rx_desc->len;
+      memcpy((void *)buf, b, len);
+      // desc->addr = (u64)(uintptr_t)buf->start;
+      Print(L"Received %x%x%x%x\n", *((uint32_t *)buf + 0), *((uint32_t *)buf + 1),
+          *((uint32_t *)buf + 2), *((uint32_t *)buf + 3));
+      buf = (uint8_t *)buf + len;
+      l += len;
+    }
+    rx_desc->status = 0;
+    cpu_mem_writed(bar0 + REG_RDT, idx);
+    idx = (idx + 1) & (RX_DESC_COUNT - 1);
   }
-  rx_desc->status = 0;
-  cpu_mem_writed(bar0 + REG_RDT, idx);
-  idx = (idx + 1) & (RX_DESC_COUNT - 1);
+  return l; 
 }
 
 uint8_t eth_get_device() {

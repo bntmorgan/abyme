@@ -42,5 +42,4 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
 }
 
 uint32_t recv(void *buf, uint32_t len, uint8_t flags) {
-  return 0;
 }
