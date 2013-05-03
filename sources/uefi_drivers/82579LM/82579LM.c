@@ -107,7 +107,7 @@ uint8_t eth_init() {
   return 0;
 }
 
-inline void eth_wait(uint8_t idx) {
+inline void eth_wait_tx(uint8_t idx) {
   trans_desc *tx_desc = tx_descs + idx;
   // Wait until the packet is send
   while (!(tx_desc->status & 0xf)) {
@@ -119,11 +119,10 @@ void eth_send(const void *buf, uint16_t len, uint8_t block) {
   // Current transmition descriptor index
   static uint8_t idx = 0;
   // Wait for the precedent descriptor being ready
-  //eth_wait((idx - 1) & (TX_DESC_COUNT - 1));
-  eth_wait(idx);
+  eth_wait_tx(idx);
   // Copy the buf into the tx_buf
   trans_desc *tx_desc = tx_descs + idx;
-  uint8_t *b = tx_bufs + (idx * TX_DESC_COUNT);
+  uint8_t *b = tx_bufs + (idx * NET_BUF_SIZE);
   memcpy(b, (void *)buf, len);
   // Write new tx descriptor
   tx_desc->addr = (uint64_t)(uintptr_t)b;
@@ -134,8 +133,36 @@ void eth_send(const void *buf, uint16_t len, uint8_t block) {
   idx = (idx + 1) & (TX_DESC_COUNT - 1);
   cpu_mem_writed(bar0 + REG_TDT, idx);
   if (block) {
-    eth_wait(idx);
+    eth_wait_tx(idx);
   }
+}
+
+inline void eth_wait_rx(uint8_t idx) {
+  recv_desc *rx_desc = rx_descs + idx;
+  // Wait until the packet is send
+  while (!(rx_desc->status & RSTA_DD)) {
+    wait(1000000);
+  }
+}
+
+void eth_recv(const void *buf, uint16_t len, uint8_t block) {
+  // Current receive descriptor index
+  static uint8_t idx = 0;
+  // Wait for a packet
+  eth_wait_rx(idx);
+  // Copy the buf into the rx_buf
+  recv_desc *rx_desc = rx_descs + idx;
+  if (rx_desc->errors) {
+    Print(L"Packet Error: (0x%x)\n", rx_desc->errors);
+  } else {
+    uint8_t __attribute__((__unused__)) *b = rx_bufs + (idx * NET_BUF_SIZE);
+    uint32_t __attribute__((__unused__)) len = rx_desc->len;
+    memcpy((void *)buf, b, len);
+    // desc->addr = (u64)(uintptr_t)buf->start;
+  }
+  rx_desc->status = 0;
+  cpu_mem_writed(bar0 + REG_RDT, idx);
+  idx = (idx + 1) & (RX_DESC_COUNT - 1);
 }
 
 uint8_t eth_get_device() {
