@@ -49,7 +49,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   status = uefi_call_wrapper(BS->InstallProtocolInterface, 4, &image_handle, &guid_82579LM, NULL, &proto);
   ASSERT (!EFI_ERROR(status));
 
-  return EFI_SUCCESS;
+  return status;
 }
 
 EFI_STATUS vmm_rt_unload (IN EFI_HANDLE image) {
