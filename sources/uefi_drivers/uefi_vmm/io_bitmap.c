@@ -15,7 +15,7 @@ void io_bitmap_set_for_port(uint64_t port) {
   if (port < 0x8000) {
     io_bitmap_a[port / 8] |= (1 << (port % 8));
   } else {
-    io_bitmap_b[port / 8] |= (1 << (port % 8));
+    io_bitmap_b[(port - 0x8000) / 8] |= (1 << (port % 8));
   }
 }
 
