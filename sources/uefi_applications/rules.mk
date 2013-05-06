@@ -2,6 +2,8 @@ sp 		:= $(sp).x
 dirstack_$(sp)	:= $(d)
 d		:= $(dir)
 
+dir	:= $(d)/eth_recv
+include	$(dir)/rules.mk
 dir	:= $(d)/eth_send
 include	$(dir)/rules.mk
 dir	:= $(d)/acpi

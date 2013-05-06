@@ -26,7 +26,7 @@ EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID;
 EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image_handle, systab);
   Print(L"Experimental Intel 82579LM Ethernet driver initialization\n\r");
-  if(eth_setup() == -1) {
+  if (eth_setup() == -1) {
     return EFI_NOT_FOUND;
   }
   

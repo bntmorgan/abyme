@@ -33,7 +33,7 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
     eh->src.n[i] = laddr->n[i];
     eh->dst.n[i] = daddr.n[i];
   }
-  eh->type = 0xdead;
+  eh->type = API_ETH_TYPE;
   eh++;
   // Copy the payload into the frame
   memcpy(eh, (void *)buf, len);
@@ -42,4 +42,17 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
 }
 
 uint32_t recv(void *buf, uint32_t len, uint8_t flags) {
+  static uint8_t frame[ETH_LEN];
+  if (len > ETH_MTU) {
+    return -1;
+  }
+  uint32_t size = len + sizeof(eth_header);
+  uint32_t l = eth_recv(frame, size, (flags & EFI_82579LM_API_BLOCK));
+  l -= sizeof(eth_header);
+  if (l > len) {
+    // Received packet is too long
+    return -1;
+  }
+  memcpy(buf, frame + sizeof(eth_header), l);
+  return l;
 }

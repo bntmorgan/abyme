@@ -225,6 +225,7 @@ uint8_t eth_setup();
 uint8_t eth_init();
 
 void eth_send(const void *buf, uint16_t len, uint8_t block);
+uint32_t eth_recv(void *buf, uint32_t len, uint8_t block);
 
 static inline pci_device_addr *eth_get_pci_addr() {
   extern pci_device_addr addr;
