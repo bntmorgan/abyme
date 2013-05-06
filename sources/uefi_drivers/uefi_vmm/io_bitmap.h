@@ -6,7 +6,7 @@
 
 void io_bitmap_setup(void);
 
-void msr_bitmap_set_for_port(uint64_t port);
+void io_bitmap_set_for_port(uint64_t port);
 
 uint64_t io_bitmap_get_ptr_a(void);
 
