@@ -163,8 +163,6 @@ uint32_t eth_recv(void *buf, uint32_t len, uint8_t block) {
       uint32_t len = rx_desc->len;
       memcpy((void *)buf, b, len);
       // desc->addr = (u64)(uintptr_t)buf->start;
-      // Print(L"Received %x%x%x%x\n", *((uint32_t *)buf + 0), *((uint32_t *)buf + 1),
-      //    *((uint32_t *)buf + 2), *((uint32_t *)buf + 3));
       buf = (uint8_t *)buf + len;
       l += len;
     }

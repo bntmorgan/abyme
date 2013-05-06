@@ -17,6 +17,30 @@ void debug_server_init() {
   }
 }
 
+void debug_server_run(uint32_t exit_reason) {
+  message_vmexit ms = {
+    MESSAGE_VMEXIT,
+    exit_reason
+  };
+  debug_server_send(&ms, sizeof(message_vmexit));
+  uint8_t buf[0x100];
+  message *mr = (message *)buf;
+  mr->type = MESSAGE_MESSAGE;
+  while (mr->type != MESSAGE_EXEC_CONTINUE) {
+    // printk("Waiting for a continue message\n");
+    if (debug_server_recv(mr, 0x100) == -1) {
+      // printk("Bad ethertype or length\n");
+      mr->type = MESSAGE_MESSAGE;
+      continue;
+    }
+    // printk("Message type %X\n", (uint64_t)mr->type);
+  }
+}
+
 void debug_server_send(void *buf, uint32_t len) {
-  eth->send(buf, len, 0);
+  eth->send(buf, len, EFI_82579LM_API_BLOCK);
+}
+
+uint32_t debug_server_recv(void *buf, uint32_t len) {
+  return eth->recv(buf, len, EFI_82579LM_API_BLOCK);
 }
