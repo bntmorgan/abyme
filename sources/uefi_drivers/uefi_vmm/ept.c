@@ -28,7 +28,7 @@ void ept_create_tables(void) {
   for (i = 1; i < 512; i++) {
     ept_tables.PML4[i] = 0;
   }
-  /* Map all memory with 2mb pages but the first entry. This first entry is mapped using 4ko pages. */
+  /* Map all memory with 2mb except for the first entry. This first entry is mapped using 4ko pages. */
   uint64_t address = 0;
   const struct memory_range *memory_range = NULL;
   for (i = 0; i < 512; i++) {

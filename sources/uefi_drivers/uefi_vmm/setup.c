@@ -4,6 +4,7 @@
 #include "gdt.h"
 #include "mtrr.h"
 #include "ept.h"
+#include "pci.h"
 #include "debug.h"
 #include "paging.h"
 #include "msr.h"
@@ -52,6 +53,9 @@ void vmm_main() {
   ept_create_tables();
   msr_bitmap_setup();
   io_bitmap_setup();
+  // Ethernet card protection
+  io_bitmap_set_for_port(PCI_CONFIG_ADDR);
+  io_bitmap_set_for_port(PCI_CONFIG_DATA);
 
   /* TODO Dump the core state
   struct core_gpr gpr;
