@@ -6,7 +6,15 @@
 #include "efi/efi_82579LM.h"
 #include "string.h"
 #include "debug.h"
-  
+
+static inline uint16_t htons(uint16_t data) {
+  return ((data >> 8) & 0xff) | ((data << 8) & 0xff00);
+}
+
+static inline uint16_t ntohs(uint16_t data) {
+  return htons(data);
+}
+
 void _api_dump_eth_frame(void *frame, uint32_t payload_len) {
   // Addresses
   Print(L"MAC Addresses\n");
@@ -33,7 +41,7 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
     eh->src.n[i] = laddr->n[i];
     eh->dst.n[i] = daddr.n[i];
   }
-  eh->type = API_ETH_TYPE;
+  eh->type = htons(API_ETH_TYPE);
   eh++;
   // Copy the payload into the frame
   memcpy(eh, (void *)buf, len);
@@ -51,6 +59,11 @@ uint32_t recv(void *buf, uint32_t len, uint8_t flags) {
   l -= sizeof(eth_header);
   if (l > len) {
     // Received packet is too long
+    return -1;
+  }
+  // Get the header
+  eth_header *eh = (eth_header *)frame; 
+  if (ntohs(eh->type) != API_ETH_TYPE){
     return -1;
   }
   memcpy(buf, frame + sizeof(eth_header), l);
