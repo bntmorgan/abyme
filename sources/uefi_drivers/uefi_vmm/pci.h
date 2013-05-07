@@ -11,6 +11,6 @@
 #define PCI_CONFIG_ADDR                 0xcf8
 #define PCI_CONFIG_DATA                 0xcfc
 
-uint32_t pci_make_addr(uint32_t id);
+inline uint32_t pci_make_addr(uint32_t id);
 
 #endif

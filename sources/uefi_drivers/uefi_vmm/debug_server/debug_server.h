@@ -1,5 +1,6 @@
 #ifndef __DEBUG_SERVER_H__
 #define __DEBUG_SERVER_H__
+#include "efi/efi_82579LM.h"
 
 void debug_server_init();
 void debug_server_send(void *buf, uint32_t len);
@@ -14,12 +15,12 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
 
 typedef struct _message {
   uint8_t type;
-} message;
+} __attribute__((packed)) message;
 
 typedef struct _message_vmexit {
   uint8_t type;
   uint32_t exit_reason;
-} message_vmexit;
+} __attribute__((packed)) message_vmexit;
 
 static inline void *message_check_type(message *m, uint8_t type) {
   if (m->type == type) {
@@ -30,5 +31,7 @@ static inline void *message_check_type(message *m, uint8_t type) {
 }
 
 void debug_server_run(uint32_t exit_reason);
+
+extern protocol_82579LM *eth;
 
 #endif

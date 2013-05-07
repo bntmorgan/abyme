@@ -25,6 +25,9 @@ typedef struct _protocol_82579LM {
     uint8_t device;
     uint8_t function;
   } pci_addr;
+  uint64_t bar0;
 } protocol_82579LM;
+
+extern uint8_t *bar0;
 
 #endif

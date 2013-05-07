@@ -17,7 +17,8 @@ protocol_82579LM proto = {
     0,
     0,
     0
-  }
+  },
+  0
 };
 
 EFI_STATUS vmm_rt_unload (IN EFI_HANDLE image); 
@@ -44,6 +45,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   proto.pci_addr.bus = pci_addr->bus;
   proto.pci_addr.device = pci_addr->device;
   proto.pci_addr.function = pci_addr->function;
+  proto.bar0 = (uint64_t)bar0;
 
   // Add a protocol so someone can locate us 
   status = uefi_call_wrapper(BS->InstallProtocolInterface, 4, &image_handle, &guid_82579LM, NULL, &proto);

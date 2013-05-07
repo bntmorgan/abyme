@@ -4,7 +4,7 @@
 #include "types.h"
 #include "pci.h"
 
-uint32_t pci_make_addr(uint32_t id) {
+inline uint32_t pci_make_addr(uint32_t id) {
   return 0x80000000 | id;
 }
 

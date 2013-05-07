@@ -3,7 +3,6 @@
 
 #include "stdio.h"
 #include "debug_server.h"
-#include "efi/efi_82579LM.h"
   
 protocol_82579LM *eth;
 
@@ -15,6 +14,7 @@ void debug_server_init() {
   if (EFI_ERROR(status)) {
     ERROR("FAILED LOL LocateProtocol\n");
   }
+  printk("BAR0 %X\n", eth->bar0);
 }
 
 void debug_server_run(uint32_t exit_reason) {
