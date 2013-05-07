@@ -56,9 +56,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 
   switch (exit_reason) {
     case EXIT_REASON_IO_INSTRUCTION: {
-      // INFO("EXIT_REASON_IO_INSTRUCTION\n");
-      // INFO("INSTRUCTION %x\n", instruction);
-      // INFO("BEFORE rax:%X rdx:%x\n", guest_regs.rax, guest_regs.rdx);
       uint32_t ins = *((uint32_t *) guest_regs.rip);
       uint8_t *ins_byte = (uint8_t *) &ins;
       memset(&ins_byte[exit_instruction_length], 0x90, 4 - exit_instruction_length);
@@ -99,80 +96,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       } else if (direction == 1 && port == PCI_CONFIG_DATA && catch) {
         memset(&guest_regs.rax, 0xff, size);
       }
-#if 0
-      // Decode instruction
-      if        ((instruction & 0x00ff) == 0x00ec &&
-          exit_instruction_length == 1) {  // in %dx, %al
-        __asm__ __volatile__(
-            "in %%dx, %%al"
-        : "=a"(guest_regs.rax), "=d"(guest_regs.rdx) : "a"(guest_regs.rax), "d"(guest_regs.rdx));
-      } else if ((instruction & 0xffff) == 0xed66 &&
-          exit_instruction_length == 2) {  // in %dx, %ax
-        __asm__ __volatile__(
-            "in %%dx, %%ax"
-        : "=a"(guest_regs.rax), "=d"(guest_regs.rdx) : "a"(guest_regs.rax), "d"(guest_regs.rdx));
-      } else if ((instruction & 0x00ff) == 0x00ed &&
-          exit_instruction_length == 1) {  // in %dx, %eax
-        __asm__ __volatile__(
-            "in %%dx, %%eax"
-        : "=a"(guest_regs.rax), "=d"(guest_regs.rdx) : "a"(guest_regs.rax), "d"(guest_regs.rdx));
-      } else if ((instruction & 0x00ff) == 0x00e4 &&
-          exit_instruction_length == 2) {  // in $x, %al
-        uint8_t dx = (instruction >> 8) & 0xff;
-        __asm__ __volatile__(
-            "in %%dx, %%al"
-        : "=a"(guest_regs.rax), "=d"(dx) : "a"(guest_regs.rax), "d"(dx));
-      } else if ((instruction & 0xffff) == 0xe566 &&
-          exit_instruction_length == 3) {  // in $x, %ax
-        uint8_t dx = (instruction >> 16) & 0xff;
-        __asm__ __volatile__(
-            "in %%dx, %%ax"
-        : "=a"(guest_regs.rax), "=d"(dx) : "a"(guest_regs.rax), "d"(dx));
-      } else if ((instruction & 0x00ff) == 0x00e5 &&
-          exit_instruction_length == 2) {  // in $x, %aex
-        uint8_t dx = (instruction >> 8) & 0xff;
-        __asm__ __volatile__(
-            "in %%dx, %%eax"
-        : "=a"(guest_regs.rax), "=d"(dx) : "a"(guest_regs.rax), "d"(dx));
-      } else if ((instruction & 0x00ff) == 0x00ee &&
-          exit_instruction_length == 1) {  // out %al, %dx
-        __asm__ __volatile__(
-            "out %%al, %%dx"
-        : "=a"(guest_regs.rax), "=d"(guest_regs.rdx) : "a"(guest_regs.rax), "d"(guest_regs.rdx));
-      } else if ((instruction & 0xffff) == 0xef66 &&
-          exit_instruction_length == 2) {  // out %ax, %dx
-        __asm__ __volatile__(
-            "out %%ax, %%dx"
-        : "=a"(guest_regs.rax), "=d"(guest_regs.rdx) : "a"(guest_regs.rax), "d"(guest_regs.rdx));
-      } else if ((instruction & 0x00ff) == 0x00ef &&
-          exit_instruction_length == 1) {  // out %eax, %dx
-        __asm__ __volatile__(
-            "out %%eax, %%dx"
-        : "=a"(guest_regs.rax), "=d"(guest_regs.rdx) : "a"(guest_regs.rax), "d"(guest_regs.rdx));
-      } else if ((instruction & 0x00ff) == 0x00e6 &&
-          exit_instruction_length == 2) {  // out %al, $x
-        uint8_t dx = (instruction >> 8) & 0xff;
-        __asm__ __volatile__(
-            "out %%al, %%dx"
-        : "=a"(guest_regs.rax), "=d"(dx) : "a"(guest_regs.rax), "d"(dx));
-      } else if ((instruction & 0xffff) == 0xe766 &&
-          exit_instruction_length == 3) {  // out %ax, $x
-        uint8_t dx = (instruction >> 16) & 0xff;
-        __asm__ __volatile__(
-            "out %%ax, %%dx"
-        : "=a"(guest_regs.rax), "=d"(dx) : "a"(guest_regs.rax), "d"(dx));
-      } else if ((instruction & 0x00ff) == 0x00e7 &&
-          exit_instruction_length == 2) {  // out %eax, $x
-        uint8_t dx = (instruction >> 8) & 0xff;
-        __asm__ __volatile__(
-            "out %%eax, %%dx"
-        : "=a"(guest_regs.rax), "=d"(dx) : "a"(guest_regs.rax), "d"(dx));
-      } else {
-        INFO("UNKNOWN I/O :(\n");
-        while(1);
-      }
-#endif
-      // INFO("AFTER rax:%X rdx:%x\n", guest_regs.rax, guest_regs.rdx);
       break;
     }
     case EXIT_REASON_CPUID: {
@@ -203,13 +126,12 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     default: {
-      printk("Exit reason (base 16) %X\n", exit_reason);
-      printk("rax %X, rbx %X, rcx %X, rdx %X\n", guest_regs.rax, guest_regs.rbx, guest_regs.rcx, guest_regs.rdx);
-      printk("cr0 %X\n", cpu_vmread(GUEST_CR0));
+      // printk("Exit reason (base 16) %X\n", exit_reason);
+      // printk("rax %X, rbx %X, rcx %X, rdx %X\n", guest_regs.rax, guest_regs.rbx, guest_regs.rcx, guest_regs.rdx);
+      // printk("cr0 %X\n", cpu_vmread(GUEST_CR0));
       //dump((void *)0, exit_instruction_length, 1, guest_regs.rip, 1);
-      uint64_t guest_linear_address = cpu_vmread(GUEST_LINEAR_ADDRESS);
-      INFO("GUEST LINEAR %X\n", guest_linear_address);
-
+      // uint64_t guest_linear_address = cpu_vmread(GUEST_LINEAR_ADDRESS);
+      // INFO("GUEST LINEAR %X\n", guest_linear_address);
       dump((void *)guest_regs.rip, 1, exit_instruction_length, guest_regs.rip, 1);
       while(1);
     }

@@ -144,7 +144,7 @@ void vmcs_fill_vm_exec_control_fields(void) {
   uint64_t eptp;
   uint64_t io_bitmap_ptr;
 
-  cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(0, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
+  cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, (1 << 3) | cpu_adjust32(0, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
   procbased_ctls = cpu_adjust32(procbased_ctls, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS);
   procbased_ctls &= ~(CR3_LOAD_EXITING | CR3_STORE_EXITING);
   cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);

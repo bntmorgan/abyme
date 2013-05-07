@@ -83,6 +83,7 @@ void ept_create_tables(void) {
   // 
   // Network card
   //
+#if 0
   uint64_t base_addr = 0xf80c8000;
   // math.floor(0xf8098000 / pow(2,21))
   uint32_t PDX = 1984;
@@ -112,7 +113,7 @@ void ept_create_tables(void) {
   base_addr = eth->bar0;
   // math.floor(0xf8098000 / pow(2,21))
   PML40_X = base_addr >> 30;
-  PDPT_PML40_X = (base_addr & 0x3fffffff) >> 21;
+  PDPT_PML40_X = (base_addr - (PML40_X << 30)) >> 21;
   ept_tables.PD_PDPT_PML40[PML40_X][PDPT_PML40_X] = ((uint64_t) &ept_tables.PT_PDX2[0]) | 0x7;
   // hex(1984 * pow(2,21))
   address = eth->bar0;
@@ -134,6 +135,7 @@ void ept_create_tables(void) {
     }
     address += 0x1000;
   }
+#endif
 }
 
 uint64_t ept_get_eptp(void) {
