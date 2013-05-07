@@ -2,11 +2,13 @@
 #include "stdio.h"
 #include "cpu.h"
 #include "msr.h"
+#include "string.h"
 #include <efi.h>
 #include <efilib.h>
 
 #include "systab.h"
 #include "vmcs.h"
+#include "pci.h"
 #include "debug.h"
 #include "debug_server/debug_server.h"
 
@@ -29,8 +31,11 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   guest_regs.rip = cpu_vmread(GUEST_RIP);
   static uint64_t msr_exit = 0;
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
+  uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
 
-  debug_server_run(exit_reason);
+  if (exit_reason != EXIT_REASON_IO_INSTRUCTION) {
+    debug_server_run(exit_reason);
+  }
 
   uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
   //printk("VM_EXIT_REASON: %x\n", exit_reason);
@@ -46,12 +51,55 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 
   //Print(L"PCI IO %d\n", status);
 
+  static uint8_t catch = 2;
+  static uint32_t eax = 0;
+
   switch (exit_reason) {
     case EXIT_REASON_IO_INSTRUCTION: {
       // INFO("EXIT_REASON_IO_INSTRUCTION\n");
-      uint32_t instruction = *((uint32_t *) guest_regs.rip);
       // INFO("INSTRUCTION %x\n", instruction);
       // INFO("BEFORE rax:%X rdx:%x\n", guest_regs.rax, guest_regs.rdx);
+      uint32_t ins = *((uint32_t *) guest_regs.rip);
+      uint8_t *ins_byte = (uint8_t *) &ins;
+      memset(&ins_byte[exit_instruction_length], 0x90, 4 - exit_instruction_length);
+      exit_qualification++;
+      uint8_t size;
+
+      if (catch == 2) {
+        eax = pci_make_addr(PCI_MAKE_ID(
+              eth->pci_addr.bus,
+              eth->pci_addr.device,
+              eth->pci_addr.function));
+      }
+      switch (exit_qualification & 0x3) {
+        case 0:
+          size = 1;
+          break;
+        case 1:
+          size = 2;
+          break;
+        case 3:
+          size = 4;
+          break;
+      }
+      // 0 out, 1 IN
+      uint8_t direction = (exit_qualification >> 2) & 0x1;
+      uint16_t port = (exit_qualification >> 16) & 0xffff;
+      __asm__ __volatile__(
+          "mov %%ecx, 1f(%%rip)  ;"
+          "1: nop; nop; nop; nop ;"
+        : "=a" (guest_regs.rax), "=d" (guest_regs.rdx)
+        : "a" (guest_regs.rax), "c" (ins), "d" (guest_regs.rdx));
+      if (direction == 0 && port == PCI_CONFIG_ADDR) {
+        if ((guest_regs.rax & 0xffffff00) == eax) {
+          catch = 1;
+        } else {
+          catch = 0;
+        }
+      } else if (direction == 1 && port == PCI_CONFIG_DATA && catch) {
+        memset(&guest_regs.rax, 0xff, size);
+      }
+#if 0
       // Decode instruction
       if        ((instruction & 0x00ff) == 0x00ec &&
           exit_instruction_length == 1) {  // in %dx, %al
@@ -123,6 +171,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         INFO("UNKNOWN I/O :(\n");
         while(1);
       }
+#endif
       // INFO("AFTER rax:%X rdx:%x\n", guest_regs.rax, guest_regs.rdx);
       break;
     }
@@ -158,6 +207,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       printk("rax %X, rbx %X, rcx %X, rdx %X\n", guest_regs.rax, guest_regs.rbx, guest_regs.rcx, guest_regs.rdx);
       printk("cr0 %X\n", cpu_vmread(GUEST_CR0));
       //dump((void *)0, exit_instruction_length, 1, guest_regs.rip, 1);
+      uint64_t guest_linear_address = cpu_vmread(GUEST_LINEAR_ADDRESS);
+      INFO("GUEST LINEAR %X\n", guest_linear_address);
 
       dump((void *)guest_regs.rip, 1, exit_instruction_length, guest_regs.rip, 1);
       while(1);
