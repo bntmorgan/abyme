@@ -32,7 +32,6 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
   if (len > ETH_MTU) {
     return -1;
   }
-  memset(frame, 0, ETH_LEN);
   uint32_t size = len + sizeof(eth_header);
   eth_header *eh = (eth_header *)&frame[0];
   eth_addr daddr = {.n = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
