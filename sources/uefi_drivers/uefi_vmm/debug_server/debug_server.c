@@ -26,6 +26,7 @@ void debug_server_run(uint32_t exit_reason) {
   uint8_t buf[0x100];
   message *mr = (message *)buf;
   mr->type = MESSAGE_MESSAGE;
+  mr->core = 0;
   while (mr->type != MESSAGE_EXEC_CONTINUE) {
     if (debug_server_recv(mr, 0x100) == -1) {
       mr->type = MESSAGE_MESSAGE;

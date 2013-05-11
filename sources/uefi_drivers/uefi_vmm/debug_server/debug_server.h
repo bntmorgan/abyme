@@ -15,10 +15,12 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
 
 typedef struct _message {
   uint8_t type;
+  uint8_t core;
 } __attribute__((packed)) message;
 
 typedef struct _message_vmexit {
   uint8_t type;
+  uint8_t core;
   uint32_t exit_reason;
 } __attribute__((packed)) message_vmexit;
 
