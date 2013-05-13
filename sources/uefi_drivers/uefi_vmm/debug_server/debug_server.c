@@ -17,14 +17,23 @@ void debug_server_init() {
   printk("BAR0 %X\n", eth->bar0);
 }
 
+void debug_server_handle_memory_read(message_memory_read *mr) {
+  // Handle message memory request
+  message_memory_data r = {
+    MESSAGE_MEMORY_DATA,
+    debug_server_get_core(),
+    mr->length
+  };
+  debug_server_send(&r, sizeof(r));
+}
+
 void debug_server_run(uint32_t exit_reason) {
   message_vmexit ms = {
     MESSAGE_VMEXIT,
-    // XXX as dirty as possible
-    0,
+    debug_server_get_core(),
     exit_reason
   };
-  debug_server_send(&ms, sizeof(message_vmexit));
+  debug_server_send(&ms, sizeof(ms));
   uint8_t buf[0x100];
   message *mr = (message *)buf;
   mr->type = MESSAGE_MESSAGE;
@@ -34,6 +43,16 @@ void debug_server_run(uint32_t exit_reason) {
     if (debug_server_recv(mr, 0x100) == -1) {
       mr->type = MESSAGE_MESSAGE;
       continue;
+    } else {
+      // We have received a message
+      switch (mr->type) {
+        case MESSAGE_MEMORY_READ: {
+          debug_server_handle_memory_read((message_memory_read*)mr);
+        }
+        default: {
+          // nothing
+        }
+      }
     }
   }
 }

@@ -18,7 +18,8 @@ protocol_82579LM proto = {
     0,
     0
   },
-  0
+  0,
+  ETH_MTU
 };
 
 EFI_STATUS vmm_rt_unload (IN EFI_HANDLE image); 

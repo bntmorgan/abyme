@@ -10,7 +10,9 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_MESSAGE,
   MESSAGE_VMEXIT,
   MESSAGE_EXEC_CONTINUE,
-  MESSAGE_EXEC_STEP
+  MESSAGE_EXEC_STEP,
+  MESSAGE_MEMORY_READ,
+  MESSAGE_MEMORY_DATA
 };
 
 typedef struct _message {
@@ -24,6 +26,19 @@ typedef struct _message_vmexit {
   uint32_t exit_reason;
 } __attribute__((packed)) message_vmexit;
 
+typedef struct _message_memory_read {
+  uint8_t type;
+  uint8_t core;
+  uint32_t address;
+  uint32_t length;
+} __attribute__((packed)) message_memory_read;
+
+typedef struct _message_memory_data {
+  uint8_t type;
+  uint8_t core;
+  uint32_t length;
+} __attribute__((packed)) message_memory_data;
+
 static inline void *message_check_type(message *m, uint8_t type) {
   if (m->type == type) {
     return m;
@@ -33,6 +48,11 @@ static inline void *message_check_type(message *m, uint8_t type) {
 }
 
 void debug_server_run(uint32_t exit_reason);
+
+static inline uint8_t debug_server_get_core() {
+  // XXX as dirty as possible
+  return 0;
+}
 
 extern protocol_82579LM *eth;
 

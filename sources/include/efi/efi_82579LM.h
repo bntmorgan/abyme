@@ -26,6 +26,7 @@ typedef struct _protocol_82579LM {
     uint8_t function;
   } pci_addr;
   uint64_t bar0;
+  uint64_t mtu;
 } protocol_82579LM;
 
 extern uint8_t *bar0;
