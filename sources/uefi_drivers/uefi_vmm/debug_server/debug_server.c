@@ -20,12 +20,15 @@ void debug_server_init() {
 void debug_server_run(uint32_t exit_reason) {
   message_vmexit ms = {
     MESSAGE_VMEXIT,
+    // XXX as dirty as possible
+    0,
     exit_reason
   };
   debug_server_send(&ms, sizeof(message_vmexit));
   uint8_t buf[0x100];
   message *mr = (message *)buf;
   mr->type = MESSAGE_MESSAGE;
+  // XXX dirty
   mr->core = 0;
   while (mr->type != MESSAGE_EXEC_CONTINUE) {
     if (debug_server_recv(mr, 0x100) == -1) {
