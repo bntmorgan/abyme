@@ -29,14 +29,14 @@ typedef struct _message_vmexit {
 typedef struct _message_memory_read {
   uint8_t type;
   uint8_t core;
-  uint32_t address;
-  uint32_t length;
+  uint64_t address;
+  uint64_t length;
 } __attribute__((packed)) message_memory_read;
 
 typedef struct _message_memory_data {
   uint8_t type;
   uint8_t core;
-  uint32_t length;
+  uint64_t length;
 } __attribute__((packed)) message_memory_data;
 
 static inline void *message_check_type(message *m, uint8_t type) {
