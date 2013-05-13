@@ -2,6 +2,7 @@
 #include <efilib.h>
 
 #include "stdio.h"
+#include "string.h"
 #include "debug_server.h"
   
 protocol_82579LM *eth;
@@ -18,13 +19,16 @@ void debug_server_init() {
 }
 
 void debug_server_handle_memory_read(message_memory_read *mr) {
+  uint64_t length = (mr->length + sizeof(message_memory_data) > eth->mtu) ? eth->mtu - sizeof(message_memory_data) : mr->length;
   // Handle message memory request
-  message_memory_data r = {
-    MESSAGE_MEMORY_DATA,
-    debug_server_get_core(),
-    mr->length
-  };
-  debug_server_send(&r, sizeof(r));
+  uint8_t b[length + sizeof(message_memory_data)];
+  message_memory_data *r = (message_memory_data *)b;
+  r->type = MESSAGE_MEMORY_DATA;
+  r->core = debug_server_get_core();
+  r->length = length;
+  uint8_t *buf = (uint8_t *)&b[0] + sizeof(message_memory_data);
+  memcpy(buf, (uint8_t *)((uintptr_t)mr->address), length);
+  debug_server_send(b, sizeof(b));
 }
 
 void debug_server_run(uint32_t exit_reason) {
@@ -34,13 +38,11 @@ void debug_server_run(uint32_t exit_reason) {
     exit_reason
   };
   debug_server_send(&ms, sizeof(ms));
-  uint8_t buf[0x100];
+  uint8_t buf[eth->mtu];
   message *mr = (message *)buf;
   mr->type = MESSAGE_MESSAGE;
-  // XXX dirty
-  mr->core = 0;
   while (mr->type != MESSAGE_EXEC_CONTINUE) {
-    if (debug_server_recv(mr, 0x100) == -1) {
+    if (debug_server_recv(mr, eth->mtu) == -1) {
       mr->type = MESSAGE_MESSAGE;
       continue;
     } else {
