@@ -36,7 +36,7 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
   eth_header *eh = (eth_header *)&frame[0];
   // XXX destination MAC address
   // eth_addr daddr = {.n = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
-  eth_addr daddr = {.n = {0xd5, 0xab, 0xa5, 0x21, 0x1b, 0x00}};
+  eth_addr daddr = {.n = {0x00, 0x1b, 0x21, 0xa5, 0xab, 0xd5}};
   eth_addr *laddr = eth_get_laddr();
   uint32_t i;
   for (i = 0; i < sizeof(eth_addr); i++) {
