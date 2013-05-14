@@ -35,7 +35,7 @@ void debug_server_handle_memory_read(message_memory_read *mr) {
 void debug_server_handle_memory_write(message_memory_write *mr) {
   // We don't trust the length in the received message
   uint64_t length = (mr->length + sizeof(message_memory_write) > eth->mtu) ? eth->mtu - sizeof(message_memory_write) : mr->length;
-  uint8_t *b = (uint8_t *)(mr++);
+  uint8_t *b = (uint8_t *)mr + sizeof(message_memory_write);
   memcpy((uint8_t *)mr->address, b, length);
   // We look if the first byte has been successfully written
   uint8_t ok = *((uint8_t *)mr->address) == b[0];
@@ -64,12 +64,12 @@ void debug_server_run(uint32_t exit_reason) {
     } else {
       // We have received a message
       switch (mr->type) {
-        case MESSAGE_MEMORY_READ: {
+        case MESSAGE_MEMORY_READ:
           debug_server_handle_memory_read((message_memory_read*)mr);
-        }
-        case MESSAGE_MEMORY_WRITE: {
+          break;
+        case MESSAGE_MEMORY_WRITE:
           debug_server_handle_memory_write((message_memory_write*)mr);
-        }
+          break;
         default: {
           // nothing
         }
