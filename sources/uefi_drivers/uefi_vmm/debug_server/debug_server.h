@@ -12,7 +12,9 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_EXEC_CONTINUE,
   MESSAGE_EXEC_STEP,
   MESSAGE_MEMORY_READ,
-  MESSAGE_MEMORY_DATA
+  MESSAGE_MEMORY_DATA,
+  MESSAGE_MEMORY_WRITE,
+  MESSAGE_MEMORY_WRITE_COMMIT
 };
 
 typedef struct _message {
@@ -39,6 +41,19 @@ typedef struct _message_memory_data {
   uint64_t address;
   uint64_t length;
 } __attribute__((packed)) message_memory_data;
+
+typedef struct _message_memory_write {
+  uint8_t type;
+  uint8_t core;
+  uint64_t address;
+  uint64_t length;
+} __attribute__((packed)) message_memory_write;
+
+typedef struct _message_memory_write_commit {
+  uint8_t type;
+  uint8_t core;
+  uint8_t ok;
+} __attribute__((packed)) message_memory_write_commit;
 
 static inline void *message_check_type(message *m, uint8_t type) {
   if (m->type == type) {
