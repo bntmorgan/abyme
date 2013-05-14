@@ -36,6 +36,7 @@ typedef struct _message_memory_read {
 typedef struct _message_memory_data {
   uint8_t type;
   uint8_t core;
+  uint64_t address;
   uint64_t length;
 } __attribute__((packed)) message_memory_data;
 

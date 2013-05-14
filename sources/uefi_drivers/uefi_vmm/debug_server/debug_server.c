@@ -25,6 +25,7 @@ void debug_server_handle_memory_read(message_memory_read *mr) {
   message_memory_data *r = (message_memory_data *)b;
   r->type = MESSAGE_MEMORY_DATA;
   r->core = debug_server_get_core();
+  r->address = mr->address;
   r->length = length;
   uint8_t *buf = (uint8_t *)&b[0] + sizeof(message_memory_data);
   memcpy(buf, (uint8_t *)((uintptr_t)mr->address), length);
