@@ -17,7 +17,8 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_MEMORY_WRITE,
   MESSAGE_MEMORY_WRITE_COMMIT,
   MESSAGE_CORE_REGS_READ,
-  MESSAGE_CORE_REGS_DATA
+  MESSAGE_CORE_REGS_DATA,
+  MESSAGE_UNHANDLED_VMEXIT
 };
 
 //
@@ -123,7 +124,7 @@ static inline void *message_check_type(message *m, uint8_t type) {
   }
 }
 
-void debug_server_run(uint32_t exit_reason, struct registers *regs);
+void debug_server_run(uint32_t exit_reason, struct registers *regs, uint8_t unhandled);
 
 static inline uint8_t debug_server_get_core() {
   // XXX as dirty as possible

@@ -101,12 +101,15 @@ void debug_server_handle_core_regs_read(message_core_regs_read *mr, struct regis
   debug_server_send(&m, sizeof(m));
 }
 
-void debug_server_run(uint32_t exit_reason, struct registers *regs) {
+void debug_server_run(uint32_t exit_reason, struct registers *regs, uint8_t unhandled) {
   message_vmexit ms = {
     MESSAGE_VMEXIT,
     debug_server_get_core(),
     exit_reason
   };
+  if (unhandled) {
+    ms.type = MESSAGE_UNHANDLED_VMEXIT;
+  }
   debug_server_send(&ms, sizeof(ms));
   uint8_t buf[eth->mtu];
   message *mr = (message *)buf;

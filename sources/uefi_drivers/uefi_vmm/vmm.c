@@ -34,22 +34,10 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
 
   if (exit_reason != EXIT_REASON_IO_INSTRUCTION) {
-    debug_server_run(exit_reason, &guest_regs);
+    debug_server_run(exit_reason, &guest_regs, 0);
   }
 
   uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
-  //printk("VM_EXIT_REASON: %x\n", exit_reason);
-  //printk("EXIT_QUALIFICATION: %x\n", cpu_vmread(EXIT_QUALIFICATION));
-  //printk("VM_EXIT_INSTRUCTION_LEN: %x\n", cpu_vmread(VM_EXIT_INSTRUCTION_LEN));
-  //printk("GUEST_RIP: %X\n", cpu_vmread(GUEST_RIP));
-  //printk("GUEST_CR0: %X\n", cpu_vmread(GUEST_CR0));
-  //printk("GUEST_CR4: %X\n", cpu_vmread(GUEST_CR4));
-  //printk("GUEST_IA32_EFER: %X\n", cpu_vmread(GUEST_IA32_EFER));
-  //printk("GUEST_RFLAGS: %X\n", cpu_vmread(GUEST_RFLAGS));
-  //printk("VM_INSTRUCTION_ERROR: %x\n", cpu_vmread(VM_INSTRUCTION_ERROR));
-  //printk("VM_ENTRY_CONTROLS: %x\n", cpu_vmread(VM_ENTRY_CONTROLS));
-
-  //Print(L"PCI IO %d\n", status);
 
   static uint8_t catch = 2;
   static uint32_t eax = 0;
@@ -126,14 +114,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     default: {
-      // printk("Exit reason (base 16) %X\n", exit_reason);
-      // printk("rax %X, rbx %X, rcx %X, rdx %X\n", guest_regs.rax, guest_regs.rbx, guest_regs.rcx, guest_regs.rdx);
-      // printk("cr0 %X\n", cpu_vmread(GUEST_CR0));
-      //dump((void *)0, exit_instruction_length, 1, guest_regs.rip, 1);
-      // uint64_t guest_linear_address = cpu_vmread(GUEST_LINEAR_ADDRESS);
-      // INFO("GUEST LINEAR %X\n", guest_linear_address);
-      dump((void *)guest_regs.rip, 1, exit_instruction_length, guest_regs.rip, 1);
-      while(1);
+      // -1 for unhandled VMExit
+      debug_server_run(exit_reason, &guest_regs, 1);
     }
   }
   if (exit_reason != EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED) {
