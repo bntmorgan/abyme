@@ -34,7 +34,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
 
   if (exit_reason != EXIT_REASON_IO_INSTRUCTION) {
-    debug_server_run(exit_reason);
+    debug_server_run(exit_reason, &guest_regs);
   }
 
   uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);

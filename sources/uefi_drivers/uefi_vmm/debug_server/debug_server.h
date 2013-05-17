@@ -1,6 +1,7 @@
 #ifndef __DEBUG_SERVER_H__
 #define __DEBUG_SERVER_H__
 #include "efi/efi_82579LM.h"
+#include "vmm.h"
 
 void debug_server_init();
 void debug_server_send(void *buf, uint32_t len);
@@ -17,6 +18,45 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_MEMORY_WRITE_COMMIT
 };
 
+//
+// Registers structures
+//
+
+typedef struct _core_regs {
+  // GPRs
+  uint64_t rax;
+  uint64_t rbx;
+  uint64_t rcx;
+  uint64_t rdx;
+  uint64_t r8;
+  uint64_t r9;
+  uint64_t r10;
+  uint64_t r11;
+  uint64_t r12;
+  uint64_t r13;
+  uint64_t r14;
+  uint64_t r15;
+  // Segment
+  uint16_t cs;
+  uint16_t ds;
+  uint16_t ss;
+  uint16_t es;
+  uint16_t fs;
+  uint16_t gs;
+  // Pointer
+  uint64_t rbp;
+  uint64_t rsp;
+  // Index
+  uint64_t rsi;
+  uint64_t rdi;
+  // Instruction pointer
+  uint64_t rip;
+} core_regs;
+
+//
+// Messages
+//
+
 typedef struct _message {
   uint8_t type;
   uint8_t core;
@@ -26,6 +66,8 @@ typedef struct _message_vmexit {
   uint8_t type;
   uint8_t core;
   uint32_t exit_reason;
+  // Registers
+  core_regs regs;
 } __attribute__((packed)) message_vmexit;
 
 typedef struct _message_memory_read {
@@ -63,7 +105,7 @@ static inline void *message_check_type(message *m, uint8_t type) {
   }
 }
 
-void debug_server_run(uint32_t exit_reason);
+void debug_server_run(uint32_t exit_reason, struct registers *regs);
 
 static inline uint8_t debug_server_get_core() {
   // XXX as dirty as possible
