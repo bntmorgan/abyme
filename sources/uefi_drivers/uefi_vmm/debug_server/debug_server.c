@@ -59,30 +59,46 @@ void debug_server_get_segment_regs(core_regs *regs) {
   regs->gs = cpu_vmread(GUEST_GS_SELECTOR);
 }
 
-void debug_server_create_regs(message_vmexit *m, struct registers *regs) {
+void debug_server_get_control_regs(core_regs *regs) {
+  regs->cr0 = cpu_vmread(GUEST_CR0);
+  regs->cr1 = 0;
+  regs->cr2 = 0;
+  regs->cr3 = cpu_vmread(GUEST_CR3);
+  regs->cr4 = cpu_vmread(GUEST_CR4);
+}
+
+void debug_server_handle_core_regs_read(message_core_regs_read *mr, struct registers *regs) {
+  message_core_regs_data m = {
+    MESSAGE_CORE_REGS_DATA,
+    debug_server_get_core()
+  };
   // Copy segment regs
-  debug_server_get_segment_regs(&m->regs); 
+  debug_server_get_segment_regs(&m.regs); 
+  // Copy control registers
+  debug_server_get_control_regs(&m.regs); 
   // Copy GPRs rsp, rbp, rsi, rdi and rip
-  m->regs.rax = regs->rax;
-  m->regs.rbx = regs->rbx;
-  m->regs.rcx = regs->rcx;
-  m->regs.rdx = regs->rdx;
-  m->regs.r8 = regs->r8;
-  m->regs.r9 = regs->r9;
-  m->regs.r10 = regs->r10;
-  m->regs.r11 = regs->r11;
-  m->regs.r12 = regs->r12;
-  m->regs.r13 = regs->r13;
-  m->regs.r14 = regs->r14;
-  m->regs.r15 = regs->r15;
+  m.regs.rax = regs->rax;
+  m.regs.rbx = regs->rbx;
+  m.regs.rcx = regs->rcx;
+  m.regs.rdx = regs->rdx;
+  m.regs.r8 = regs->r8;
+  m.regs.r9 = regs->r9;
+  m.regs.r10 = regs->r10;
+  m.regs.r11 = regs->r11;
+  m.regs.r12 = regs->r12;
+  m.regs.r13 = regs->r13;
+  m.regs.r14 = regs->r14;
+  m.regs.r15 = regs->r15;
   // Copy index registers
-  m->regs.rsi = regs->rsi;
-  m->regs.rdi = regs->rdi;
+  m.regs.rsi = regs->rsi;
+  m.regs.rdi = regs->rdi;
   // Copy pointer registers
-  m->regs.rbp = regs->rbp;
-  m->regs.rsp = regs->rsp;
+  m.regs.rbp = regs->rbp;
+  m.regs.rsp = regs->rsp;
   // Copy instruction pointer register
-  m->regs.rip = regs->rip;
+  m.regs.rip = regs->rip;
+  // Send to the client
+  debug_server_send(&m, sizeof(m));
 }
 
 void debug_server_run(uint32_t exit_reason, struct registers *regs) {
@@ -91,7 +107,6 @@ void debug_server_run(uint32_t exit_reason, struct registers *regs) {
     debug_server_get_core(),
     exit_reason
   };
-  debug_server_create_regs(&ms, regs);
   debug_server_send(&ms, sizeof(ms));
   uint8_t buf[eth->mtu];
   message *mr = (message *)buf;
@@ -108,6 +123,9 @@ void debug_server_run(uint32_t exit_reason, struct registers *regs) {
           break;
         case MESSAGE_MEMORY_WRITE:
           debug_server_handle_memory_write((message_memory_write*)mr);
+          break;
+        case MESSAGE_CORE_REGS_READ:
+          debug_server_handle_core_regs_read((message_core_regs_read*)mr, regs);
           break;
         default: {
           // nothing

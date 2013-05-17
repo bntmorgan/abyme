@@ -15,7 +15,9 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_MEMORY_READ,
   MESSAGE_MEMORY_DATA,
   MESSAGE_MEMORY_WRITE,
-  MESSAGE_MEMORY_WRITE_COMMIT
+  MESSAGE_MEMORY_WRITE_COMMIT,
+  MESSAGE_CORE_REGS_READ,
+  MESSAGE_CORE_REGS_DATA
 };
 
 //
@@ -51,7 +53,13 @@ typedef struct _core_regs {
   uint64_t rdi;
   // Instruction pointer
   uint64_t rip;
-} core_regs;
+  // Control registers
+  uint64_t cr0;
+  uint64_t cr1;
+  uint64_t cr2;
+  uint64_t cr3;
+  uint64_t cr4;
+} __attribute__((packed)) core_regs;
 
 //
 // Messages
@@ -66,8 +74,6 @@ typedef struct _message_vmexit {
   uint8_t type;
   uint8_t core;
   uint32_t exit_reason;
-  // Registers
-  core_regs regs;
 } __attribute__((packed)) message_vmexit;
 
 typedef struct _message_memory_read {
@@ -96,6 +102,18 @@ typedef struct _message_memory_write_commit {
   uint8_t core;
   uint8_t ok;
 } __attribute__((packed)) message_memory_write_commit;
+
+typedef struct _message_core_regs_read {
+  uint8_t type;
+  uint8_t core;
+} __attribute__((packed)) message_core_regs_read;
+
+typedef struct _message_core_regs_data {
+  uint8_t type;
+  uint8_t core;
+  // Registers
+  core_regs regs;
+} __attribute__((packed)) message_core_regs_data;
 
 static inline void *message_check_type(message *m, uint8_t type) {
   if (m->type == type) {
