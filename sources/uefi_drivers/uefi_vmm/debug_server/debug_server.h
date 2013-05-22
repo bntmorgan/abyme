@@ -18,7 +18,9 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_MEMORY_WRITE_COMMIT,
   MESSAGE_CORE_REGS_READ,
   MESSAGE_CORE_REGS_DATA,
-  MESSAGE_UNHANDLED_VMEXIT
+  MESSAGE_UNHANDLED_VMEXIT,
+  MESSAGE_VMCS_READ,
+  MESSAGE_VMCS_DATA
 };
 
 //
@@ -115,6 +117,16 @@ typedef struct _message_core_regs_data {
   // Registers
   core_regs regs;
 } __attribute__((packed)) message_core_regs_data;
+
+typedef struct _message_vmcs_read {
+  uint8_t type;
+  uint8_t core;
+} __attribute__((packed)) message_vmcs_read;
+
+typedef struct _message_vmcs_data {
+  uint8_t type;
+  uint8_t core;
+} __attribute__((packed)) message_vmcs_data;
 
 static inline void *message_check_type(message *m, uint8_t type) {
   if (m->type == type) {
