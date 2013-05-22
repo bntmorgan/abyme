@@ -108,7 +108,7 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   uint8_t *data = (uint8_t *)mr + sizeof(message_vmcs_read);
   uint8_t b[eth->mtu];
   uint8_t *buf = &b[0];
-  uint64_t f = 0;
+  uint64_t v = 0;
   message_vmcs_data *m = (message_vmcs_data *)&buf[0];
   m->core = debug_server_get_core();
   m->type = MESSAGE_VMCS_DATA;
@@ -129,8 +129,8 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
     *((uint64_t *)buf) = e;
     buf = (uint8_t *)buf + sizeof(uint64_t);
     // Field
-    f = cpu_vmread(e);
-    memcpy(buf, (void *)&f, s);
+    v = cpu_vmread(e);
+    memcpy(buf, (void *)&v, s);
     buf = (uint8_t *)buf + s;
     // Size
     s = data[0];
