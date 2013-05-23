@@ -116,13 +116,12 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   // Size
   s = data[0];
   data++;
-  // Encoding
-  e = *((uint64_t *)data);
-  data = (uint8_t *)((uint64_t *)data + 1);
   // Global size
   size += sizeof(s) + sizeof(uint64_t) + s;
-  INFO("size %x encoding %x global size %x\n", s, e, size);
   while (s && size < eth->mtu) {
+    // Encoding
+    e = *((uint64_t *)data);
+    data = (uint8_t *)((uint64_t *)data + 1);
     // Size
     buf[0] = s;
     buf++;
@@ -136,12 +135,8 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
     // Size
     s = data[0];
     data++;
-    // Encoding
-    e = *((uint64_t *)data);
-    data = (uint8_t *)((uint64_t *)data + 1);
     // Global size
     size += sizeof(s) + sizeof(uint64_t) + s;
-    INFO("size %x encoding %x global size %x\n", s, e, size);
   }
   // Ends the message
   buf[0] = 0;
