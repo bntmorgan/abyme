@@ -104,7 +104,7 @@ void debug_server_handle_core_regs_read(message_core_regs_read *mr, struct regis
 void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   uint8_t size = sizeof(message_vmcs_data);
   uint8_t s = -1;
-  uint8_t e = 0;
+  uint64_t e = 0;
   uint8_t *data = (uint8_t *)mr + sizeof(message_vmcs_read);
   uint8_t b[eth->mtu];
   uint8_t *buf = &b[0];
@@ -118,9 +118,10 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   data++;
   // Encoding
   e = *((uint64_t *)data);
-  data = (uint8_t *)((uint64_t *)data) + 1;
+  data = (uint8_t *)((uint64_t *)data + 1);
   // Global size
   size += sizeof(s) + sizeof(uint64_t) + s;
+  INFO("size %x encoding %x global size %x\n", s, e, size);
   while (s && size < eth->mtu) {
     // Size
     buf[0] = s;
@@ -137,9 +138,10 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
     data++;
     // Encoding
     e = *((uint64_t *)data);
-    data = (uint8_t *)((uint64_t *)data) + 1;
+    data = (uint8_t *)((uint64_t *)data + 1);
     // Global size
     size += sizeof(s) + sizeof(uint64_t) + s;
+    INFO("size %x encoding %x global size %x\n", s, e, size);
   }
   // Ends the message
   buf[0] = 0;
