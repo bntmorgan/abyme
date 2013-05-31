@@ -20,7 +20,10 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_CORE_REGS_DATA,
   MESSAGE_UNHANDLED_VMEXIT,
   MESSAGE_VMCS_READ,
-  MESSAGE_VMCS_DATA
+  MESSAGE_VMCS_DATA,
+  MESSAGE_VMM_PANIC,
+  MESSAGE_VMCS_WRITE,
+  MESSAGE_VMCS_WRITE_COMMIT
 };
 
 //
@@ -128,6 +131,23 @@ typedef struct _message_vmcs_data {
   uint8_t core;
 } __attribute__((packed)) message_vmcs_data;
 
+typedef struct _message_vmm_panic {
+  uint8_t type;
+  uint8_t core;
+  uint64_t code;
+} __attribute__((packed)) message_vmm_panic;
+
+typedef struct _message_vmcs_write {
+  uint8_t type;
+  uint8_t core;
+} __attribute__((packed)) message_vmcs_write;
+
+typedef struct _message_vmcs_write_commit {
+  uint8_t type;
+  uint8_t core;
+  uint8_t ok;
+} __attribute__((packed)) message_vmcs_write_commit;
+
 static inline void *message_check_type(message *m, uint8_t type) {
   if (m->type == type) {
     return m;
@@ -136,7 +156,7 @@ static inline void *message_check_type(message *m, uint8_t type) {
   }
 }
 
-void debug_server_run(uint32_t exit_reason, struct registers *regs, uint8_t unhandled);
+void debug_server_run(struct registers *regs);
 
 static inline uint8_t debug_server_get_core() {
   // XXX as dirty as possible

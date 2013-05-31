@@ -39,9 +39,11 @@ void debug_server_handle_memory_write(message_memory_write *mr) {
   // We don't trust the length in the received message
   uint64_t length = (mr->length + sizeof(message_memory_write) > eth->mtu) ? eth->mtu - sizeof(message_memory_write) : mr->length;
   uint8_t *b = (uint8_t *)mr + sizeof(message_memory_write);
+
+  uint8_t ok;
   memcpy((uint8_t *)mr->address, b, length);
-  // We look if the first byte has been successfully written
-  uint8_t ok = *((uint8_t *)mr->address) == b[0];
+  ok = *((uint8_t *)mr->address) == b[0];
+
   message_memory_write_commit r = {
     MESSAGE_MEMORY_WRITE_COMMIT,
     debug_server_get_core(),
@@ -144,16 +146,45 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   debug_server_send(b, size);
 }
 
-void debug_server_run(uint32_t exit_reason, struct registers *regs, uint8_t unhandled) {
-  message_vmexit ms = {
-    MESSAGE_VMEXIT,
-    debug_server_get_core(),
-    exit_reason
-  };
-  if (unhandled) {
-    ms.type = MESSAGE_UNHANDLED_VMEXIT;
+void debug_server_handle_vmcs_write(message_vmcs_read *mr) {
+  uint8_t *data = (uint8_t*)mr + sizeof(message_vmcs_read);
+  // Size
+  uint8_t s = *((uint8_t*)data);
+  data += 1;
+  uint64_t e = 0;
+  uint64_t v = 0;
+  while (s) {
+    // Encoding
+    e = *((uint64_t *)data);
+    data += 8;
+    // Value
+    if (s == 2) {
+      v = *((uint16_t *)data);
+      data += 2;
+    } else if (s == 4) {
+      v = *((uint32_t *)data);
+      data += 4;
+    } else if (s == 8) {
+      v = *((uint64_t *)data);
+      data += 8;
+    } else {
+      return;
+    }
+    // Write the vmcs fields
+    cpu_vmwrite(e, v);
+    // Size
+    s = *((uint8_t *)data);
+    data += 1;
   }
-  debug_server_send(&ms, sizeof(ms));
+  message_vmcs_write_commit r = {
+    MESSAGE_VMCS_WRITE_COMMIT,
+    debug_server_get_core(),
+    1
+  };
+  debug_server_send(&r, sizeof(r));
+}
+
+void debug_server_run(struct registers *regs) {
   uint8_t buf[eth->mtu];
   message *mr = (message *)buf;
   mr->type = MESSAGE_MESSAGE;
@@ -175,6 +206,9 @@ void debug_server_run(uint32_t exit_reason, struct registers *regs, uint8_t unha
           break;
         case MESSAGE_VMCS_READ:
           debug_server_handle_vmcs_read((message_vmcs_read*)mr);
+          break;
+        case MESSAGE_VMCS_WRITE:
+          debug_server_handle_vmcs_write((message_vmcs_read*)mr);
           break;
         default: {
           // nothing
