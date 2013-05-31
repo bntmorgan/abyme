@@ -14,7 +14,8 @@ echo press any key
 pause
 load efi.efi
 echo Vmm runtime driver loaded !
-cd \EFI\svc_grub
+fs1:
+cd \EFI\arch_grub
 echo Launching grub
 echo press any key
 pause
