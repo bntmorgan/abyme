@@ -165,10 +165,18 @@ void vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(TSC_OFFSET, 0);
   cpu_vmwrite(TSC_OFFSET_HIGH, 0);
 
-  cpu_vmwrite(CR0_GUEST_HOST_MASK, 0x20);
+  cpu_vmwrite(CR0_GUEST_HOST_MASK, (msr_read(MSR_ADDRESS_VMX_CR0_FIXED0) | (~msr_read(MSR_ADDRESS_VMX_CR0_FIXED1))) & ~(0xe0000001));
+  //cpu_vmwrite(CR0_GUEST_HOST_MASK, cpu_adjust64(0, MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1));
+  cpu_vmwrite(CR0_READ_SHADOW, cpu_read_cr0());
+  cpu_vmwrite(CR4_GUEST_HOST_MASK, msr_read(MSR_ADDRESS_VMX_CR4_FIXED0) | ~msr_read(MSR_ADDRESS_VMX_CR4_FIXED1));
+  //cpu_vmwrite(CR4_GUEST_HOST_MASK, cpu_adjust64(0, MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
+  cpu_vmwrite(CR4_READ_SHADOW, cpu_read_cr4());
+  /*cpu_vmwrite(CR0_GUEST_HOST_MASK, 0x20);
   cpu_vmwrite(CR0_READ_SHADOW, 0);
+
   cpu_vmwrite(CR4_GUEST_HOST_MASK, 0x2000);
   cpu_vmwrite(CR4_READ_SHADOW, 0);
+  */
 
   cpu_vmwrite(CR3_TARGET_COUNT, 0);
   cpu_vmwrite(CR3_TARGET_VALUE0, 0);
@@ -195,7 +203,13 @@ void vmcs_fill_vm_exit_control_fields(void) {
 
 void vmcs_fill_vm_entry_control_fields(void) {
   uint32_t entry_controls = ENTRY_LOAD_IA32_EFER | IA32E_MODE_GUEST;
+  INFO("%X\n", entry_controls);
+  INFO("%X\n", entry_controls);
+  INFO("%X\n", entry_controls);
   cpu_vmwrite(VM_ENTRY_CONTROLS, cpu_adjust32(entry_controls, MSR_ADDRESS_IA32_VMX_ENTRY_CTLS));
+  INFO("%X\n", cpu_vmread(VM_ENTRY_CONTROLS));
+  INFO("%X\n", cpu_vmread(VM_ENTRY_CONTROLS));
+  INFO("%X\n", cpu_vmread(VM_ENTRY_CONTROLS));
   cpu_vmwrite(VM_ENTRY_MSR_LOAD_COUNT, 0);
   cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, 0);
 }

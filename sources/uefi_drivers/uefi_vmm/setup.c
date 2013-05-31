@@ -52,6 +52,8 @@ void vmm_main() {
   mtrr_print_ranges();
   ept_create_tables();
   msr_bitmap_setup();
+  msr_bitmap_set_read_write(MSR_ADDRESS_IA32_EFER);
+  msr_bitmap_set_for_mtrr();
   io_bitmap_setup();
   // Ethernet card protection
   io_bitmap_set_for_port(PCI_CONFIG_ADDR);

@@ -20,12 +20,12 @@ void msr_bitmap_setup(void) {
 
 void msr_bitmap_set_read_write(uint64_t msr) {
   if (msr <= 0x00001fff) {
-    msr_bitmap.low_msrs_read_bitmap[msr / 8] |= (1 << (msr % 8));
+    //msr_bitmap.low_msrs_read_bitmap[msr / 8] |= (1 << (msr % 8));
     msr_bitmap.low_msrs_write_bitmap[msr / 8] |= (1 << (msr % 8));
   } else {
     uint64_t msr_index = msr - 0xc0000000;
-    msr_bitmap.low_msrs_read_bitmap[msr_index / 8] |= (1 << (msr_index % 8));
-    msr_bitmap.low_msrs_write_bitmap[msr_index / 8] |= (1 << (msr_index % 8));
+    //msr_bitmap.high_msrs_read_bitmap[msr_index / 8] |= (1 << (msr_index % 8));
+    msr_bitmap.high_msrs_write_bitmap[msr_index / 8] |= (1 << (msr_index % 8));
   }
 }
 
