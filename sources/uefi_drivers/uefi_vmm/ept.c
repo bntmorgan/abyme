@@ -22,8 +22,8 @@ extern uint8_t _padding_begin_b;
 extern uint8_t _padding_end_a;
 extern uint8_t _padding_end_b;
 
-uint8_t lol[0x1000] __attribute__((aligned(0x1000))) = {0xff};
-uint8_t lol2[0x1000] __attribute__((aligned(0x1000))) = {0xff};
+uint8_t lol[0x1000] __attribute__((aligned(0x1000))) = {0xff, 0xff, 0xff, 0xff};
+uint8_t lol2[0x1000] __attribute__((aligned(0x1000))) = {0xff, 0xff, 0xff, 0xff};
 
 /* All the physical memory is mapped using identity mapping. */
 void ept_create_tables(void) {
@@ -83,7 +83,7 @@ void ept_create_tables(void) {
   // 
   // Network card
   //
-#if 0
+#if 1
   uint64_t base_addr = 0xf80c8000;
   // math.floor(0xf8098000 / pow(2,21))
   uint32_t PDX = 1984;
@@ -106,7 +106,7 @@ void ept_create_tables(void) {
     if (address == base_addr) {
       ept_tables.PT_PDX[i] = ((uint64_t) &lol[0]) | 0x7 | (memory_range->type << 3);
     } else {
-      ept_tables.PT_PDX[i] = ((uint64_t) i << 12) | 0x7 | (memory_range->type << 3);
+      ept_tables.PT_PDX[i] = (((uint64_t) i << 12) | ((PDPT_PML40_X << 21) + (PML40_X << 30))) | 0x7 | (memory_range->type << 3);
     }
     address += 0x1000;
   }
@@ -131,7 +131,7 @@ void ept_create_tables(void) {
     if (address == base_addr) {
       ept_tables.PT_PDX2[i] = ((uint64_t) &lol2[0]) | 0x7 | (memory_range->type << 3);
     } else {
-      ept_tables.PT_PDX2[i] = ((uint64_t) i << 12) | 0x7 | (memory_range->type << 3);
+      ept_tables.PT_PDX2[i] = (((uint64_t) i << 12) | ((PDPT_PML40_X << 21) + (PML40_X << 30))) | 0x7 | (memory_range->type << 3);
     }
     address += 0x1000;
   }
