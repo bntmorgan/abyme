@@ -32,6 +32,12 @@ enum CPU_MODE {
   MODE_LONG
 };
 
+enum VMM_PANIC {
+  VMM_PANIC_RDMSR,
+  VMM_PANIC_WRMSR,
+  VMM_PANIC_CR_ACCESS,
+  VMM_PANIC_UNKNOWN_CPU_MODE
+};
 
 int vmm_get_cpu_mode() {
   uint64_t cr0 = cpu_vmread(GUEST_CR0);
@@ -62,7 +68,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
   uint8_t mode = vmm_get_cpu_mode(); 
 
-  if (exit_reason != EXIT_REASON_IO_INSTRUCTION) {
+  //if (exit_reason != EXIT_REASON_IO_INSTRUCTION) {
+  if (exit_reason == EXIT_REASON_VMCALL) {
     message_vmexit ms = {
       MESSAGE_VMEXIT,
       debug_server_get_core(),
@@ -138,7 +145,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         guest_regs.rax = (guest_regs.rax & (0xffffffff00000000)) | (cpu_vmread(GUEST_IA32_EFER) & 0xffffffff);
         guest_regs.rdx = (guest_regs.rdx & (0xffffffff00000000)) | (cpu_vmread(GUEST_IA32_EFER_HIGH) & 0xffffffff);
       } else {
-        vmm_panic(0);
+        vmm_panic(VMM_PANIC_RDMSR);
       }
       /*__asm__ __volatile__("rdmsr"
           : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
@@ -146,24 +153,12 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_WRMSR: {
-      // vmm_panic(99);
       if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
         cpu_vmwrite(GUEST_IA32_EFER, guest_regs.rax & 0xffffffff);
         cpu_vmwrite(GUEST_IA32_EFER_HIGH, guest_regs.rdx & 0xffffffff);
       } else {
-        vmm_panic(0);
+        vmm_panic(VMM_PANIC_WRMSR);
       }
-      /*if ((guest_regs.rax >> 8) & 1) {
-        vmm_panic(91);
-        debug_server_run(&guest_regs);
-        uint64_t v = cpu_vmread(VM_ENTRY_CONTROLS);
-        v |= IA32E_MODE_GUEST;
-        cpu_vmwrite(VM_ENTRY_CONTROLS, v);
-      }*/
-      // vmm_panic(100);
-      /*__asm__ __volatile__("wrmsr"
-          : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
-          :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));*/
       break;
     }
     case EXIT_REASON_CR_ACCESS : {
@@ -189,7 +184,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         (uint8_t) (uint64_t) &(((struct registers *) 0)->r15)
       };
       if (a != 0) {
-        vmm_panic(2);
+        vmm_panic(VMM_PANIC_CR_ACCESS);
       }
       uint64_t value = *((uint64_t *)(((uint8_t *)&guest_regs) + offset[o]));
       // printk("Value %016X offset %d\n", value, o);
@@ -202,7 +197,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         if (((previous_cr0 >> 31) & 1) == 0 && ((value >> 31) & 1) && ((value_IA32_EFER >> 8) & 1)) {
           // We still are in long mode but without paging ???
           if ((value_IA32_EFER >> 10) & 1) {
-            vmm_panic(-1);
+            vmm_panic(VMM_PANIC_CR_ACCESS);
           }
           // Write LMA
           cpu_vmwrite(GUEST_IA32_EFER, value_IA32_EFER | (1 << 10));
@@ -224,7 +219,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         cpu_vmwrite(CR4_READ_SHADOW, value);
         // printk("CR4 %016X, SHAD CR4 %016X\n", cpu_vmread(GUEST_CR4), cpu_vmread(CR4_READ_SHADOW));
       } else {
-        vmm_panic(3);
+        vmm_panic(VMM_PANIC_CR_ACCESS);
       }
       break;
     }
@@ -263,6 +258,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     default : 
-      vmm_panic(4);
+      vmm_panic(VMM_PANIC_UNKNOWN_CPU_MODE);
   }
 }
