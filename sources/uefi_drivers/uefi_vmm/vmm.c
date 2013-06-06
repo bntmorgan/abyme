@@ -36,7 +36,9 @@ enum VMM_PANIC {
   VMM_PANIC_RDMSR,
   VMM_PANIC_WRMSR,
   VMM_PANIC_CR_ACCESS,
-  VMM_PANIC_UNKNOWN_CPU_MODE
+  VMM_PANIC_UNKNOWN_CPU_MODE,
+  VMM_PANIC_IO,
+  VMM_PANIC_XSETBV
 };
 
 int vmm_get_cpu_mode() {
@@ -51,13 +53,19 @@ int vmm_get_cpu_mode() {
   }
 }
 
-void vmm_panic(uint64_t code) {
+void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_regs) {
   message_vmm_panic m = {
     MESSAGE_VMM_PANIC,
     debug_server_get_core(),
-    code
+    code,
+    extra
   };
   debug_server_send(&m, sizeof(m));
+  if (guest_regs) {
+    debug_server_run(guest_regs);
+  } else {
+    while(1);
+  }
 }
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
@@ -68,8 +76,10 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
   uint8_t mode = vmm_get_cpu_mode(); 
 
-  //if (exit_reason != EXIT_REASON_IO_INSTRUCTION) {
-  if (exit_reason == EXIT_REASON_VMCALL) {
+#if 1
+  // if (exit_reason == EXIT_REASON_IO_INSTRUCTION) {
+  // if (exit_reason == EXIT_REASON_VMCALL) {
+  if (exit_reason != EXIT_REASON_CPUID && exit_reason != EXIT_REASON_IO_INSTRUCTION) {
     message_vmexit ms = {
       MESSAGE_VMEXIT,
       debug_server_get_core(),
@@ -78,53 +88,63 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     debug_server_send(&ms, sizeof(ms));
     debug_server_run(&guest_regs);
   }
+#endif
 
   uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
 
-  static uint8_t catch = 2;
-  static uint32_t eax = 0;
+  // static uint8_t catch = 2;
+  // static uint32_t eax = 0;
 
   switch (exit_reason) {
+    case EXIT_REASON_XSETBV: {
+      if (vmm_get_cpu_mode() == MODE_LONG) {
+        __asm__ __volatile__("xsetbv" : : "a"(guest_regs.rax), "c"(guest_regs.rcx), "d"(guest_regs.rdx));
+      } else {
+        vmm_panic(VMM_PANIC_XSETBV, 0, &guest_regs);
+      }
+    }
     case EXIT_REASON_IO_INSTRUCTION: {
-      uint32_t ins = *((uint32_t *) guest_regs.rip);
-      uint8_t *ins_byte = (uint8_t *) &ins;
-      memset(&ins_byte[exit_instruction_length], 0x90, 4 - exit_instruction_length);
-      exit_qualification++;
-      uint8_t size;
-
-      if (catch == 2) {
-        eax = pci_make_addr(PCI_MAKE_ID(
-              eth->pci_addr.bus,
-              eth->pci_addr.device,
-              eth->pci_addr.function));
-      }
-      switch (exit_qualification & 0x3) {
-        case 0:
-          size = 1;
-          break;
-        case 1:
-          size = 2;
-          break;
-        case 3:
-          size = 4;
-          break;
-      }
-      // 0 out, 1 IN
-      uint8_t direction = (exit_qualification >> 2) & 0x1;
-      uint16_t port = (exit_qualification >> 16) & 0xffff;
-      __asm__ __volatile__(
-          "mov %%ecx, 1f(%%rip)  ;"
-          "1: nop; nop; nop; nop ;"
-        : "=a" (guest_regs.rax), "=d" (guest_regs.rdx)
-        : "a" (guest_regs.rax), "c" (ins), "d" (guest_regs.rdx));
-      if (direction == 0 && port == PCI_CONFIG_ADDR) {
-        if ((guest_regs.rax & 0xffffff00) == eax) {
-          catch = 1;
-        } else {
-          catch = 0;
+      // Checking the privileges
+      uint8_t cpl = (cpu_vmread(GUEST_CS_AR_BYTES) >> 5) & 3;
+      uint8_t iopl = (cpu_vmread(GUEST_RFLAGS) >> 12) & 3;
+      if (vmm_get_cpu_mode() == MODE_REAL || cpl <= iopl) {
+        // REP prefixed || String I/O
+        if ((exit_qualification & 0x20) || (exit_qualification & 0x10)) {
+          vmm_panic(VMM_PANIC_IO, 0, &guest_regs);
         }
-      } else if (direction == 1 && port == PCI_CONFIG_DATA && catch) {
-        memset(&guest_regs.rax, 0xff, size);
+        uint8_t direction = exit_qualification & 8;
+        uint8_t size = exit_qualification & 7;
+        uint8_t port = (exit_qualification >> 16) & 0xffff; 
+        // out 
+        uint32_t v = guest_regs.rax;
+        if (direction == 0) {
+          if (size == 0) {
+            __asm__ __volatile__("out %%al, %%dx" : : "a"(v), "d"(port)); 
+          } else if (size == 1) {
+            __asm__ __volatile__("out %%ax, %%dx" : : "a"(v), "d"(port)); 
+          } else if (size == 3) {
+            __asm__ __volatile__("out %%eax, %%dx" : : "a"(v), "d"(port)); 
+          } else {
+            vmm_panic(VMM_PANIC_IO, 1, &guest_regs);
+          }
+        // in
+        } else {
+          if (size == 0) {
+            __asm__ __volatile__("in %%dx, %%al" : "=a"(v) : "d"(port)); 
+            guest_regs.rax = (guest_regs.rax & 0xffffffffffffff00) | (v & 0x000000ff);
+          } else if (size == 1) {
+            __asm__ __volatile__("in %%dx, %%ax" : "=a"(v) : "d"(port)); 
+            guest_regs.rax = (guest_regs.rax & 0xffffffffffff0000) | (v & 0x0000ffff);
+          } else if (size == 3) {
+            __asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port)); 
+            guest_regs.rax = (guest_regs.rax & 0xffffffff00000000) | (v & 0xffffffff);
+          } else {
+            vmm_panic(VMM_PANIC_IO, 2, &guest_regs);
+          }
+        }
+      // Unsufficient privileges
+      } else {
+        vmm_panic(VMM_PANIC_IO, 3, &guest_regs);
       }
       break;
     }
@@ -145,7 +165,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         guest_regs.rax = (guest_regs.rax & (0xffffffff00000000)) | (cpu_vmread(GUEST_IA32_EFER) & 0xffffffff);
         guest_regs.rdx = (guest_regs.rdx & (0xffffffff00000000)) | (cpu_vmread(GUEST_IA32_EFER_HIGH) & 0xffffffff);
       } else {
-        vmm_panic(VMM_PANIC_RDMSR);
+        vmm_panic(VMM_PANIC_RDMSR, 0, &guest_regs);
       }
       /*__asm__ __volatile__("rdmsr"
           : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
@@ -157,7 +177,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         cpu_vmwrite(GUEST_IA32_EFER, guest_regs.rax & 0xffffffff);
         cpu_vmwrite(GUEST_IA32_EFER_HIGH, guest_regs.rdx & 0xffffffff);
       } else {
-        vmm_panic(VMM_PANIC_WRMSR);
+        vmm_panic(VMM_PANIC_WRMSR, 0, &guest_regs);
       }
       break;
     }
@@ -184,7 +204,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         (uint8_t) (uint64_t) &(((struct registers *) 0)->r15)
       };
       if (a != 0) {
-        vmm_panic(VMM_PANIC_CR_ACCESS);
+        vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
       }
       uint64_t value = *((uint64_t *)(((uint8_t *)&guest_regs) + offset[o]));
       // printk("Value %016X offset %d\n", value, o);
@@ -197,13 +217,12 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         if (((previous_cr0 >> 31) & 1) == 0 && ((value >> 31) & 1) && ((value_IA32_EFER >> 8) & 1)) {
           // We still are in long mode but without paging ???
           if ((value_IA32_EFER >> 10) & 1) {
-            vmm_panic(VMM_PANIC_CR_ACCESS);
+            vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
           }
           // Write LMA
           cpu_vmwrite(GUEST_IA32_EFER, value_IA32_EFER | (1 << 10));
           cpu_vmwrite(VM_ENTRY_CONTROLS, vm_entry_controls | (1 << 9));
         } else if (((previous_cr0 >> 31) & 1) != ((value >> 31) & 1)) {
-          //vmm_panic(2);
           cpu_vmwrite(GUEST_IA32_EFER, value_IA32_EFER & ~(1 << 10));
           cpu_vmwrite(VM_ENTRY_CONTROLS, vm_entry_controls & ~(1 << 9));
         }
@@ -219,7 +238,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         cpu_vmwrite(CR4_READ_SHADOW, value);
         // printk("CR4 %016X, SHAD CR4 %016X\n", cpu_vmread(GUEST_CR4), cpu_vmread(CR4_READ_SHADOW));
       } else {
-        vmm_panic(VMM_PANIC_CR_ACCESS);
+        vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
       }
       break;
     }
@@ -227,6 +246,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       // Don't increment RIP
       return;
     default: {
+#if 1
       message_vmexit ms = {
         MESSAGE_UNHANDLED_VMEXIT,
         debug_server_get_core(),
@@ -234,6 +254,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       };
       debug_server_send(&ms, sizeof(ms));
       debug_server_run(&guest_regs);
+#endif
     }
   }
   switch (mode) {
@@ -258,6 +279,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     default : 
-      vmm_panic(VMM_PANIC_UNKNOWN_CPU_MODE);
+      vmm_panic(VMM_PANIC_UNKNOWN_CPU_MODE, 0, &guest_regs);
   }
 }

@@ -103,7 +103,8 @@ void vmcs_fill_host_state_fields(void) {
   cpu_vmwrite(HOST_CR0, cpu_adjust64(cpu_read_cr0(), MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1));
   cpu_vmwrite(HOST_CR3, cpu_read_cr3());
   /* TODO cpu_vmwrite(HOST_CR3, paging_get_host_cr3()); */
-  cpu_vmwrite(HOST_CR4, cpu_adjust64(cpu_read_cr4(), MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
+  // TODO Bit 18 OSXSAVE Activation du XCR0 -> proxifier le XSETBV
+  cpu_vmwrite(HOST_CR4, cpu_adjust64(cpu_read_cr4() | (1 << 18), MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
   cpu_vmwrite(HOST_RSP, (uint64_t) &vmm_stack[VMM_STACK_SIZE]);
   cpu_vmwrite(HOST_RIP, (uint64_t) vmm_vm_exit_handler);
 
@@ -138,7 +139,7 @@ void vmcs_fill_host_state_fields(void) {
 }
 
 void vmcs_fill_vm_exec_control_fields(void) {
-  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS | USE_IO_BITMAPS /*| MONITOR_TRAP_FLAG*/;
+  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS /* | USE_IO_BITMAPS | MONITOR_TRAP_FLAG*/;
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST;
   uint64_t msr_bitmap_ptr;
   uint64_t eptp;
