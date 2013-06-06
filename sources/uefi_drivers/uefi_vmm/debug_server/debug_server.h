@@ -135,6 +135,7 @@ typedef struct _message_vmm_panic {
   uint8_t type;
   uint8_t core;
   uint64_t code;
+  uint64_t extra;
 } __attribute__((packed)) message_vmm_panic;
 
 typedef struct _message_vmcs_write {
