@@ -118,7 +118,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         // out 
         uint32_t v = guest_regs.rax;
         if (direction == 0) {
-          // if (pci_no_protect_out(port, v)) {
+          if (pci_no_protect_out(port, v)) {
             if (size == 0) {
               __asm__ __volatile__("out %%al, %%dx" : : "a"(v), "d"(port)); 
             } else if (size == 1) {
@@ -128,10 +128,10 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
             } else {
               vmm_panic(VMM_PANIC_IO, 1, &guest_regs);
             }
-          // }
+          }
         // in
         } else {
-          // if (pci_no_protect_in(port)) {
+          if (pci_no_protect_in(port)) {
             if (size == 0) {
               __asm__ __volatile__("in %%dx, %%al" : "=a"(v) : "d"(port)); 
               guest_regs.rax = (guest_regs.rax & 0xffffffffffffff00) | (v & 0x000000ff);
@@ -144,7 +144,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
             } else {
               vmm_panic(VMM_PANIC_IO, 2, &guest_regs);
             }
-          /* } else {
+          } else {
             if (size == 0) {
               guest_regs.rax = (guest_regs.rax & 0xffffffffffffff00) | 0x000000ff;
             } else if (size == 1) {
@@ -154,7 +154,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
             } else {
               vmm_panic(VMM_PANIC_IO, 2, &guest_regs);
             }
-          } */
+          }
         }
       // Unsufficient privileges
       } else {

@@ -56,8 +56,8 @@ void vmm_main() {
   msr_bitmap_set_for_mtrr();
   io_bitmap_setup();
   // Ethernet card protection
-  // io_bitmap_set_for_port(PCI_CONFIG_ADDR);
-  // io_bitmap_set_for_port(PCI_CONFIG_DATA);
+  io_bitmap_set_for_port(PCI_CONFIG_ADDR);
+  io_bitmap_set_for_port(PCI_CONFIG_DATA);
 
   /* TODO Dump the core state
   struct core_gpr gpr;
