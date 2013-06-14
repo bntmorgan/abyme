@@ -53,11 +53,11 @@ void vmm_main() {
   ept_create_tables();
   msr_bitmap_setup();
   // msr_bitmap_set_read_write(MSR_ADDRESS_IA32_EFER);
-  // msr_bitmap_set_for_mtrr();
+  msr_bitmap_set_for_mtrr();
   io_bitmap_setup();
   // Ethernet card protection
-  io_bitmap_set_for_port(PCI_CONFIG_ADDR);
-  io_bitmap_set_for_port(PCI_CONFIG_DATA);
+  // io_bitmap_set_for_port(PCI_CONFIG_ADDR);
+  // io_bitmap_set_for_port(PCI_CONFIG_DATA);
 
   /* TODO Dump the core state
   struct core_gpr gpr;

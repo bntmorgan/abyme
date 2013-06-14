@@ -139,7 +139,7 @@ void vmcs_fill_host_state_fields(void) {
 }
 
 void vmcs_fill_vm_exec_control_fields(void) {
-  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS /* | USE_IO_BITMAPS | MONITOR_TRAP_FLAG*/;
+  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS /* | USE_IO_BITMAPS | CR3_LOAD_EXITING | USE_IO_BITMAPS | MONITOR_TRAP_FLAG*/;
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST;
   uint64_t msr_bitmap_ptr;
   uint64_t eptp;

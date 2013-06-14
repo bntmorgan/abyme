@@ -23,7 +23,8 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_VMCS_DATA,
   MESSAGE_VMM_PANIC,
   MESSAGE_VMCS_WRITE,
-  MESSAGE_VMCS_WRITE_COMMIT
+  MESSAGE_VMCS_WRITE_COMMIT,
+  MESSAGE_LOG_CR3
 };
 
 //
@@ -149,6 +150,12 @@ typedef struct _message_vmcs_write_commit {
   uint8_t ok;
 } __attribute__((packed)) message_vmcs_write_commit;
 
+typedef struct _message_log_cr3 {
+  uint8_t type;
+  uint8_t core;
+  uint64_t length;
+} __attribute__((packed)) message_log_cr3;
+
 static inline void *message_check_type(message *m, uint8_t type) {
   if (m->type == type) {
     return m;
@@ -165,5 +172,10 @@ static inline uint8_t debug_server_get_core() {
 }
 
 extern protocol_82579LM *eth;
+
+// 8 * 0x20000 = 1Mo must be DEBUG_SERVER_CR3_PER_MESSAGE multiple
+#define DEBUG_SERVER_CR3_SIZE 128
+#define DEBUG_SERVER_CR3_PER_MESSAGE 128
+void debug_server_log_cr3_add(struct registers *regs, uint64_t cr3);
 
 #endif

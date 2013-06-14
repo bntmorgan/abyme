@@ -9,6 +9,8 @@
 #include "systab.h"
 #include "vmcs.h"
 #include "pci.h"
+#include "mtrr.h"
+#include "ept.h"
 #include "debug.h"
 #include "debug_server/debug_server.h"
 
@@ -79,7 +81,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 #if 1
   // if (exit_reason == EXIT_REASON_IO_INSTRUCTION) {
   // if (exit_reason == EXIT_REASON_VMCALL) {
-  if (exit_reason != EXIT_REASON_CPUID && exit_reason != EXIT_REASON_IO_INSTRUCTION) {
+  if (exit_reason != EXIT_REASON_CPUID && exit_reason != EXIT_REASON_IO_INSTRUCTION && exit_reason != EXIT_REASON_WRMSR) {
     message_vmexit ms = {
       MESSAGE_VMEXIT,
       debug_server_get_core(),
@@ -92,9 +94,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 
   uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
 
-  // static uint8_t catch = 2;
-  // static uint32_t eax = 0;
-
   switch (exit_reason) {
     case EXIT_REASON_XSETBV: {
       if (vmm_get_cpu_mode() == MODE_LONG) {
@@ -102,6 +101,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       } else {
         vmm_panic(VMM_PANIC_XSETBV, 0, &guest_regs);
       }
+      break;
     }
     case EXIT_REASON_IO_INSTRUCTION: {
       // Checking the privileges
@@ -118,29 +118,43 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         // out 
         uint32_t v = guest_regs.rax;
         if (direction == 0) {
-          if (size == 0) {
-            __asm__ __volatile__("out %%al, %%dx" : : "a"(v), "d"(port)); 
-          } else if (size == 1) {
-            __asm__ __volatile__("out %%ax, %%dx" : : "a"(v), "d"(port)); 
-          } else if (size == 3) {
-            __asm__ __volatile__("out %%eax, %%dx" : : "a"(v), "d"(port)); 
-          } else {
-            vmm_panic(VMM_PANIC_IO, 1, &guest_regs);
-          }
+          // if (pci_no_protect_out(port, v)) {
+            if (size == 0) {
+              __asm__ __volatile__("out %%al, %%dx" : : "a"(v), "d"(port)); 
+            } else if (size == 1) {
+              __asm__ __volatile__("out %%ax, %%dx" : : "a"(v), "d"(port)); 
+            } else if (size == 3) {
+              __asm__ __volatile__("out %%eax, %%dx" : : "a"(v), "d"(port)); 
+            } else {
+              vmm_panic(VMM_PANIC_IO, 1, &guest_regs);
+            }
+          // }
         // in
         } else {
-          if (size == 0) {
-            __asm__ __volatile__("in %%dx, %%al" : "=a"(v) : "d"(port)); 
-            guest_regs.rax = (guest_regs.rax & 0xffffffffffffff00) | (v & 0x000000ff);
-          } else if (size == 1) {
-            __asm__ __volatile__("in %%dx, %%ax" : "=a"(v) : "d"(port)); 
-            guest_regs.rax = (guest_regs.rax & 0xffffffffffff0000) | (v & 0x0000ffff);
-          } else if (size == 3) {
-            __asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port)); 
-            guest_regs.rax = (guest_regs.rax & 0xffffffff00000000) | (v & 0xffffffff);
-          } else {
-            vmm_panic(VMM_PANIC_IO, 2, &guest_regs);
-          }
+          // if (pci_no_protect_in(port)) {
+            if (size == 0) {
+              __asm__ __volatile__("in %%dx, %%al" : "=a"(v) : "d"(port)); 
+              guest_regs.rax = (guest_regs.rax & 0xffffffffffffff00) | (v & 0x000000ff);
+            } else if (size == 1) {
+              __asm__ __volatile__("in %%dx, %%ax" : "=a"(v) : "d"(port)); 
+              guest_regs.rax = (guest_regs.rax & 0xffffffffffff0000) | (v & 0x0000ffff);
+            } else if (size == 3) {
+              __asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port)); 
+              guest_regs.rax = (guest_regs.rax & 0xffffffff00000000) | (v & 0xffffffff);
+            } else {
+              vmm_panic(VMM_PANIC_IO, 2, &guest_regs);
+            }
+          /* } else {
+            if (size == 0) {
+              guest_regs.rax = (guest_regs.rax & 0xffffffffffffff00) | 0x000000ff;
+            } else if (size == 1) {
+              guest_regs.rax = (guest_regs.rax & 0xffffffffffff0000) | 0x0000ffff;
+            } else if (size == 3) {
+              guest_regs.rax = (guest_regs.rax & 0xffffffff00000000) | 0xffffffff;
+            } else {
+              vmm_panic(VMM_PANIC_IO, 2, &guest_regs);
+            }
+          } */
         }
       // Unsufficient privileges
       } else {
@@ -176,12 +190,32 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
         cpu_vmwrite(GUEST_IA32_EFER, guest_regs.rax & 0xffffffff);
         cpu_vmwrite(GUEST_IA32_EFER_HIGH, guest_regs.rdx & 0xffffffff);
+      } else if (
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRRCAP ||
+          guest_regs.rcx == MSR_ADDRESS_A32_MTRR_DEF_TYPE ||
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX64K_00000 ||
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX16K_80000 ||
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX16K_A0000 ||
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_C0000 ||
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_C8000 ||
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_D0000 ||
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_D8000 ||
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_E0000 ||
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_E8000 ||
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_F0000 ||
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_F8000 ) {
+        __asm__ __volatile__("wrmsr"
+          : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+        // Recompute the cache ranges
+        mtrr_create_ranges();
+        // Recompute ept tables
+        ept_create_tables();
       } else {
         vmm_panic(VMM_PANIC_WRMSR, 0, &guest_regs);
       }
       break;
     }
-    case EXIT_REASON_CR_ACCESS : {
+    case EXIT_REASON_CR_ACCESS: {
       uint8_t o = (exit_qualification >> 8) & 0xf;
       uint8_t n = (exit_qualification >> 0) & 0xf;
       uint8_t a = (exit_qualification >> 4) & 0x3;
@@ -237,6 +271,14 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         cpu_vmwrite(GUEST_CR4, cpu_adjust64(value, MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
         cpu_vmwrite(CR4_READ_SHADOW, value);
         // printk("CR4 %016X, SHAD CR4 %016X\n", cpu_vmread(GUEST_CR4), cpu_vmread(CR4_READ_SHADOW));
+      } else if (n == 3) {
+        // Mov to CR3
+        if (a == 0) {
+          // debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
+          cpu_vmwrite(GUEST_CR3, value);
+        } else {
+          vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
+        }
       } else {
         vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
       }
