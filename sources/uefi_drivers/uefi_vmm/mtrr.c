@@ -49,23 +49,6 @@ struct msr_mtrr_variable {
   uint64_t range_address_end;
 };
 
-struct msr_mtrrcap {
-  struct {
-    uint64_t address;
-    union {
-      struct {
-        uint64_t vcnt:8;
-        uint64_t fix:1;
-        uint64_t reserved_1:1;
-        uint64_t wc:1;
-        uint64_t smrr:1;
-        uint64_t reserved_2:52;
-      } __attribute__((packed));
-      uint64_t value;
-    } __attribute__((packed));
-  } msr;
-};
-
 struct msr_mtrr_def_type {
   struct {
     uint64_t address;

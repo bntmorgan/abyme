@@ -13,6 +13,7 @@
 #include "ept.h"
 #include "debug.h"
 #include "debug_server/debug_server.h"
+#include "mtrr.h"
 
 void vmm_print_guest_regs(struct registers *guest_regs) {
   INFO("rax=%X\n", guest_regs->rax);
@@ -114,7 +115,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         }
         uint8_t direction = exit_qualification & 8;
         uint8_t size = exit_qualification & 7;
-        uint8_t port = (exit_qualification >> 16) & 0xffff; 
+        uint8_t encoding = (exit_qualification >> 6) & 1;
+        uint16_t port = encoding ? guest_regs.rdx : (exit_qualification >> 16) & 0xffff; 
         // out 
         uint32_t v = guest_regs.rax;
         if (direction == 0) {
@@ -142,7 +144,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
               __asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port)); 
               guest_regs.rax = (guest_regs.rax & 0xffffffff00000000) | (v & 0xffffffff);
             } else {
-              vmm_panic(VMM_PANIC_IO, 2, &guest_regs);
+              vmm_panic(VMM_PANIC_IO, port, &guest_regs);
             }
           } else {
             if (size == 0) {
@@ -187,10 +189,24 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_WRMSR: {
+      // Check for variable mtrr msr
+      uint64_t msr_base_address = MSR_ADDRESS_IA32_MTRR_PHYBASE0;
+      uint64_t msr_mask_address = MSR_ADDRESS_IA32_MTRR_PHYBASE0 + 1;
+      uint8_t is_var_mtrr = 0;
+      uint32_t i;
+      // mtrr_cap is a mtrr.c extern
+      for (i = 0; i < mtrr_cap.msr.vcnt; i++) {
+        if (guest_regs.rcx == msr_base_address || guest_regs.rcx == msr_mask_address) {
+          is_var_mtrr = 1;
+        }
+        msr_base_address += 2;
+        msr_mask_address += 2;
+      }
       if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
         cpu_vmwrite(GUEST_IA32_EFER, guest_regs.rax & 0xffffffff);
         cpu_vmwrite(GUEST_IA32_EFER_HIGH, guest_regs.rdx & 0xffffffff);
       } else if (
+          is_var_mtrr ||
           guest_regs.rcx == MSR_ADDRESS_IA32_MTRRCAP ||
           guest_regs.rcx == MSR_ADDRESS_A32_MTRR_DEF_TYPE ||
           guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX64K_00000 ||
@@ -287,6 +303,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_MONITOR_TRAP_FLAG:
       // Don't increment RIP
       return;
+      break;
     default: {
 #if 1
       message_vmexit ms = {

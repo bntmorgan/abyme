@@ -139,13 +139,13 @@ void vmcs_fill_host_state_fields(void) {
 }
 
 void vmcs_fill_vm_exec_control_fields(void) {
-  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS /* | USE_IO_BITMAPS | CR3_LOAD_EXITING | USE_IO_BITMAPS | MONITOR_TRAP_FLAG*/;
+  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS | USE_IO_BITMAPS /* | CR3_LOAD_EXITING | USE_IO_BITMAPS | MONITOR_TRAP_FLAG*/;
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST;
   uint64_t msr_bitmap_ptr;
   uint64_t eptp;
   uint64_t io_bitmap_ptr;
 
-  cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, (1 << 3) | cpu_adjust32(0, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
+  cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, /*(1 << 3) |*/ cpu_adjust32(0, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
   procbased_ctls = cpu_adjust32(procbased_ctls, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS);
   procbased_ctls &= ~(CR3_LOAD_EXITING | CR3_STORE_EXITING);
   cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
