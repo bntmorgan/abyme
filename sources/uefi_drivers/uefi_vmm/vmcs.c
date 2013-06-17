@@ -144,8 +144,10 @@ void vmcs_fill_vm_exec_control_fields(void) {
   uint64_t msr_bitmap_ptr;
   uint64_t eptp;
   uint64_t io_bitmap_ptr;
-
-  cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, /*(1 << 3) |*/ cpu_adjust32(0, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
+  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER; 
+  
+  cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, 0);
+  cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
   procbased_ctls = cpu_adjust32(procbased_ctls, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS);
   procbased_ctls &= ~(CR3_LOAD_EXITING | CR3_STORE_EXITING);
   cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
@@ -204,13 +206,7 @@ void vmcs_fill_vm_exit_control_fields(void) {
 
 void vmcs_fill_vm_entry_control_fields(void) {
   uint32_t entry_controls = ENTRY_LOAD_IA32_EFER | IA32E_MODE_GUEST;
-  INFO("%X\n", entry_controls);
-  INFO("%X\n", entry_controls);
-  INFO("%X\n", entry_controls);
   cpu_vmwrite(VM_ENTRY_CONTROLS, cpu_adjust32(entry_controls, MSR_ADDRESS_IA32_VMX_ENTRY_CTLS));
-  INFO("%X\n", cpu_vmread(VM_ENTRY_CONTROLS));
-  INFO("%X\n", cpu_vmread(VM_ENTRY_CONTROLS));
-  INFO("%X\n", cpu_vmread(VM_ENTRY_CONTROLS));
   cpu_vmwrite(VM_ENTRY_MSR_LOAD_COUNT, 0);
   cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, 0);
 }
