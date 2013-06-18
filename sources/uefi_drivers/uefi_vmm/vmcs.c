@@ -144,7 +144,7 @@ void vmcs_fill_vm_exec_control_fields(void) {
   uint64_t msr_bitmap_ptr;
   uint64_t eptp;
   uint64_t io_bitmap_ptr;
-  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER; 
+  uint32_t pinbased_ctls = 0 /* ACT_VMX_PREEMPT_TIMER */;
   
   cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, 0);
   cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));

@@ -71,6 +71,8 @@ void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_regs) {
   }
 }
 
+uint64_t io_count = 0;
+
 void vmm_handle_vm_exit(struct registers guest_regs) {
   guest_regs.rsp = cpu_vmread(GUEST_RSP);
   guest_regs.rip = cpu_vmread(GUEST_RIP);
@@ -105,6 +107,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_IO_INSTRUCTION: {
+      io_count++;
       // Checking the privileges
       uint8_t cpl = (cpu_vmread(GUEST_CS_AR_BYTES) >> 5) & 3;
       uint8_t iopl = (cpu_vmread(GUEST_RFLAGS) >> 12) & 3;
@@ -115,8 +118,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         }
         uint8_t direction = exit_qualification & 8;
         uint8_t size = exit_qualification & 7;
-        uint8_t encoding = (exit_qualification >> 6) & 1;
-        uint16_t port = encoding ? guest_regs.rdx : (exit_qualification >> 16) & 0xffff; 
+        uint16_t port = (exit_qualification >> 16) & 0xffff; 
         // out 
         uint32_t v = guest_regs.rax;
         if (direction == 0) {
@@ -148,11 +150,11 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
             }
           } else {
             if (size == 0) {
-              guest_regs.rax = (guest_regs.rax & 0xffffffffffffff00) | 0x000000ff;
+              guest_regs.rax = guest_regs.rax | 0x000000ff;
             } else if (size == 1) {
-              guest_regs.rax = (guest_regs.rax & 0xffffffffffff0000) | 0x0000ffff;
+              guest_regs.rax = guest_regs.rax | 0x0000ffff;
             } else if (size == 3) {
-              guest_regs.rax = (guest_regs.rax & 0xffffffff00000000) | 0xffffffff;
+              guest_regs.rax = guest_regs.rax | 0xffffffff;
             } else {
               vmm_panic(VMM_PANIC_IO, 2, &guest_regs);
             }
@@ -166,10 +168,17 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     }
     case EXIT_REASON_CPUID: {
       //vmm_print_guest_regs(&guest_regs);
-      __asm__ __volatile__("cpuid"
-          : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
-          :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));
-      //vmm_print_guest_regs(&guest_regs);
+      if (guest_regs.rax == 0x88888888) {
+        guest_regs.rax = 0xC001C001C001C001;
+        guest_regs.rbx = io_count;
+      } else if (guest_regs.rax == 0x99999999) {
+        vmm_panic(VMM_PANIC_RDMSR, 1234, &guest_regs);
+      } else {
+        __asm__ __volatile__("cpuid"
+            : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
+            :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));
+        //vmm_print_guest_regs(&guest_regs);
+      }
       break;
     }
     case EXIT_REASON_RDMSR: {
@@ -290,7 +299,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       } else if (n == 3) {
         // Mov to CR3
         if (a == 0) {
-          // debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
+          debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
           cpu_vmwrite(GUEST_CR3, value);
         } else {
           vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
@@ -323,7 +332,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 #endif
     }
   }
-  switch (mode) {
+  /*switch (mode) {
     case MODE_REAL: {
       uint16_t tmp = (uint16_t) guest_regs.rip;
       tmp = tmp + (uint16_t) exit_instruction_length;
@@ -334,17 +343,19 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       uint32_t tmp = (uint32_t) guest_regs.rip;
       tmp = tmp + (uint32_t) exit_instruction_length;
       cpu_vmwrite(GUEST_RIP, (guest_regs.rip & 0xffffffff00000000) | tmp);
-      //cpu_vmwrite(GUEST_RIP, guest_regs.rip + (uint32_t)exit_instruction_length);
       break;
     }
-    case MODE_LONG : {
+    case MODE_LONG: {*/
       uint64_t tmp = (uint64_t) guest_regs.rip;
       tmp = tmp + (uint64_t) exit_instruction_length;
       cpu_vmwrite(GUEST_RIP, (guest_regs.rip & 0x0000000000000000) | tmp);
-      //cpu_vmwrite(GUEST_RIP, guest_regs.rip + (uint64_t)exit_instruction_length);
-      break;
+      /*break;
     }
     default : 
       vmm_panic(VMM_PANIC_UNKNOWN_CPU_MODE, 0, &guest_regs);
-  }
+  }*/
+}
+
+void msr_bitmap_changes(void) {
+  //msr_bitmap_get_ptr();
 }
