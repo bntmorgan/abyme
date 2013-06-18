@@ -174,7 +174,8 @@ static inline uint8_t debug_server_get_core() {
 extern protocol_82579LM *eth;
 
 // 8 * 0x20000 = 1Mo must be DEBUG_SERVER_CR3_PER_MESSAGE multiple
-#define DEBUG_SERVER_CR3_SIZE 128
+// #define DEBUG_SERVER_CR3_SIZE 0x200000
+#define DEBUG_SERVER_CR3_SIZE 0x128
 #define DEBUG_SERVER_CR3_PER_MESSAGE 128
 void debug_server_log_cr3_add(struct registers *regs, uint64_t cr3);
 

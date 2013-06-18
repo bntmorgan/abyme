@@ -43,8 +43,13 @@ void debug_server_log_cr3_reset() {
 
 void debug_server_log_cr3_add(struct registers *regs, uint64_t cr3) {
   // INFO("Add\n");
+  static uint64_t prec = 0;
+  if (cr3 == prec) {
+    return;
+  }
+  prec = cr3;
   if (log_cr3_index == DEBUG_SERVER_CR3_SIZE) {
-    // debug_server_log_cr3_flush(regs);
+    debug_server_log_cr3_flush(regs);
     debug_server_log_cr3_reset();
   }
   log_cr3_table[log_cr3_index] = cr3;

@@ -72,6 +72,7 @@ void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_regs) {
 }
 
 uint64_t io_count = 0;
+uint64_t cr3_count = 0;
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
   guest_regs.rsp = cpu_vmread(GUEST_RSP);
@@ -84,7 +85,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 #if 1
   // if (exit_reason == EXIT_REASON_IO_INSTRUCTION) {
   // if (exit_reason == EXIT_REASON_VMCALL) {
-  if (exit_reason != EXIT_REASON_CPUID && exit_reason != EXIT_REASON_IO_INSTRUCTION && exit_reason != EXIT_REASON_WRMSR) {
+  if (exit_reason != EXIT_REASON_CPUID && exit_reason != EXIT_REASON_IO_INSTRUCTION && exit_reason != EXIT_REASON_WRMSR && exit_reason != EXIT_REASON_CR_ACCESS) {
     message_vmexit ms = {
       MESSAGE_VMEXIT,
       debug_server_get_core(),
@@ -171,6 +172,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       if (guest_regs.rax == 0x88888888) {
         guest_regs.rax = 0xC001C001C001C001;
         guest_regs.rbx = io_count;
+        guest_regs.rcx = cr3_count;
       } else if (guest_regs.rax == 0x99999999) {
         vmm_panic(VMM_PANIC_RDMSR, 1234, &guest_regs);
       } else {
@@ -262,6 +264,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         (uint8_t) (uint64_t) &(((struct registers *) 0)->r14),
         (uint8_t) (uint64_t) &(((struct registers *) 0)->r15)
       };
+      // Mov to CRX
       if (a != 0) {
         vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
       }
@@ -297,13 +300,12 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         cpu_vmwrite(CR4_READ_SHADOW, value);
         // printk("CR4 %016X, SHAD CR4 %016X\n", cpu_vmread(GUEST_CR4), cpu_vmread(CR4_READ_SHADOW));
       } else if (n == 3) {
-        // Mov to CR3
-        if (a == 0) {
-          debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
-          cpu_vmwrite(GUEST_CR3, value);
-        } else {
-          vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
-        }
+        cr3_count++;
+        debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
+        uint8_t desc[16] = { cpu_vmread(VIRTUAL_PROCESSOR_ID), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        uint64_t un = 1;
+        __asm__ __volatile__("invvpid %1, %%rax" : : "a"(un), "m"(*desc) : "memory");
+        cpu_vmwrite(GUEST_CR3, value);
       } else {
         vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
       }
