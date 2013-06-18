@@ -332,7 +332,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 #endif
     }
   }
-  /*switch (mode) {
+  switch (mode) {
     case MODE_REAL: {
       uint16_t tmp = (uint16_t) guest_regs.rip;
       tmp = tmp + (uint16_t) exit_instruction_length;
@@ -345,15 +345,15 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       cpu_vmwrite(GUEST_RIP, (guest_regs.rip & 0xffffffff00000000) | tmp);
       break;
     }
-    case MODE_LONG: {*/
+    case MODE_LONG: {
       uint64_t tmp = (uint64_t) guest_regs.rip;
       tmp = tmp + (uint64_t) exit_instruction_length;
       cpu_vmwrite(GUEST_RIP, (guest_regs.rip & 0x0000000000000000) | tmp);
-      /*break;
+      break;
     }
     default : 
       vmm_panic(VMM_PANIC_UNKNOWN_CPU_MODE, 0, &guest_regs);
-  }*/
+  }
 }
 
 void msr_bitmap_changes(void) {
