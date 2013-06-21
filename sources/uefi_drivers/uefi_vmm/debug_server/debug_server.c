@@ -91,8 +91,8 @@ void debug_server_handle_memory_write(message_memory_write *mr) {
   memcpy((uint8_t *)mr->address, b, length);
   ok = *((uint8_t *)mr->address) == b[0];
 
-  message_memory_write_commit r = {
-    MESSAGE_MEMORY_WRITE_COMMIT,
+  message_commit r = {
+    MESSAGE_COMMIT,
     debug_server_get_core(),
     ok
   };
@@ -223,8 +223,8 @@ void debug_server_handle_vmcs_write(message_vmcs_read *mr) {
     s = *((uint8_t *)data);
     data += 1;
   }
-  message_vmcs_write_commit r = {
-    MESSAGE_VMCS_WRITE_COMMIT,
+  message_commit r = {
+    MESSAGE_COMMIT,
     debug_server_get_core(),
     1
   };

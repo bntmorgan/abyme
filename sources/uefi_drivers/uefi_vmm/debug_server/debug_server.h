@@ -15,7 +15,7 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_MEMORY_READ,
   MESSAGE_MEMORY_DATA,
   MESSAGE_MEMORY_WRITE,
-  MESSAGE_MEMORY_WRITE_COMMIT,
+  MESSAGE_COMMIT,
   MESSAGE_CORE_REGS_READ,
   MESSAGE_CORE_REGS_DATA,
   MESSAGE_UNHANDLED_VMEXIT,
@@ -23,7 +23,6 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_VMCS_DATA,
   MESSAGE_VMM_PANIC,
   MESSAGE_VMCS_WRITE,
-  MESSAGE_VMCS_WRITE_COMMIT,
   MESSAGE_LOG_CR3
 };
 
@@ -104,11 +103,11 @@ typedef struct _message_memory_write {
   uint64_t length;
 } __attribute__((packed)) message_memory_write;
 
-typedef struct _message_memory_write_commit {
+typedef struct _message_commit {
   uint8_t type;
   uint8_t core;
   uint8_t ok;
-} __attribute__((packed)) message_memory_write_commit;
+} __attribute__((packed)) message_commit;
 
 typedef struct _message_core_regs_read {
   uint8_t type;
@@ -143,12 +142,6 @@ typedef struct _message_vmcs_write {
   uint8_t type;
   uint8_t core;
 } __attribute__((packed)) message_vmcs_write;
-
-typedef struct _message_vmcs_write_commit {
-  uint8_t type;
-  uint8_t core;
-  uint8_t ok;
-} __attribute__((packed)) message_vmcs_write_commit;
 
 typedef struct _message_log_cr3 {
   uint8_t type;
