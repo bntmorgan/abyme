@@ -1,7 +1,5 @@
 #include <efi.h>
 #include <efilib.h>
-#include "efi/efiapi_1_1.h"
-#include "efi/efi_1_1.h"
 
 #define EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID \
     {0x0964e5b22,0x6459,0x11d2, {0x8e,0x39,0x00,0xa0,0xc9,0x69,0x72,0x3b} }
@@ -66,7 +64,7 @@ efi_main (EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st)
   systab = st;
   read_file(L"\\caca.txt");
 
-  /*status = uefi_call_wrapper(GET_EFI_BOOT_SERVICES_1_1(systab->BootServices)->LocateProtocol,
+  /*status = uefi_call_wrapper(systab->BootServices->LocateProtocol,
     3,
     &gop_guid,
     NULL,
@@ -75,7 +73,7 @@ efi_main (EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st)
     Print(L"Framebuffer base is at %lx %d\n", gop->Mode->FrameBufferBase, status);
 
     EFI_GUID smm_guid = EFI_SMM_ACCESS_PROTOCOL_GUID;
-    status = uefi_call_wrapper(GET_EFI_BOOT_SERVICES_1_1(systab->BootServices)->LocateProtocol,
+    status = uefi_call_wrapper(systab->BootServices->LocateProtocol,
     3,
     &smm_guid,
     NULL,
@@ -84,7 +82,7 @@ efi_main (EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st)
     Print(L"SMM %d\n", status);
 
     EFI_GUID smm_base_guid = EFI_SMM_BASE_PROTOCOL_GUID;
-    status = uefi_call_wrapper(GET_EFI_BOOT_SERVICES_1_1(systab->BootServices)->LocateProtocol,
+    status = uefi_call_wrapper(systab->BootServices->LocateProtocol,
     3,
     &smm_base_guid,
     NULL,
@@ -94,7 +92,7 @@ efi_main (EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st)
         
   /*EFI_GUID pci_io_guid = EFI_PCI_IO_PROTOCOL_GUID;
   EFI_PCI_IO_PROTOCOL *PciIo;
-  status = uefi_call_wrapper(GET_EFI_BOOT_SERVICES_1_1(systab->BootServices)->LocateProtocol,
+  status = uefi_call_wrapper(systab->BootServices->LocateProtocol,
       3,
       &pci_io_guid,
       NULL,

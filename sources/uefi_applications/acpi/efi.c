@@ -1,7 +1,5 @@
 #include <efi.h>
 #include <efilib.h>
-#include "efi/efiapi_1_1.h"
-#include "efi/efi_1_1.h"
 
 //
 // here is the slighlty complicated ACPI poweroff code

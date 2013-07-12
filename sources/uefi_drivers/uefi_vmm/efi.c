@@ -7,9 +7,6 @@
 #include "cpuid.h"
 #include "stdio.h"
 
-#include "efi/efiapi_1_1.h"
-#include "efi/efi_1_1.h"
-
 #define EFI_LOADED_IMAGE_PROTOCOL_GUID \
     {0x5B1B31A1, 0x9562, 0x11d2, {0x8E, 0x3F, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B }}
 
@@ -60,7 +57,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
 
   EFI_GUID li_guid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
   EFI_LOADED_IMAGE *efi_loaded_image = 0; 
-  EFI_STATUS status = uefi_call_wrapper(GET_EFI_BOOT_SERVICES_1_1(systab->BootServices)->LocateProtocol,
+  EFI_STATUS status = uefi_call_wrapper(systab->BootServices->LocateProtocol,
       3,
       &li_guid,
       NULL,
