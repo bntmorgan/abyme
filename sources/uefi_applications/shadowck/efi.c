@@ -30,6 +30,19 @@ uint64_t cpu_adjust64(uint64_t value, uint32_t msr_fixed0, uint32_t msr_fixed1) 
  * VMCS does not change.
  */
 EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
-  Print(L"VMCS shadowing supported ? :%d\n", !(cpu_adjust32((1 << 14), MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2) == 0));
+  // Print(L"VMCS shadowing supported ? :%d\n", !(cpu_adjust32((1 << 14), MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2) == 0));
+  int thunes = cpu_adjust32((1 << 14), MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2) & (1 << 14);
+  if(thunes) {
+    uefi_call_wrapper(systab->ConOut->OutputString, 2, systab->ConOut, L"VMCS SHADOWING !!!\n");
+  } else {
+    uefi_call_wrapper(systab->ConOut->OutputString, 2, systab->ConOut, L"No VMCS Shadowning :'(\n");
+  }
+  
+  if (msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2)) {
+    uefi_call_wrapper(systab->ConOut->OutputString, 2, systab->ConOut, L"MSR non zéro\n");
+  } else {
+    uefi_call_wrapper(systab->ConOut->OutputString, 2, systab->ConOut, L"MSR null no yolol\n");
+  }
+
   return EFI_SUCCESS;
 }
