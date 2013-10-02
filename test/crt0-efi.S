@@ -44,7 +44,7 @@ _start:
 	pushq %rdx
 
 0:
-	lea ImageBase(%rip), %rdi
+	lea image_base(%rip), %rdi
 	lea _DYNAMIC(%rip), %rsi
 
 	popq %rcx

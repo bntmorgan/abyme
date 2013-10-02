@@ -1,30 +1,23 @@
-/* Same as elf_x86_64_fbsd_efi.lds, except for OUTPUT_FORMAT below - KEEP IN SYNC */
 OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64", "elf64-x86-64")
 OUTPUT_ARCH(i386:x86-64)
 ENTRY(_start)
+
 SECTIONS
 {
   . = 0;
-  ImageBase = .;
-  .hash : { *(.hash) }	/* this MUST come first! */
-  . = ALIGN(4096);
-  .eh_frame : 
-  { 
-    *(.eh_frame)
+  image_base = .;
+  . = ALIGN(0x1000);
+  .eh_frame : { *(.eh_frame) }
+  .padding_begin : ALIGN(0x1000) {
+    _padding_begin_a = .;
+    BYTE(0x90);
+    _padding_begin_b = . + 0x200000;
   }
-  . = ALIGN(4096);
-  .text :
-  {
-   *(.text)
-   *(.text.*)
-   *(.gnu.linkonce.t.*)
-  }
-  . = ALIGN(4096);
-  .reloc :
-  {
-   *(.reloc)
-  }
-  . = ALIGN(4096);
+  . = ALIGN(0x1000);
+  .text : { *(.text) }
+  . = ALIGN(0x1000);
+  .reloc : { *(.reloc) }
+  . = ALIGN(0x1000);
   .data :
   {
    *(.rodata*)
@@ -38,28 +31,24 @@ SECTIONS
    *(.scommon)
    *(.dynbss)
    *(.bss)
-   *(COMMON)
-   *(.rel.local)
   }
-  . = ALIGN(4096);
-  .dynamic  : { *(.dynamic) }
-  . = ALIGN(4096);
+  . = ALIGN(0x1000);
+  .dynamic : { *(.dynamic) }
+  . = ALIGN(0x1000);
   .rela :
   {
     *(.rela.data*)
     *(.rela.got)
     *(.rela.stab)
   }
-  . = ALIGN(4096);
-  .dynsym   : { *(.dynsym) }
-  . = ALIGN(4096);
-  .dynstr   : { *(.dynstr) }
-  . = ALIGN(4096);
-  .ignored.reloc :
-  {
-    *(.rela.reloc)
-    *(.eh_frame)
-    *(.note.GNU-stack)
+  . = ALIGN(0x1000);
+  .dynsym : { *(.dynsym) }
+  . = ALIGN(0x1000);
+  .dynstr : { *(.dynstr) }
+
+  .padding_end :ALIGN(0x1000) {
+    _padding_end_a = .;
+    BYTE(0x90);
+    _padding_end_b = . + 0x200000;
   }
-  .comment 0 : { *(.comment) }
 }
