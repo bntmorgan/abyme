@@ -38,6 +38,7 @@ define SRC_2_BIN
 endef
 
 all: targets
+	make -C test
 
 # Overriden in rules.mk
 TARGETS :=
