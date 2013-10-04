@@ -80,6 +80,7 @@ tests/%:
 targets: $(patsubst sources/%, binary/%, $(TARGETS))
 
 clean:
+	@rm -fr sources
 	@rm -f $(TARGETS) $(OBJECTS)
 
 info:
