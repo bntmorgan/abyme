@@ -13,8 +13,7 @@ map_folder() {
   local FOLDERS=`ls $MODULES/$DIR`
   local f
   echo $FOLDERS
-  for f in $FOLDERS
-  do
+  for f in $FOLDERS; do
     $FUNCTION $DIR/$f
   done
 }
@@ -34,7 +33,6 @@ do_deploy() {
 
 do_all() {
   echo Dossier de travail : $MODULES
-
   map_folder "" do_deploy
 }
 
