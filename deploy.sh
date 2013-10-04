@@ -23,7 +23,7 @@ do_deploy() {
     if [ "${1#*.}" = "w" ]; then
       filename=`basename $1`
       if [ "${filename%.*}"  = "root" ]; then
-        echo $2 Fichier web racine
+        echo $2 "=>" Fichier web racine
         python3.3 literale/prepare.py -b `dirname $MODULES$1` `basename $1` | python3.3 literale/tangle.py -d `dirname $DESTINATION$1`
       fi
     else
