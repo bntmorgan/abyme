@@ -2,7 +2,8 @@ Remain of the file 1.
 Remain of the file 2.
 
 @+ imports of packages
-#include <stdio.h>
+#include <efi.h>
+#include <efilib.h>
 @-
 
 

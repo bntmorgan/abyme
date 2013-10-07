@@ -24,7 +24,8 @@ do_deploy() {
       filename=`basename $1`
       if [ "${filename%.*}"  = "root" ]; then
         echo $2 "=>" Fichier web racine
-        python3.3 literale/prepare.py -b `dirname $MODULES$1` `basename $1` | python3.3 literale/tangle.py -d `dirname $DESTINATION$1`
+        $PYTHON literale/prepare.py -b `dirname $MODULES$1` `basename $1` | \
+          $PYTHON literale/tangle.py -d `dirname $DESTINATION$1`
       fi
     else
       cp -fpr $MODULES$1 $DESTINATION$1

@@ -18,17 +18,23 @@ comment x.  A comment x.  A comment x.  A comment x.  A comment x.  A comment
 x.
 
 \subsection{SUBSECTION}
-@++ code/test.c
+@++ test.c
 @< imports of packages >
-void main(void) {
+EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
+  InitializeLib(image, systab);
+
+  uefi_call_wrapper(systab->ConOut->OutputString, 2, systab->ConOut, L"Hello World\n\r");
+  
   @< delcarations >
   @< calcul >
+
+  return EFI_SUCCESS;
 }
 @-
 
 \subsection{SUBSECTION}
 
-@++ code/file.py
+@++ file.py
 @< imports of packages >
   print math.pi, time.time()
 123 @< value > 456
@@ -45,8 +51,8 @@ print math.pi, time.time()
 @+ calcul
   a = @< value >;
   b = a * 2;
-  printf("%d\n", a);
-  printf("%d\n", b);
+  Print(L"%d\n", a);
+  Print(L"%d\n", b);
 @-
 
 \section{SECTION}

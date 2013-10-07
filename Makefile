@@ -1,5 +1,6 @@
 CC						:= gcc
 OBJDUMP				:= objdump
+PYTHON				:= python3
 
 INCLUDE_DIR			:= sources/include
 
@@ -38,15 +39,20 @@ define SRC_2_BIN
 endef
 
 all: targets
-	make -C test
+# make -C test
 
 # Overriden in rules.mk
 TARGETS :=
 OBJECTS :=
+WEBS		:=
 
 dir	:= modules
 target_dir := sources
 include	$(dir)/rules.mk
+
+modules/%.w: 
+	$(PYTHON) literale/prepare.py -b $(dir $@) $@ | \
+		$(PYTHON) literale/tangle.py -d $(dir $(call MOD_2_SRC, $@))
 
 build/%.o: sources/%.s
 	@echo "  [CC]    $< -> $@"
@@ -87,6 +93,7 @@ clean:
 info:
 	@echo Targets [$(TARGETS)]
 	@echo Objects [$(OBJECTS)]
+	@echo Webs [$(WEBS)]
 
 usb: all
 	sudo mount /dev/sdb1 /mnt
