@@ -14,6 +14,8 @@ dir	:= $(d)/debug_server
 include	$(dir)/rules.mk
 
 $(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d)
+SOURCES_$(d)		:= $(call FIND, $(d))
+SOURCES					+= $(SOURCES_$(d))
 
 $(TARGET)				:  LD_FLAGS_TARGET	:= 
 $(TARGET)				:  LD_OBJECTS	:= $(OBJS_$(d))
@@ -23,7 +25,7 @@ $(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-rtdrv-$(ARCH)
 #$(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-bsdrv-$(ARCH)
 # Application
 #$(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-app-$(ARCH)
-$(TARGET)				:  $(OBJS_$(d))
+$(TARGET)				:  $(SOURCES_$(d)) $(OBJS_$(d))
 
 d               := $(dirstack_$(sp))
 sp              := $(basename $(sp))

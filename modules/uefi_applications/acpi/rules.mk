@@ -7,6 +7,8 @@ TARGETS 				+= $(call SRC_2_BIN, $(TARGET))
 OBJS_$(d)				:= $(call SRC_2_OBJ, \
 										$(d)/efi.o)
 OBJECTS 				+= $(OBJS_$(d))
+SOURCES_$(d)		:= $(call FIND, $(d))
+SOURCES					+= $(SOURCES_$(d))
 
 $(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d)
 

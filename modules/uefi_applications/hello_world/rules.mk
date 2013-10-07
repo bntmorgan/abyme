@@ -9,6 +9,8 @@ OBJS_$(d)				:= $(call SRC_2_OBJ, \
 OBJECTS 				+= $(OBJS_$(d))
 
 $(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d)
+SOURCES_$(d)		:= $(call FIND, $(d))
+SOURCES					+= $(SOURCES_$(d))
 
 $(TARGET)				:  LD_FLAGS_TARGET	:= 
 $(TARGET)				:  LD_OBJECTS	:= $(OBJS_$(d))

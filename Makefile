@@ -42,6 +42,10 @@ define MOD_2_SRC
     $(foreach src,$(1),$(patsubst modules/%,sources/%,$(src)))
 endef
 
+define FIND
+    $(shell find $(1))
+endef
+
 all: targets
 # make -C test
 
@@ -49,19 +53,23 @@ all: targets
 TARGETS :=
 OBJECTS :=
 WEBS		:=
+SOURCES :=
 
 dir	:= modules
 target_dir := sources
 include	$(dir)/rules.mk
 
 sources/%temoin:
-	@for w in $^; do \
+	for w in $^; do \
 		filename=`basename $$w`; \
 		if [ "$${filename%.*}" = "root" ]; then \
 			$(PYTHON) literale/prepare.py -b `dirname $$w` `basename $$w` | $(PYTHON) literale/tangle.py -d $(dir $@); \
 			touch $@; \
 		fi \
 	done
+
+# Copy rule
+sources: $(call MOD_2_SRC, $(SOURCES))
 
 build/%.o: sources/%.s
 	@echo "  [CC]    $< -> $@"
@@ -93,7 +101,11 @@ tests/%:
 	@mkdir -p $(dir $@)
 	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_TARGET) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
 
-targets: $(WEBS) $(patsubst sources/%, binary/%, $(TARGETS))
+sources/%: modules/%
+	mkdir -p $(dir $@)
+	cp -r $^ $@
+
+targets: sources $(WEBS) $(patsubst sources/%, binary/%, $(TARGETS))
 
 clean:
 	@rm -fr sources
@@ -103,6 +115,7 @@ info:
 	@echo Targets [$(TARGETS)]
 	@echo Objects [$(OBJECTS)]
 	@echo Webs [$(WEBS)]
+	@echo Sources [$(SOURCES)]
 
 usb: all
 	sudo mount /dev/sdb1 /mnt
