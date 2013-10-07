@@ -104,7 +104,7 @@ tests/%:
 
 sources/%: modules/%
 	@mkdir -p $(dir $@)
-	@cp -r $^ $@
+	@cp -r --force $^ $@
 	@echo "  [CP]    $^ -> $@"
 
 targets: sources $(WEBS) $(patsubst sources/%, binary/%, $(TARGETS))

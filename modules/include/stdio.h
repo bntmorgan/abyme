@@ -3,10 +3,6 @@
 
 #include <efi.h>
 #include "types.h"
-//TODO: on ne devrait pas avoir a inclure ce fichier, non???
-#include "cpu.h"
-
-//#include "hardware/cpu.h"
 
 #define PRINTK(stop, msg, ...)                                       \
   do {                                                               \
@@ -15,7 +11,9 @@
     printk(msg);                                                     \
     printk(__VA_ARGS__);                                             \
     if (stop == 1) {                                                 \
-      cpu_stop();                                                    \
+      __asm__ __volatile__("cli");                                   \
+      __asm__ __volatile__("hlt");                                   \
+      while (1);                                                     \
     }                                                                \
   } while (0)
 
