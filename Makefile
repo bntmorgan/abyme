@@ -30,11 +30,11 @@ endif
 LD_FLAGS_ALL		:= -nostdlib -T $(EFI_LDS) -shared -Bsymbolic -L$(EFI_PATH) $(EFI_CRT_OBJS) -znocombreloc -fPIC --no-undefined
 
 define SRC_2_OBJ
-    $(foreach src,$(1),$(patsubst sources/%,build/%,$(src)))
+    $(foreach src,$(1),$(patsubst modules/%,build/%,$(src)))
 endef
 
 define SRC_2_BIN
-    $(foreach src,$(1),$(patsubst sources/%,binary/%,$(src)))
+    $(foreach src,$(1),$(patsubst modules/%,binary/%,$(src)))
 endef
 
 all: targets
@@ -44,7 +44,8 @@ all: targets
 TARGETS :=
 OBJECTS :=
 
-dir	:= sources
+dir	:= modules
+target_dir := sources
 include	$(dir)/rules.mk
 
 build/%.o: sources/%.s
