@@ -60,11 +60,12 @@ target_dir := sources
 include	$(dir)/rules.mk
 
 sources/%temoin:
-	for w in $^; do \
+	@for w in $^; do \
 		filename=`basename $$w`; \
 		if [ "$${filename%.*}" = "root" ]; then \
 			$(PYTHON) literale/prepare.py -b `dirname $$w` `basename $$w` | $(PYTHON) literale/tangle.py -d $(dir $@); \
 			touch $@; \
+			echo '  [W@]    '$$w; \
 		fi \
 	done
 
@@ -87,14 +88,14 @@ binary/%.efi: binary/%.elf
 		-j .rela -j .reloc -j .padding_end \
 		$(OBJCPY_FLAGS_TARGET) \
 	  $< $@
-		cp $< $<.toto
+		@cp $< $<.toto
 		
 	@#strip $@
 
 binary/%.elf:
-	@echo "  [LD]    $< -> $@"
+	@echo "  [LD]    $@"
 	@mkdir -p $(dir $@)
-	$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_TARGET) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
+	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_TARGET) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
 
 tests/%:
 	@echo "  [LD]    $< -> $@"
@@ -102,8 +103,9 @@ tests/%:
 	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_TARGET) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
 
 sources/%: modules/%
-	mkdir -p $(dir $@)
-	cp -r $^ $@
+	@mkdir -p $(dir $@)
+	@cp -r $^ $@
+	@echo "  [CP]    $^ -> $@"
 
 targets: sources $(WEBS) $(patsubst sources/%, binary/%, $(TARGETS))
 
