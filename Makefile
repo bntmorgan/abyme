@@ -38,6 +38,10 @@ define SRC_2_BIN
     $(foreach src,$(1),$(patsubst modules/%,binary/%,$(src)))
 endef
 
+define MOD_2_SRC
+    $(foreach src,$(1),$(patsubst modules/%,sources/%,$(src)))
+endef
+
 all: targets
 # make -C test
 
@@ -50,9 +54,14 @@ dir	:= modules
 target_dir := sources
 include	$(dir)/rules.mk
 
-modules/%.w: 
-	$(PYTHON) literale/prepare.py -b $(dir $@) $@ | \
-		$(PYTHON) literale/tangle.py -d $(dir $(call MOD_2_SRC, $@))
+sources/%temoin:
+	@for w in $^; do \
+		filename=`basename $$w`; \
+		if [ "$${filename%.*}" = "root" ]; then \
+			$(PYTHON) literale/prepare.py -b `dirname $$w` `basename $$w` | $(PYTHON) literale/tangle.py -d $(dir $@); \
+			touch $@; \
+		fi \
+	done
 
 build/%.o: sources/%.s
 	@echo "  [CC]    $< -> $@"
@@ -84,7 +93,7 @@ tests/%:
 	@mkdir -p $(dir $@)
 	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_TARGET) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
 
-targets: $(patsubst sources/%, binary/%, $(TARGETS))
+targets: $(WEBS) $(patsubst sources/%, binary/%, $(TARGETS))
 
 clean:
 	@rm -fr sources
