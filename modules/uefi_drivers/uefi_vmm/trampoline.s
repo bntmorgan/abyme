@@ -1,3 +1,6 @@
+trampoline_start:
+.global trampoline_start
+
 .global start16
 .org 0
 
@@ -209,3 +212,6 @@ start64:
   call *%rax
 end64:
   jmp end64
+
+trampoline_end:
+.global trampoline_end
