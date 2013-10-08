@@ -42,8 +42,16 @@ define MOD_2_SRC
     $(foreach src,$(1),$(patsubst modules/%,sources/%,$(src)))
 endef
 
+define SVG_2_PDF
+    $(foreach src,$(1),$(patsubst modules/%.svg,sources/%.pdf,$(src)))
+endef
+
 define FIND
-    $(shell find $(1) -type f | grep -v '/\.' | grep -v 'mk$$' | grep -v '\.w$$')
+    $(shell find $(1) -type f | grep -v '/\.' | grep -v 'mk$$' | grep -v '\.w$$' | grep -v '\.svg$$')
+endef
+
+define FIND_FIGURES
+    $(shell find $(1) -type f | grep -i '\.svg$$')
 endef
 
 all: targets
@@ -53,6 +61,7 @@ all: targets
 TARGETS :=
 OBJECTS :=
 WEBS		:=
+FIGS 		:=
 SOURCES :=
 
 dir	:= modules
@@ -68,7 +77,7 @@ sources/%temoin:
 			$(PYTHON) literale/prepare.py -b `dirname $$w` `basename $$w` | $(PYTHON) literale/weave.py latex > $(dir $@)/doc.tex; \
 			touch $@; \
 			echo '  [TX]    '$(dir $@)doc.tex; \
-			cd $(dir $@) && pdflatex doc.tex > /dev/null &&  pdflatex doc.tex > /dev/null;\
+			cd $(dir $@) && pdflatex doc.tex > /dev/null && pdflatex doc.tex > /dev/null;\
 		fi \
 	done
 
@@ -105,6 +114,11 @@ tests/%:
 	@mkdir -p $(dir $@)
 	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_TARGET) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
 
+sources/%.pdf: modules/%.svg
+	@mkdir -p $(dir $@)
+	@echo "  [IS]    $^ -> $@"
+	@inkscape $< --export-pdf="$@"
+
 sources/%: modules/%
 	@mkdir -p $(dir $@)
 	@cp -r --force $^ $@
@@ -121,6 +135,7 @@ info:
 	@echo Objects [$(OBJECTS)]
 	@echo Webs [$(WEBS)]
 	@echo Sources [$(SOURCES)]
+	@echo Figures [$(FIGS)]
 
 usb: all
 	sudo mount /dev/sdb1 /mnt

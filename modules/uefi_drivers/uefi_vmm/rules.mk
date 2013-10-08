@@ -23,7 +23,9 @@ SOURCES					+= $(SOURCES_$(d))
 WEB							:= $(call MOD_2_SRC, $(d)/temoin)
 WEBS						+= $(WEB)
 WEBS_$(d)				:= $(d)/root.w
-$(WEB)					:	 $(WEBS_$(d))
+FIGS_$(d)				:= $(call SVG_2_PDF, $(call FIND_FIGURES, $(d)/figures))
+FIGS 						+= $(FIGS_$(d))
+$(WEB)					:	 $(FIGS_$(d)) $(WEBS_$(d))
 
 $(TARGET)				:  LD_FLAGS_TARGET	:= 
 $(TARGET)				:  LD_OBJECTS	:= $(OBJS_$(d))
