@@ -43,7 +43,7 @@ define MOD_2_SRC
 endef
 
 define FIND
-    $(shell find $(1))
+    $(shell find $(1) -type f | grep -v '/\.' | grep -v '/mk$$')
 endef
 
 all: targets
