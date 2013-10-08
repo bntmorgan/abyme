@@ -68,7 +68,7 @@ sources/%temoin:
 			$(PYTHON) literale/prepare.py -b `dirname $$w` `basename $$w` | $(PYTHON) literale/weave.py latex > $(dir $@)/doc.tex; \
 			touch $@; \
 			echo '  [TX]    '$(dir $@)doc.tex; \
-			cd $(dir $@) && pdflatex doc.tex > /dev/null; \
+			cd $(dir $@) && pdflatex doc.tex > /dev/null &&  pdflatex doc.tex > /dev/null;\
 		fi \
 	done
 
@@ -78,7 +78,7 @@ sources: $(call MOD_2_SRC, $(SOURCES))
 build/%.o: sources/%.s
 	@echo "  [CC]    $< -> $@"
 	@mkdir -p $(dir $@)
-	$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_TARGET) -o $@ -c $<
+	@$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_TARGET) -o $@ -c $<
 
 build/%.o: sources/%.c
 	@echo "  [CC]    $< -> $@"
