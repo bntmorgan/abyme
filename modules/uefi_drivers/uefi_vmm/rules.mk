@@ -5,7 +5,7 @@ d               := $(dir)
 TARGET					:= $(call SRC_2_BIN, $(d)/efi.efi)
 TARGETS 				+= $(call SRC_2_BIN, $(TARGET))
 OBJS_$(d)				:= $(call SRC_2_OBJ, \
-										$(d)/efi.o $(d)/vmm.o $(d)/common/screen.o $(d)/common/stdio.o $(d)/common/stdlib.o $(d)/common/debug.o $(d)/cpu.o $(d)/cpuid.o $(d)/msr.o $(d)/vmexit.o $(d)/setup.o $(d)/vmcs.o $(d)/gdt.o $(d)/mtrr.o $(d)/common/string.o $(d)/ept.o $(d)/msr_bitmap.o $(d)/paging.o $(d)/io_bitmap.o $(d)/pci.o, $(d)/test.o $(d)/smp.o)
+										$(d)/efi.o $(d)/vmm.o $(d)/common/screen.o $(d)/common/stdio.o $(d)/common/stdlib.o $(d)/common/debug.o $(d)/cpu.o $(d)/cpuid.o $(d)/msr.o $(d)/vmexit.o $(d)/setup.o $(d)/vmcs.o $(d)/gdt.o $(d)/mtrr.o $(d)/common/string.o $(d)/ept.o $(d)/msr_bitmap.o $(d)/paging.o $(d)/io_bitmap.o $(d)/pci.o $(d)/trampo.o, $(d)/test.o $(d)/smp.o)
 
 OBJECTS 				+= $(OBJS_$(d))
 
@@ -22,7 +22,7 @@ SOURCES					+= $(SOURCES_$(d))
 # New awesome rocking WEB
 WEB							:= $(call MOD_2_SRC, $(d)/temoin)
 WEBS						+= $(WEB)
-WEBS_$(d)				:= $(d)/root.w
+WEBS_$(d)				:= $(d)/root.w $(d)/smp.w
 FIGS_$(d)				:= $(call SVG_2_PDF, $(call FIND_FIGURES, $(d)/figures))
 FIGS 						+= $(FIGS_$(d))
 $(WEB)					:	 $(FIGS_$(d)) $(WEBS_$(d))

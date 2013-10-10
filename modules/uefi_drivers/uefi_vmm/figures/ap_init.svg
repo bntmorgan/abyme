@@ -53,13 +53,13 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.98994949"
-     inkscape:cx="255.45313"
-     inkscape:cy="148.60665"
+     inkscape:zoom="1.4"
+     inkscape:cx="206.66892"
+     inkscape:cy="219.58123"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="true"
-     inkscape:window-width="1676"
+     inkscape:window-width="836"
      inkscape:window-height="1027"
      inkscape:window-x="0"
      inkscape:window-y="19"
@@ -88,7 +88,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -103,27 +103,27 @@
        width="100"
        height="60"
        x="160"
-       y="262.36218"
+       y="262.36215"
        rx="0"
        ry="0" />
     <text
        xml:space="preserve"
        style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-       x="208.71582"
-       y="287.328"
+       x="209.43848"
+       y="287.15219"
        id="text3031-7"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3033-3"
-         x="208.71582"
-         y="287.328">data AP</tspan><tspan
+         x="209.43848"
+         y="287.15219">param AP</tspan><tspan
          sodipodi:role="line"
-         x="208.71582"
-         y="312.328"
+         x="209.43848"
+         y="312.15219"
          id="tspan3061">init*</tspan><tspan
          sodipodi:role="line"
-         x="208.71582"
-         y="337.328"
+         x="209.43848"
+         y="337.15219"
          id="tspan3059" /></text>
     <rect
        style="fill:#ffffff;fill-opacity:1;stroke:#333333;stroke-width:0.61237246;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
@@ -131,40 +131,40 @@
        width="100"
        height="40"
        x="160"
-       y="332.36218"
+       y="322.36215"
        rx="0"
        ry="0" />
     <text
        xml:space="preserve"
        style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
        x="210.59082"
-       y="359.64246"
+       y="349.64243"
        id="text3031-3"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3033-8"
          x="210.59082"
-         y="359.64246">A20</tspan></text>
+         y="349.64243">A20</tspan></text>
     <rect
        style="fill:#ffffff;fill-opacity:1;stroke:#333333;stroke-width:0.61237246;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
        id="rect3018-2-5"
        width="100"
        height="40"
        x="160"
-       y="372.36218"
+       y="362.36215"
        rx="0"
        ry="0" />
     <text
        xml:space="preserve"
        style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
        x="209.51172"
-       y="399.51062"
+       y="389.51059"
        id="text3031-3-0"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3033-8-7"
          x="209.51172"
-         y="399.51062">GDT PM</tspan></text>
+         y="389.51059">GDT PM</tspan></text>
     <rect
        style="fill:#ffffff;fill-opacity:1;stroke:#333333;stroke-width:0.61237246;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
        id="rect3018-3-5"
@@ -192,17 +192,6 @@
     <text
        xml:space="preserve"
        style="font-size:20px;font-style:normal;font-weight:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-       x="296.00098"
-       y="299.6864"
-       id="text3147"
-       sodipodi:linespacing="125%"><tspan
-         sodipodi:role="line"
-         id="tspan3149"
-         x="296.00098"
-         y="299.6864">Stack AP init</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:20px;font-style:normal;font-weight:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
        x="296.19629"
        y="129.81824"
        id="text3147-7"
@@ -217,60 +206,60 @@
        width="100"
        height="40"
        x="160"
-       y="412.36218"
+       y="402.36215"
        rx="0"
        ry="0" />
     <text
        xml:space="preserve"
        style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
        x="209.51172"
-       y="439.51062"
+       y="429.51059"
        id="text3031-3-0-6"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3033-8-7-6"
          x="209.51172"
-         y="439.51062">GDT LM</tspan></text>
+         y="429.51059">GDT LM</tspan></text>
     <rect
        style="fill:#ffffff;fill-opacity:1;stroke:#333333;stroke-width:0.61237246;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
        id="rect3018-2-5-9"
        width="100"
        height="40"
        x="160"
-       y="452.36218"
+       y="442.36215"
        rx="0"
        ry="0" />
     <text
        xml:space="preserve"
        style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
        x="209.51172"
-       y="479.51062"
+       y="469.51059"
        id="text3031-3-0-5"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3033-8-7-64"
          x="209.51172"
-         y="479.51062">CR3 LM</tspan></text>
+         y="469.51059">CR3 LM</tspan></text>
     <rect
        style="fill:#ffffff;fill-opacity:1;stroke:#333333;stroke-width:0.61237246;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
        id="rect3018-2-5-0"
        width="100"
        height="40"
        x="160"
-       y="492.36218"
+       y="482.36215"
        rx="0"
        ry="0" />
     <text
        xml:space="preserve"
        style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
        x="210.59082"
-       y="519.64246"
+       y="509.64243"
        id="text3031-3-0-2"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3033-8-7-2"
          x="210.59082"
-         y="519.64246">VMM AP</tspan></text>
+         y="509.64243">VMM AP</tspan></text>
     <rect
        style="fill:#ffffff;fill-opacity:1;stroke:#333333;stroke-width:0.61237246;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
        id="rect3018-2-1"
@@ -314,21 +303,21 @@
     <text
        xml:space="preserve"
        style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-       x="208.71582"
-       y="217.32799"
+       x="209.43848"
+       y="217.15221"
        id="text3031-7-9"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3033-3-0"
-         x="208.71582"
-         y="217.32799">data AP</tspan><tspan
+         x="209.43848"
+         y="217.15221">param AP</tspan><tspan
          sodipodi:role="line"
-         x="208.71582"
-         y="242.32799"
+         x="209.43848"
+         y="242.15221"
          id="tspan3061-1">init</tspan><tspan
          sodipodi:role="line"
-         x="208.71582"
-         y="267.328"
+         x="209.43848"
+         y="267.15222"
          id="tspan3059-1" /></text>
     <text
        xml:space="preserve"
@@ -345,16 +334,16 @@
        xml:space="preserve"
        style="font-size:20px;font-style:normal;font-weight:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
        x="296.19629"
-       y="425.72156"
+       y="385.72153"
        id="text3147-7-6"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3149-9-7"
          x="296.19629"
-         y="425.72156">Code AP init </tspan><tspan
+         y="385.72153">Code AP init </tspan><tspan
          sodipodi:role="line"
          x="296.19629"
-         y="450.72156"
+         y="410.72153"
          id="tspan5006">@ &lt; 1Mb</tspan></text>
     <rect
        style="fill:#ffffff;fill-opacity:1;stroke:#333333;stroke-width:0.61237246;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
@@ -362,23 +351,23 @@
        width="100"
        height="40"
        x="160"
-       y="542.36218"
+       y="532.36218"
        rx="0"
        ry="0" />
     <text
        xml:space="preserve"
        style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
        x="210.26855"
-       y="569.64246"
+       y="559.64246"
        id="text3031-7-3-5"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          x="210.26855"
-         y="569.64246"
+         y="559.64246"
          id="tspan3145-4">VMM BSP</tspan><tspan
          sodipodi:role="line"
          x="210.26855"
-         y="594.64246"
+         y="584.64246"
          id="tspan3059-7-3" /></text>
     <text
        xml:space="preserve"
@@ -393,13 +382,13 @@
          y="569.81824">Code</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow2Mend)"
-       d="m 160,122.36218 -30,0 0,229.99999 30,0 0,0 0,0"
+       d="m 160,122.36218 -30,0 0,219.99999 30,0 0,0 0,0"
        id="path4188"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cccccc" />
     <path
        style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow2Mend)"
-       d="m 160,512.36215 -30,0 0,50.00002 30,0"
+       d="m 160,502.36213 -30,0 0,50.00002 30,0"
        id="path4820"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cccc" />
