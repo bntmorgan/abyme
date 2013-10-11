@@ -22,7 +22,7 @@ SOURCES					+= $(SOURCES_$(d))
 # New awesome rocking WEB
 WEB							:= $(call MOD_2_SRC, $(d)/temoin)
 WEBS						+= $(WEB)
-WEBS_$(d)				:= $(d)/root.w $(d)/smp.w
+WEBS_$(d)				:= $(d)/root.w $(d)/smp.w $(d)/multicore.w $(d)/trampoline.w
 FIGS_$(d)				:= $(call SVG_2_PDF, $(call FIND_FIGURES, $(d)/figures))
 FIGS 						+= $(FIGS_$(d))
 $(WEB)					:	 $(FIGS_$(d)) $(WEBS_$(d))

@@ -26,6 +26,6 @@
 
 \def\figwidth{12cm}
 
-@i smp.w
+@i multicore.w
 
 \end{document}
