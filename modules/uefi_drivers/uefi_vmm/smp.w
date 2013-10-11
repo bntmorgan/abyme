@@ -181,8 +181,8 @@ contenant le pointeur de GDT. Le pointeur de GDT est déjà préparé par le BSP
 présent dans la structure AP param. Nous la recopions dans cette zone mémoire et
 chargeons GDTR avec le contenu de celle-ci. Enfin nous pouvons modifier le CR0
 et passer en mode protégé avec un long jump.
-Il est important de noter que la GDT que nous chargeons pour le mode protégé doit
-être telle que rip == 0 à l'addresse protected mode!!
+Il est important de noter que la GDT que nous chargeons pour le mode protégé
+doit être telle que rip == 0 à l'addresse protected mode!!
 
 @+ gdt pm
   /*
@@ -281,7 +281,8 @@ la requète d'entrée DANS IA32\_EFER. Nous devons pas oublier d'activer PAE
   lret
 @-
 
-Sets the lm segments, jump into the VMM code and that's it !
+Mettons en place les segments lm. Nous n'avons plus de gdt telle que rip == à
+start64. Nous devons retrouver la structure param de manière relative à rip.
 
 @+ call vmm
 .code64
@@ -293,8 +294,11 @@ start64:
   mov %ax, %fs
   mov %ax, %ss
   mov %ax, %ss
+  callq get_address_lm
+get_address_lm:
+  pop %rax
   /* Get ap param pointer */
-  movl (%esp), %eax
+  add $(param - start64), %rax
   /* Get vmm_next address */
   movq 16(%eax), %rbx
   /* jumps into the vmm_next function ! */
