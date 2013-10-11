@@ -25,7 +25,7 @@ les infos suivantes :
 \end{itemize}
 
 Un AP s'exécute en mode réel lorsqu'il est activé. Nous avons donc écrit un
-petit bout de code (trampoline) chargé de passé en mode protégé, puis long,
+petit bout de code (trampoline) chargé de passer en mode protégé, puis long,
 d'exécuter du code de l'hyperviseur qui installera la virtualisation et
 haltera le coeur jusqu'à son utilisation par l'OS.
 
