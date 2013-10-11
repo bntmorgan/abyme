@@ -7,7 +7,7 @@ détail de l'initialisation de la virtualisation.
 
 Une fois que le VMM du bootstrap processor (BSP) c'est installé correctement, il
 va activer un par un, en série les application processors (AP), qui vont
-exécuter un séquence d'initialisation particulière, activation la virtualisation
+exécuter une séquence d'initialisation particulière, activation la virtualisation
 et installer le VMM. Nous n'entrerons pas dans les détails de l'activation de la
 virtualisation et de l'installation du VMM ici.
 
@@ -36,7 +36,7 @@ active. dans une structure de la forme suivante :
   \item Le pointeur de GDT protégé;
   \item Le pointeur de GDT long;
   \item Le CR3 long;
-  \item Le pointeur de foction 64 AMD-64 ABI pour l'exécution de la suite;
+  \item Le pointeur de fonction 64 AMD-64 ABI pour l'exécution de la suite;
 \end{itemize}
 
 @+ smp ap param
@@ -74,7 +74,6 @@ trampoline_start:
 .global trampoline_start
 
 @< get address >
-@< get bsp parameters >
 @< a20 >
 @< gdt pm >
 @< pm >
@@ -82,13 +81,14 @@ trampoline_start:
 @< cr3 lm >
 @< lm >
 @< call vmm >
+@< globals >
 
 trampoline_end:
 .global trampoline_end
 @-
 
-Les glonales trampoline\_start et trampoline\_end servant a marquer le début et
-la fin de trampoline pour pouvoir le recopier dans une zone < à 1 Mo (mode
+Les globales trampoline\_start et trampoline\_end servant a marquer le début et
+la fin de trampoline pour pouvoir le recopier dans une zone $<$ à 1 Mo (mode
 réel).
 Ce code s'apelle trampoline parcequ'il passe du mode réel au mode long en très
 peu de temps.
@@ -105,8 +105,6 @@ données, sinon le rip relative adressing ne marcherait pas.
 .code16
 start16:
   jmp start16_cont
-
-param: .long 0
 
 start16_cont:
   /*
@@ -128,8 +126,6 @@ start16_cont:
   xor %ebx, %ebx
   call get_address
 get_address:
-  test %ax, %ax
-  jnz cs_adjusted 
   pop %bx
   /* ax = get_address */
   mov %bx, %ax
@@ -148,43 +144,16 @@ get_address:
    * Simulate a long jump to get_address using long ret.
    */
   pushw %cx
+  /* rip relative cs_adjusted address */
+  add $(cs_adjusted - get_address), %ax
   pushw %ax
   lret
 cs_adjusted:
-  /* GDT pointer */
-  .long 0x90909090
-  .long 0x90909090
   /*
    * Update data segment.
    */
   mov %cx, %ds
 @-
-
-Nous allons récupérer l'adresse de la structure params et l'empiler pour pouvoir
-l'utiliser plus tard. nous allons aussi empiler l'adresse de get\_address, qui
-pourra nous servir pour la suite.
-
-@+ get bsp parameters
-  calll bsp_parameters
-  bsp_parameters:
-  pop %ebx
-  mov %ebx, %eax
-  sub $(bsp_parameters - param), %eax
-  /* BSP parameters label address */
-  pushl %ebx
-  /* Params label address */
-  pushl %eax
-@-
-
-Ce qui nous donne la stack représentée par la figure
-\ref{fig:stak_trampo_bsp_params}.
-
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\figwidth]{figures/stak_trampo_bsp_params.pdf}
-  \caption{Pile APs après récupération des paramètres}
-  \label{fig:stak_trampo_bsp_params}
-\end{figure}
 
 Nous activons ensuite la gate a20
 
@@ -212,6 +181,8 @@ contenant le pointeur de GDT. Le pointeur de GDT est déjà préparé par le BSP
 présent dans la structure AP param. Nous la recopions dans cette zone mémoire et
 chargeons GDTR avec le contenu de celle-ci. Enfin nous pouvons modifier le CR0
 et passer en mode protégé avec un long jump.
+Il est important de noter que la GDT que nous chargeons pour le mode protégé doit
+être telle que rip == 0 à l'addresse protected mode!!
 
 @+ gdt pm
   /*
@@ -219,16 +190,16 @@ et passer en mode protégé avec un long jump.
    * We use our own gdt until we reach the protected mode.
    * Update the gdt pointer (we didn't know where we are in memory).
    */
-  /* Get ap param structure pointer */
-  movl (%esp), %eax
+  /* Get ap param structure pointer rip is zero at cs_adjusted !*/
+  movl $(param - cs_adjusted), %eax
   /* gdt size */
   movw (%eax), %bx
-  mov %bx, 0x0
+  movw %bx, gdtptr - cs_adjusted
   /* gdt address */
   movl 2(%eax), %ebx
-  movl %ebx, 0x0
+  movl %ebx, gdtptr - cs_adjusted + 2
   /* We know that gdt is at 0x0 address cs => rip 0*/
-  lgdt 0x0
+  lgdt gdtptr - cs_adjusted
   /*
    * Go to protected mode.
    */
@@ -238,21 +209,19 @@ et passer en mode protégé avec un long jump.
   /*
    * Again, jump using a long return.
    */
-  /* Get cs_adjusted rip */
-  movl 2(%esp), %eax
-  /* Get protected_mode address */
-  add $(protected_mode - bsp_parameters), %ebx
+  /* Get protected_mode address, cs_adjusted rip is zero !*/
+  mov $(protected_mode - cs_adjusted), %ebx
   /* Prepare lret stack */
   pushw $0x8
   push %bx
   lret
 @-
 
-Pour commencer nous metto sà jour les selecteurs de segments de donnée et de
-pile.
+Pour commencer nous mettons à jour les selecteurs de segments de donnée et de
+pile. Nous savons que notre rip == 0 à partir de protected mode.
 
 @+ pm
-  protected_mode:
+protected_mode:
   /*
    * Update segment selectors.
    */
@@ -264,16 +233,14 @@ pile.
 Ensuite nous préparons la GDT lm de la même manière que pour la GDT pm.
 
 @+ gdt lm
-  /* Get ap param structure pointer */
-  movl (%esp), %eax
   /* gdt size */
-  movw 6(%eax), %bx
-  mov %bx, 0x0
+  movw param - protected_mode + 6, %bx
+  movw %bx, gdtptr - protected_mode
   /* gdt address */
-  movl 8(%eax), %ebx
-  movl %ebx, 0x0
+  movl param - protected_mode + 8, %ebx
+  movl %ebx, gdtptr - protected_mode + 2
   /* We know that gdt is at 0x0 address cs => rip 0*/
-  lgdt 0x0
+  lgdt gdtptr - protected_mode
 @-
 
 Une fois GDTR chargé, nous chargeons le CR3 pour le contexte de pagination mode
@@ -308,11 +275,8 @@ la requète d'entrée DANS IA32\_EFER. Nous devons pas oublier d'activer PAE
    * Jump into 64 mode using far ret.
    * TODO: adjust 0x10 (depend on gdt).
    */
-  /* Get cs_adjusted rip */
-  movl 2(%esp), %eax
   /* Get protected_mode address */
-  add $(start64 - bsp_parameters), %ebx
-  pushl $0x10
+  pushl $(start64 - protected_mode)
   pushl %ebx
   lret
 @-
@@ -337,6 +301,16 @@ start64:
   callq *%rbx
 end:
   jmp end
+@-
+
+@++ globals
+param: 
+  /* AP params */
+  .long 0x90909090
+gdtptr:
+  /* GDT pointer */
+  .long 0x90909090
+  .long 0x90909090
 @-
 
 \section{Fichiers}
