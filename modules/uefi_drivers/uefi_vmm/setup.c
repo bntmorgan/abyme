@@ -15,6 +15,7 @@
 #include "msr_bitmap.h"
 #include "io_bitmap.h"
 #include "debug_server/debug_server.h"
+#include "smp.h"
 
 //extern char __text;
 extern uint8_t _padding_begin_a;
@@ -30,7 +31,7 @@ uint8_t vmxon[4096] __attribute((aligned(0x1000)));
 uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
 
 void vmm_main() {
-  debug_server_init();
+  // debug_server_init();
   cpuid_setup();
 
   /* TODO: test pagination id-map, gdt-flat, etc. */
@@ -44,8 +45,10 @@ void vmm_main() {
   INFO("_padding_end_a   %X\n", &_padding_end_a);
   INFO("_padding_end_b   %X\n", &_padding_end_b);
 
+  /* Test smp */
+  smp_setup();
 
-  gdt_setup_guest_gdt();
+  /*gdt_setup_guest_gdt();
   gdt_setup_host_gdt();
   paging_setup_host_paging();
   mtrr_create_ranges();
@@ -57,7 +60,7 @@ void vmm_main() {
   io_bitmap_setup();
   // Ethernet card protection
   io_bitmap_set_for_port(PCI_CONFIG_ADDR);
-  io_bitmap_set_for_port(PCI_CONFIG_DATA);
+  io_bitmap_set_for_port(PCI_CONFIG_DATA);*/
 
   /* TODO Dump the core state
   struct core_gpr gpr;
@@ -65,9 +68,9 @@ void vmm_main() {
   read_core_state(&gpr, &cr);
   dump_core_state(&gpr, &cr);*/
 
-  vmm_setup();
+  /*vmm_setup();
   vmm_vm_setup_and_launch();
-  extern uint8_t _padding_begin_b;
+  extern uint8_t _padding_begin_b;*/
 }
 
 void vmm_setup() {

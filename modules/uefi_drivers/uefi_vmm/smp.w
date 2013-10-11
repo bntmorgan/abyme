@@ -190,14 +190,14 @@ void smp_setup(void) {
   smp_print_info();
   smp_default_setup();
   smp_activate_apic();
-  smp_print_trampoline((uint8_t *) &trampoline_start); // TODO
-  smp_prepare_trampoline(); // TODO
-  smp_print_trampoline((uint8_t *) (SMP_AP_VECTOR << 12)); // TODO
+  // smp_print_trampoline((uint8_t *) &trampoline_start); // TODO
+  // smp_prepare_trampoline(); // TODO
+  // smp_print_trampoline((uint8_t *) (SMP_AP_VECTOR << 12)); // TODO
   smp_search_mp_configuration_table_header();
   if (smp_mp_configuration_table_header != 0) {
     smp_print_mp_configuration_table_header(); // TODO
-    smp_process_entries();
-    smp_activate_ap(); // TODO
+    // smp_process_entries();
+    // smp_activate_ap(); // TODO
   }
 }
 @-
@@ -222,7 +222,11 @@ uint64_t smp_search_mp_floating_pointer_structure(uint64_t address, uint64_t len
   uint32_t i;
   for (i = 0; i < length - sizeof(mp_fps_signature); i++) {
     if ( *((uint32_t *) (address + i)) == *((uint32_t *) &mp_fps_signature[0])) {
+      INFO("MP Floating Pointer Structure FOUND !\n");
       return address + i;
+    }
+    if (i % 0x100 == 0) {
+      INFO("I : %x\n", i);
     }
   }
   return 0;
@@ -535,6 +539,7 @@ void smp_prepare_trampoline(void) {
 #include <efi.h>
 
 @< smp ap param >
+void smp_setup(void);
 
 #endif//__SMP_H__
 @-
