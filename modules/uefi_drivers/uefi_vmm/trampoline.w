@@ -35,13 +35,12 @@ réel).
 Ce code s'apelle trampoline parcequ'il passe du mode réel au mode long en très
 peu de temps.
 
-Le BSP passe des paramètres à l'AP via un pointeur sur une structure de données
-mise en place au préalable. La première étape consiste donc à
-récupérer ce pointeur. Ensuite nous devons récupérer RIP de manière à pouvoir
-nous adresser relativement à lui. Enfin pour pouvoir exécuter correctement
-l'initialisation du coeur, nous devons modifier cs en mode réel pour que rip
-soit virtuellement à zéro. Nous faisons la même chose avec le segment de
-données, sinon le rip relative adressing ne marcherait pas.
+Le BSP passe des paramètres à l'AP via une structure de données
+mise en place au préalable. La première étape consiste donc à récupérer RIP de
+manière à pouvoir nous adresser relativement à lui. Enfin pour pouvoir exécuter
+correctement l'initialisation du coeur, nous devons modifier cs en mode réel
+pour que rip soit virtuellement à zéro. Nous faisons la même chose avec le
+segment de données, sinon le rip relative adressing ne marcherait pas.
 
 @+ get address
 .code16
@@ -132,13 +131,11 @@ doit être telle que rip == 0 à l'addresse protected mode!!
    * We use our own gdt until we reach the protected mode.
    * Update the gdt pointer (we didn't know where we are in memory).
    */
-  /* Get ap param structure pointer rip is zero at cs_adjusted !*/
-  movl $(param - cs_adjusted), %eax
   /* gdt size */
-  movw (%eax), %bx
+  movw param - cs_adjusted, %bx
   movw %bx, gdtptr - cs_adjusted
   /* gdt address */
-  movl 2(%eax), %ebx
+  movl param - cs_adjusted + 2, %ebx
   movl %ebx, gdtptr - cs_adjusted + 2
   /* We know that gdt is at 0x0 address cs => rip 0*/
   lgdt gdtptr - cs_adjusted
@@ -191,7 +188,7 @@ diretement dans le code de celui-ci).
 
 @+ cr3 lm
   /* CR3 */
-  movl 12(%eax), %ebx
+  movl param - protected_mode + 12, %ebx
   movl %ebx, %cr3
 @-
 
@@ -239,23 +236,20 @@ start64:
   callq get_address_lm
 get_address_lm:
   pop %rax
-  /* Get ap param pointer */
-  add $(param - start64), %rax
   /* Get vmm_next address */
-  movq 16(%eax), %rbx
+  add $(param - get_address_lm + 16), %rax
   /* jumps into the vmm_next function ! */
-  callq *%rbx
+  callq *%rax
 end:
   jmp end
 @-
 
 @++ globals
-param: 
-  /* AP params */
-  .long 0x90909090
 gdtptr:
   /* GDT pointer */
   .long 0x90909090
   .long 0x90909090
+param: 
+  /* AP params */
 @-
 
