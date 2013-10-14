@@ -37,7 +37,7 @@ active. dans une structure de la forme suivante :
 \end{itemize}
 
 @+ smp ap param
-struct ap_param{
+struct ap_param {
   uint16_t gdt_pm_size;
   uint32_t gdt_pm_start;
   uint16_t gdt_lm_size;
@@ -52,6 +52,60 @@ chargement pour l'initialisation d'un AP.
 
 Le code de l'initialisation de l'AP est chargé dans un zone inférieure au
 premier méga par le BSP.
+
+\subsubsection{Chargement du code d'initialisation d'un AP}
+
+Dans l'image binaire UEFI de notre VMM, nous avons inclus un bout de code PIC
+correspondant à la séquence d'initialisation d'un coeur, le trampoline. Cette séquence doit
+être recopiée en mémoire dans un espace $<$ au premier méga octet, un cœur se
+démarrant en mode réel. 
+
+Pour identifier le code trampoline, nous avons crée deux variables globales,
+donts les adresses correspondent respectivement au débutr et à la fin de
+cette section de code.
+
+\begin{itemize}
+\item trampoline\_start;
+\item trampoline\_end;
+\end{itemize}
+
+Avant de copier le code de ce trampoline, il faut s'assurer d'avoir une zone
+mémoire réservée à cet effet. Nous nous appuyons sur les services offerts par
+UEFI pour cette allocation de mémoire. Grâce au bootservice AllocatePages, nous
+ponvons demander au firmware de nous réserver des pages dans une zone inférieure
+au premier méga, mais aussi de type BootService. Ce qui signifie que quand le
+firwmare aura exécuté l'appel transitif, ExitBootServices, entre le firwmare et
+l'OS, cette zone mémoir ene sera plus marquée comme réservé et pourra être
+utilisée par le système d'exploitation, ce qui nous convient parfaitement.
+
+@+ smp allocate trampoline
+
+/* trampoline locations */
+extern uint8_t trampoline_start;
+extern uint8_t trampoline_end;
+extern uint8_t ap_gdtptr;
+extern uint8_t ap_param;
+
+void smp_allocate_trampoline() {
+  EFI_PHYSICAL_ADDRESS *address = (EFI_PHYSICAL_ADDRESS *)0x100000;
+  uint32_t pages = (&trampoline_end - &trampoline_start) / 0x1000 +
+    (((&trampoline_end - &trampoline_start) * 1. / 0x1000 > 0) ? 1 : 0 );
+  INFO("Number of pages to allocate for trampoline 0x%x\n", pages);
+  uint32_t code = uefi_call_wrapper(systab->BootServices->AllocatePages, 4
+      AllocateMaxAddress, EfiBootServicesCode, pages, address);
+  // XXX ULTRA DIRTY
+  address = (EFI_PHYSICAL_ADDRESS *)0x80000;
+  code = 0;
+  if(code != EFI_SUCCESS) {
+    INFO("Failed to allocate memory for trampoline 0x%x, address 0x%x, type\
+        0x%x, memory_type 0x%x, max_memory_type 0x%x\n", code, address,
+        AllocateMaxAddress, EfiBootServicesData, EfiMaxMemoryType);
+    while(1);
+  } else {
+    INFO("Allocated address 0x%x\n", address);
+  }
+}
+@-
 
 \subsubsection{Configuration et activation du multicœur}
 
@@ -190,15 +244,16 @@ void smp_setup(void) {
   smp_print_info();
   smp_default_setup();
   smp_activate_apic();
+  smp_allocate_trampoline();
   // smp_print_trampoline((uint8_t *) &trampoline_start); // TODO
   // smp_prepare_trampoline(); // TODO
   // smp_print_trampoline((uint8_t *) (SMP_AP_VECTOR << 12)); // TODO
-  smp_search_mp_configuration_table_header();
-  if (smp_mp_configuration_table_header != 0) {
-    smp_print_mp_configuration_table_header(); // TODO
+  // smp_search_mp_configuration_table_header();
+  // if (smp_mp_configuration_table_header != 0) {
+    // smp_print_mp_configuration_table_header(); // TODO
     // smp_process_entries();
     // smp_activate_ap(); // TODO
-  }
+  // }
 }
 @-
 
@@ -367,14 +422,15 @@ void smp_activate_ap(void) {
 #include "stdio.h"
 #include "msr.h"
 #include "cpu.h"
+#include "systab.h"
 
 /*
  * See [Intel_August_2012], volume 3, section 8.4.4.
  * See [Multiprocessor_Version1.4_May_1997].
  */
 
-#define SMP_ADDRESS_EBDA_ADDRESS	0x0040e
-#define SMP_ADDRESS_BASE_MEMORY_SIZE	0x00413
+#define SMP_ADDRESS_EBDA_ADDRESS	0x00400e
+#define SMP_ADDRESS_BASE_MEMORY_SIZE	0x004013
 #define SMP_ADDRESS_ROM_START		0xf0000
 #define SMP_ADDRESS_ROM_END		0xfffff
 
@@ -526,6 +582,7 @@ void smp_prepare_trampoline(void) {
   INFO("trampoline cr3: %08X\n", (uint64_t) *trampoline_cr3);
 }
 
+@< smp allocate trampoline >
 @< smp activate apic >
 @< smp search mp configuration table header >
 @< smp process entries >

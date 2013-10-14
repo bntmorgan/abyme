@@ -24,6 +24,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
 
   // Save the uefi systab
   systab = st;
+
   // Initialize gnuefi lib
   InitializeLib(image_handle, st);
   INFO("VMM driver startup\n");
