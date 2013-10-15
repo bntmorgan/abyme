@@ -27,6 +27,8 @@ void printk(char *format, ...);
 
 int getchar();
 
+void printk_bin(uint32_t size, char *sep, uint8_t *data);
+
 #define panic ERROR
 
 #endif

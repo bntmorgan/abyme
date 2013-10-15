@@ -98,8 +98,16 @@ void printk(char *format, ...) {
   __builtin_va_end(values);
 }
 
-/*int getchar() {
-  char c = keyboard_decode(waitkey());
-  printk("%c", c);
-  return c;
-}*/
+void printk_bin(uint32_t size, char *sep, uint8_t *data) {
+  uint32_t i, j;
+  uint8_t d;
+  for (i = size ; i > 0; i--) {
+    d = *(data + i - 1);
+    for (j = 8; j > 0; j--) {
+      printk("%x", (d & 0x80) >> 7);
+      d <<= 1;
+    }
+    printk("%s", sep);
+  }
+  printk("\n");
+}

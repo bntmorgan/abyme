@@ -42,9 +42,9 @@ struct ap_param {
   struct gdt_ptr_32 gdt_ptr_pm;
   // 0x06
   struct gdt_ptr_64 gdt_ptr_lm;
-  // 0x16
+  // 0x10
   uint32_t cr3_lm;
-  // 0x20
+  // 0x14
   uint64_t vmm_next;
 } __attribute__((packed));
 @-
@@ -105,12 +105,24 @@ uint8_t smp_allocate_trampoline() {
 }
 @-
 
-Nous devons ensuite copier trampoline dans la mémoire allouée.
+Nous devons allouer une GDT disponible dans l'espace d'adressage 16-bit pour le
+mode protégé, et une GDT disponible dans l'espace 32-bit pour le mode long.
 
-@+ smp install trampoline
-void smp_install_trampoline() {
-  memcpy(ap_trampoline_start, &trampoline_start, &trampoline_end -
-      &trampoline_start);
+@+ smp allocate gdt pm
+uint8_t *ap_gdt_pm;
+
+uint8_t smp_allocate_gdt_pm() {
+  ap_gdt_pm = (uint8_t *)0x90000;
+  return 0;
+}
+@-
+
+@+ smp allocate gdt lm
+uint8_t *ap_gdt_lm;
+
+uint8_t smp_allocate_gdt_lm() {
+  ap_gdt_lm = (void *)0x91000;
+  return 0;
 }
 @-
 
@@ -125,25 +137,51 @@ tel que adresse logique : $$ \texttt{adresse logique 0} = \texttt{adresse physiq
 
 @+ smp create ap gdt pm
 #define SMP_AP_GDT_PM_SIZE 0x24
-uint8_t ap_gdt_pm[SMP_AP_GDT_PM_SIZE] __attribute((aligned(0x4)));
 extern uint8_t protected_mode;
 
 void smp_create_ap_gdt_pm() {
   struct gdt_entry e;
-  struct ap_param *ap_param = (struct ap_param *)((uint64_t)ap_trampoline_start
-      + (uint64_t)&trampoline_start - (uint64_t)&ap_param);
+  struct ap_param *p = (struct ap_param *)&ap_param;
+  INFO("ap_param address: 0x%x, value 0x%x\n", p, ap_param);
   // Create GDT ptr
-  // ap_param.gdt_pm_base =
-  // Initialize GDT entry
-  memset(&e, 0, sizeof(e));
+  p->gdt_ptr_pm.base = (uint32_t)(uint64_t)ap_gdt_pm;
+  p->gdt_ptr_pm.limit = SMP_AP_GDT_PM_SIZE;
+  INFO("ap_get_pm adress: 0x%x\n", ap_gdt_pm);
   // Initialize GDT
-  memset(ap_gdt_pm, 0, sizeof(uint8_t) * SMP_AP_GDT_PM_SIZE);
+  memset(ap_gdt_pm, 0, SMP_AP_GDT_PM_SIZE);
+  // Entry 0 is null
   // We compute the base of the segments regarding physical loading address and
   // protected\_mode adress
   e.base = (uint32_t)((uint64_t)&protected_mode + (uint64_t)ap_trampoline_start);
-  // The first entry is null
-  // NOOP
-  // The second entry is for code
+  INFO("Computed base of mp segments : 0x%x\n", e.base);
+  e.limit = 0xffffffff;
+  // Entry 1 is for code
+  // G, D
+  e.granularity = 0xc0;
+  // P, DPL = 0, not system, r-x
+  e.access = 0x96;
+  gdt_copy_desc(&e, ap_gdt_pm + 0x8);
+  printk("Code 0x%X\n", *((uint64_t *)(ap_gdt_pm + 0x8)));
+  printk_bin(8, " ", ap_gdt_pm + 0x8);
+  // Entry 2 is for data
+  // G, D
+  e.granularity = 0xc0;
+  // P, DPL = 0, not system, r-x
+  e.access = 0x92;
+  gdt_copy_desc(&e, ap_gdt_pm + 0x10);
+  printk("Data 0x%X\n", *((uint64_t *)(ap_gdt_pm + 0x10)));
+  printk_bin(8, " ", ap_gdt_pm + 0x10);
+}
+@-
+
+Nous devons ensuite copier trampoline dans la mémoire allouée.
+
+@+ smp install trampoline
+void smp_install_trampoline() {
+  INFO("Trampoline installation : 0x%x (0x%x octets) -> 0x%x\n", &trampoline_start,
+      &trampoline_end - &trampoline_start, ap_trampoline_start);
+  memcpy(ap_trampoline_start, &trampoline_start, &trampoline_end -
+      &trampoline_start);
 }
 @-
 
@@ -284,9 +322,10 @@ void smp_setup(void) {
   smp_print_info();
   smp_default_setup();
   smp_activate_apic();
-  if(!smp_allocate_trampoline()) {
-    smp_install_trampoline();
+  if(!smp_allocate_trampoline() && !smp_allocate_gdt_pm() &&
+      !smp_allocate_gdt_lm()) {
     smp_create_ap_gdt_pm();
+    smp_install_trampoline();
     // smp_print_trampoline((uint8_t *) &trampoline_start); // TODO
     // smp_prepare_trampoline(); // TODO
     // smp_print_trampoline((uint8_t *) (SMP_AP_VECTOR << 12)); // TODO
@@ -465,7 +504,6 @@ void smp_activate_ap(void) {
 #include "stdio.h"
 #include "msr.h"
 #include "cpu.h"
-#include "gdt.h"
 #include "systab.h"
 #include "string.h"
 
@@ -634,6 +672,8 @@ void smp_prepare_trampoline(void) {
 }
 
 @< smp allocate trampoline >
+@< smp allocate gdt pm >
+@< smp allocate gdt lm >
 @< smp install trampoline >
 @< smp create ap gdt pm >
 @< smp activate apic >
@@ -647,6 +687,7 @@ void smp_prepare_trampoline(void) {
 #ifndef __SMP_H__
 #define __SMP_H__
 #include <efi.h>
+#include "gdt.h"
 
 @< smp ap param >
 void smp_setup(void);

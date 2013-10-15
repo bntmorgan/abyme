@@ -131,14 +131,8 @@ doit être telle que rip == 0 à l'addresse protected mode!!
    * We use our own gdt until we reach the protected mode.
    * Update the gdt pointer (we didn't know where we are in memory).
    */
-  /* gdt size */
-  movw ap_param - cs_adjusted, %bx
-  movw %bx, ap_gdtptr - cs_adjusted
-  /* gdt address */
-  movl ap_param - cs_adjusted + 2, %ebx
-  movl %ebx, ap_gdtptr - cs_adjusted + 2
   /* We know that gdt is at 0x0 address cs => rip 0*/
-  lgdt ap_gdtptr - cs_adjusted
+  lgdt ap_param - cs_adjusted
   /*
    * Go to protected mode.
    */
@@ -173,14 +167,8 @@ protected_mode:
 Ensuite nous préparons la GDT lm de la même manière que pour la GDT pm.
 
 @+ gdt lm
-  /* gdt size */
-  movw ap_param - protected_mode + 6, %bx
-  movw %bx, ap_gdtptr - protected_mode
-  /* gdt address */
-  movl ap_param - protected_mode + 8, %ebx
-  movl %ebx, ap_gdtptr - protected_mode + 2
   /* We know that gdt is at 0x0 address cs => rip 0*/
-  lgdt ap_gdtptr - protected_mode
+  lgdt ap_param - protected_mode + 0x06
 @-
 
 Une fois GDTR chargé, nous chargeons le CR3 pour le contexte de pagination mode
@@ -189,7 +177,7 @@ diretement dans le code de celui-ci).
 
 @+ cr3 lm
   /* CR3 */
-  movl ap_param - protected_mode + 12, %ebx
+  movl ap_param - protected_mode + 0x10, %ebx
   movl %ebx, %cr3
 @-
 
@@ -238,7 +226,7 @@ start64:
 get_address_lm:
   pop %rax
   /* Get vmm_next address */
-  add $(ap_param - get_address_lm + 16), %rax
+  add $(ap_param - get_address_lm + 0x14), %rax
   /* jumps into the vmm_next function ! */
   callq *%rax
 end:
@@ -246,15 +234,11 @@ end:
 @-
 
 @++ globals
-.global ap_gdtptr
-ap_gdtptr:
-  /* GDT pointer */
-  .long 0x90909090
-  .long 0x90909090
 .global ap_param
 ap_param: 
   /* AP params */
   /* sizeof struct ap_param */
+  .long 0
   .long 0
   .long 0
   .long 0
