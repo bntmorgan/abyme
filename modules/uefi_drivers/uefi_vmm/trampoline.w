@@ -160,6 +160,7 @@ Pour commencer nous mettons à jour les selecteurs de segments de donnée et de
 pile. Nous savons que notre rip == 0 à partir de protected mode.
 
 @+ pm
+.global protected_mode
 protected_mode:
   /*
    * Update segment selectors.
@@ -253,5 +254,12 @@ ap_gdtptr:
 .global ap_param
 ap_param: 
   /* AP params */
+  /* sizeof struct ap_param */
+  .long 0
+  .long 0
+  .long 0
+  .long 0
+  .long 0
+  .long 0
 @-
 

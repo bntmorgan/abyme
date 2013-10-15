@@ -6,14 +6,9 @@
 
 #define VMEM_GDT_SIZE 0x48
 
-struct gdt_ptr {
-  uint16_t limit;
-  uint64_t base;
-} __attribute__((packed));
-
 uint8_t host_gdt[VMEM_GDT_SIZE] __attribute((aligned(0x4)));
-struct gdt_ptr host_gdt_ptr;
-struct gdt_ptr guest_gdt_ptr;
+struct gdt_ptr_64 host_gdt_ptr;
+struct gdt_ptr_64 guest_gdt_ptr;
 
 void gdt_copy_entry(uint8_t *gdt_desc, struct gdt_entry *entry) {
   entry->base         = (*((uint16_t *) (gdt_desc + 2)) <<  0) & 0x0000ffff;
@@ -25,12 +20,22 @@ void gdt_copy_entry(uint8_t *gdt_desc, struct gdt_entry *entry) {
   entry->access       = (*((uint8_t *)  (gdt_desc + 5)) <<  0) & 0x000000ff;
 }
 
+void gdt_copy_desc(struct gdt_entry *entry, uint8_t *gdt_desc) {
+  *((uint16_t *) (gdt_desc + 2))  = (entry->base        >>  0) & 0x0000ffff;
+  *((uint8_t *)  (gdt_desc + 4))  = (entry->base        >> 16) & 0x000000ff;
+  *((uint8_t *)  (gdt_desc + 7))  = (entry->base        >> 24) & 0x000000ff;
+  *((uint16_t *) (gdt_desc + 0))  = (entry->limit       >>  0) & 0x0000ffff;
+  *((uint8_t *)  (gdt_desc + 6))  = (entry->limit       >> 16) & 0x0000000f;
+  *((uint8_t *)  (gdt_desc + 6)) |= (entry->granularity >>  0) & 0x000000f0;
+  *((uint8_t *)  (gdt_desc + 5))  = (entry->access      >>  0) & 0x000000ff;
+}
+
 void gdt_setup_guest_gdt(void) {
   cpu_read_gdt((uint8_t *) &guest_gdt_ptr);
 }
 
 void gdt_setup_host_gdt(void) {
-  struct gdt_ptr previous_gdt_ptr;
+  struct gdt_ptr_64 previous_gdt_ptr;
   cpu_read_gdt((uint8_t *) &previous_gdt_ptr);
   host_gdt_ptr.base = (uint64_t) &host_gdt[0];
   host_gdt_ptr.limit = previous_gdt_ptr.limit;

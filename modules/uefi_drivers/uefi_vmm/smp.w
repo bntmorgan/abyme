@@ -38,11 +38,13 @@ active. dans une structure de la forme suivante :
 
 @+ smp ap param
 struct ap_param {
-  uint16_t gdt_pm_size;
-  uint32_t gdt_pm_start;
-  uint16_t gdt_lm_size;
-  uint32_t gdt_lm_start;
+  // 0x00
+  struct gdt_ptr_32 gdt_ptr_pm;
+  // 0x06
+  struct gdt_ptr_64 gdt_ptr_lm;
+  // 0x16
   uint32_t cr3_lm;
+  // 0x20
   uint64_t vmm_next;
 } __attribute__((packed));
 @-
@@ -79,14 +81,7 @@ l'OS, cette zone mémoir ene sera plus marquée comme réservé et pourra être
 utilisée par le système d'exploitation, ce qui nous convient parfaitement.
 
 @+ smp allocate trampoline
-
-/* trampoline locations */
-extern uint8_t trampoline_start;
-extern uint8_t trampoline_end;
-extern uint8_t ap_gdtptr;
-extern uint8_t ap_param;
-
-void smp_allocate_trampoline() {
+uint8_t smp_allocate_trampoline() {
   EFI_PHYSICAL_ADDRESS *address = (EFI_PHYSICAL_ADDRESS *)0x100000;
   uint32_t pages = (&trampoline_end - &trampoline_start) / 0x1000 +
     (((&trampoline_end - &trampoline_start) * 1. / 0x1000 > 0) ? 1 : 0 );
@@ -94,16 +89,61 @@ void smp_allocate_trampoline() {
   uint32_t code = uefi_call_wrapper(systab->BootServices->AllocatePages, 4
       AllocateMaxAddress, EfiBootServicesCode, pages, address);
   // XXX ULTRA DIRTY
+  // http://wiki.osdev.org/Memory_Map_(x86)
   address = (EFI_PHYSICAL_ADDRESS *)0x80000;
   code = 0;
   if(code != EFI_SUCCESS) {
     INFO("Failed to allocate memory for trampoline 0x%x, address 0x%x, type\
         0x%x, memory_type 0x%x, max_memory_type 0x%x\n", code, address,
         AllocateMaxAddress, EfiBootServicesData, EfiMaxMemoryType);
-    while(1);
+    return code;
   } else {
     INFO("Allocated address 0x%x\n", address);
+    ap_trampoline_start = address;
   }
+  return 0;
+}
+@-
+
+Nous devons ensuite copier trampoline dans la mémoire allouée.
+
+@+ smp install trampoline
+void smp_install_trampoline() {
+  memcpy(ap_trampoline_start, &trampoline_start, &trampoline_end -
+      &trampoline_start);
+}
+@-
+
+\subsubsection{Préparation des paramètres}
+
+Nous devosn préparer les paramètres du trampoline pour l'activation des APs.
+Nous verronts plus tard qu'il nous faut créer une GDT telle que ds et cs
+pointent vers des descripteurs de segments tels que rip \symbol{64} protected\_mode. Nous
+devons donc tout simplement prévoir une adresse de base pour ces descripteurs
+tel que adresse logique : $$ \texttt{adresse logique 0} = \texttt{adresse physique de chargement} +
+\texttt{protected mode} $$
+
+@+ smp create ap gdt pm
+#define SMP_AP_GDT_PM_SIZE 0x24
+uint8_t ap_gdt_pm[SMP_AP_GDT_PM_SIZE] __attribute((aligned(0x4)));
+extern uint8_t protected_mode;
+
+void smp_create_ap_gdt_pm() {
+  struct gdt_entry e;
+  struct ap_param *ap_param = (struct ap_param *)((uint64_t)ap_trampoline_start
+      + (uint64_t)&trampoline_start - (uint64_t)&ap_param);
+  // Create GDT ptr
+  // ap_param.gdt_pm_base =
+  // Initialize GDT entry
+  memset(&e, 0, sizeof(e));
+  // Initialize GDT
+  memset(ap_gdt_pm, 0, sizeof(uint8_t) * SMP_AP_GDT_PM_SIZE);
+  // We compute the base of the segments regarding physical loading address and
+  // protected\_mode adress
+  e.base = (uint32_t)((uint64_t)&protected_mode + (uint64_t)ap_trampoline_start);
+  // The first entry is null
+  // NOOP
+  // The second entry is for code
 }
 @-
 
@@ -244,16 +284,19 @@ void smp_setup(void) {
   smp_print_info();
   smp_default_setup();
   smp_activate_apic();
-  smp_allocate_trampoline();
-  // smp_print_trampoline((uint8_t *) &trampoline_start); // TODO
-  // smp_prepare_trampoline(); // TODO
-  // smp_print_trampoline((uint8_t *) (SMP_AP_VECTOR << 12)); // TODO
-  // smp_search_mp_configuration_table_header();
-  // if (smp_mp_configuration_table_header != 0) {
-    // smp_print_mp_configuration_table_header(); // TODO
-    // smp_process_entries();
-    // smp_activate_ap(); // TODO
-  // }
+  if(!smp_allocate_trampoline()) {
+    smp_install_trampoline();
+    smp_create_ap_gdt_pm();
+    // smp_print_trampoline((uint8_t *) &trampoline_start); // TODO
+    // smp_prepare_trampoline(); // TODO
+    // smp_print_trampoline((uint8_t *) (SMP_AP_VECTOR << 12)); // TODO
+    // smp_search_mp_configuration_table_header();
+    // if (smp_mp_configuration_table_header != 0) {
+      // smp_print_mp_configuration_table_header(); // TODO
+      // smp_process_entries();
+      // smp_activate_ap(); // TODO
+    // }
+  }
 }
 @-
 
@@ -422,7 +465,9 @@ void smp_activate_ap(void) {
 #include "stdio.h"
 #include "msr.h"
 #include "cpu.h"
+#include "gdt.h"
 #include "systab.h"
+#include "string.h"
 
 /*
  * See [Intel_August_2012], volume 3, section 8.4.4.
@@ -468,8 +513,14 @@ uint8_t smp_cpu_ids[16];
 uint8_t smp_nb_cpus;
 uint8_t smp_bsp_id;
 
+/* trampoline locations */
 extern uint8_t trampoline_start;
 extern uint8_t trampoline_end;
+extern uint8_t ap_gdtptr;
+extern uint8_t ap_param;
+
+/* installed trampoline physical address */
+void *ap_trampoline_start;
 
 void smp_print_info(void) {
   INFO("apic physical address: %016x\n", msr_read(MSR_ADDRESS_IA32_APIC_BASE));
@@ -583,6 +634,8 @@ void smp_prepare_trampoline(void) {
 }
 
 @< smp allocate trampoline >
+@< smp install trampoline >
+@< smp create ap gdt pm >
 @< smp activate apic >
 @< smp search mp configuration table header >
 @< smp process entries >
