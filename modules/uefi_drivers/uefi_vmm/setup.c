@@ -30,7 +30,7 @@ uint8_t vmm_stack[VMM_STACK_SIZE];
 uint8_t vmxon[4096] __attribute((aligned(0x1000)));
 uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
 
-void vmm_main() {
+void bsp_main() {
   // debug_server_init();
   cpuid_setup();
 
@@ -45,15 +45,16 @@ void vmm_main() {
   INFO("_padding_end_a   %X\n", &_padding_end_a);
   INFO("_padding_end_b   %X\n", &_padding_end_b);
 
-  /* Test smp */
-  smp_setup();
-
-  /*gdt_setup_guest_gdt();
+  gdt_setup_guest_gdt();
   gdt_setup_host_gdt();
   paging_setup_host_paging();
   mtrr_create_ranges();
   mtrr_print_ranges();
-  ept_create_tables();
+
+  /* Test smp */
+  smp_setup();
+
+  /*ept_create_tables();
   msr_bitmap_setup();
   // msr_bitmap_set_read_write(MSR_ADDRESS_IA32_EFER);
   msr_bitmap_set_for_mtrr();

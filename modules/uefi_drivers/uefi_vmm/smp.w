@@ -129,7 +129,7 @@ uint8_t smp_allocate_gdt_lm() {
 \subsubsection{Préparation des paramètres}
 
 Nous devosn préparer les paramètres du trampoline pour l'activation des APs.
-Nous verronts plus tard qu'il nous faut créer une GDT telle que ds et cs
+Nous verrons plus tard qu'il nous faut créer une GDT telle que ds et cs
 pointent vers des descripteurs de segments tels que rip \symbol{64} protected\_mode. Nous
 devons donc tout simplement prévoir une adresse de base pour ces descripteurs
 tel que adresse logique : $$ \texttt{adresse logique 0} = \texttt{adresse physique de chargement} +
@@ -171,6 +171,20 @@ void smp_create_ap_gdt_pm() {
   gdt_copy_desc(&e, ap_gdt_pm + 0x10);
   printk("Data 0x%X\n", *((uint64_t *)(ap_gdt_pm + 0x10)));
   printk_bin(8, " ", ap_gdt_pm + 0x10);
+}
+@-
+
+Nous disposons déjà d'une gdt correcte pour l'exécution courante de l'UEFI, nous
+allons l'utiliser.
+
+@+ smp create ap gdt lm
+void smp_create_ap_gdt_lm() {
+  struct ap_param *p = (struct ap_param *)&ap_param;
+  // Create GDT ptr
+  p->gdt_ptr_lm.base = (uint64_t)ap_gdt_lm;
+  p->gdt_ptr_lm.limit = gdt_get_host_limit();
+  // Copy the gdt
+  memcpy(ap_gdt_lm, (uint8_t *)gdt_get_host_base(), p->gdt_ptr_lm.limit);
 }
 @-
 
@@ -309,36 +323,6 @@ du processeur. Le champ CPU signature contient le résultat du cpuid si possible
 Un champ indique si le processeur est utilisable. Un autre champ indique si le
 processeur courant est le BSP, tous les autres étant alors de APs. Nous laissons
 pour l'instant de coté les autres type d'entrées.
-
-La séquence d'installation du multi-cœur est la suivante :
-
-@+ smp setup
-void smp_setup(void) {
-  /*
-   * TODO: check the APIC physical address equals the virtual address!
-   * NOTE : We are loaded in a UEFI environment where physical addr equals
-   * logical one.
-   */
-  smp_print_info();
-  smp_default_setup();
-  smp_activate_apic();
-  if(!smp_allocate_trampoline() && !smp_allocate_gdt_pm() &&
-      !smp_allocate_gdt_lm()) {
-    smp_create_ap_gdt_pm();
-    smp_install_trampoline();
-    // smp_print_trampoline((uint8_t *) &trampoline_start); // TODO
-    // smp_prepare_trampoline(); // TODO
-    // smp_print_trampoline((uint8_t *) (SMP_AP_VECTOR << 12)); // TODO
-    // smp_search_mp_configuration_table_header();
-    // if (smp_mp_configuration_table_header != 0) {
-      // smp_print_mp_configuration_table_header(); // TODO
-      // smp_process_entries();
-      // smp_activate_ap(); // TODO
-    // }
-  }
-}
-@-
-
 La première étape de l'activation du multi-coeur est donc d'activer l'APIC.
 
 @+ smp activate apic
@@ -353,7 +337,6 @@ spécification MP. Les addresses de recherches sont spécifiées dans la
 documentation.
 
 @+ smp search mp configuration table header
-
 uint64_t smp_search_mp_floating_pointer_structure(uint64_t address, uint64_t length) {
   uint8_t mp_fps_signature[] = "_MP_";
   uint32_t i;
@@ -492,6 +475,51 @@ void smp_activate_ap(void) {
       INFO("launch only one core!\n");
       break;
     }
+  }
+}
+@-
+
+La séquence d'installation du multi-cœur est la suivante :
+
+@+ smp setup
+void smp_setup(void) {
+  /*
+   * TODO: check the APIC physical address equals the virtual address!
+   * NOTE : We are loaded in a UEFI environment where physical addr equals
+   * logical one.
+   */
+  smp_print_info();
+  smp_default_setup();
+  smp_activate_apic();
+  if(!smp_allocate_trampoline() && !smp_allocate_gdt_pm() &&
+      !smp_allocate_gdt_lm()) {
+    smp_create_ap_gdt_pm();
+    smp_create_ap_gdt_lm();
+    smp_install_trampoline();
+  }
+}
+@-
+
+Une fois le mode smp préparé, nous allons entamer la séquence d'initialisation
+des coeurs.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\figwidth]{figures/smp_setup.pdf}
+  \caption{Séquence d'installation et d'activation de smp}
+  \label{fig:ap_init}
+\end{figure}
+
+@+ smp activate cores
+void smp_activate_cores() {
+  smp_print_trampoline((uint8_t *) &trampoline_start); // TODO
+  smp_prepare_trampoline(); // TODO
+  smp_print_trampoline((uint8_t *) (SMP_AP_VECTOR << 12)); // TODO
+  smp_search_mp_configuration_table_header();
+  if (smp_mp_configuration_table_header != 0) {
+    smp_print_mp_configuration_table_header(); // TODO
+    smp_process_entries();
+    smp_activate_ap(); // TODO
   }
 }
 @-
@@ -676,10 +704,12 @@ void smp_prepare_trampoline(void) {
 @< smp allocate gdt lm >
 @< smp install trampoline >
 @< smp create ap gdt pm >
+@< smp create ap gdt lm >
 @< smp activate apic >
 @< smp search mp configuration table header >
 @< smp process entries >
 @< smp activate ap >
+@< smp activate cores >
 @< smp setup >
 @-
 

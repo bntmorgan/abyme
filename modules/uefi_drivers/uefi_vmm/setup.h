@@ -1,7 +1,7 @@
 #ifndef __VMM_SETUP_H__
 #define __VMM_SETUP_H__
 
-void vmm_main(void);
+void bsp_main(void);
 
 void vmm_setup(void);
 
