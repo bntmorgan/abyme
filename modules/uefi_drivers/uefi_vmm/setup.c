@@ -31,13 +31,10 @@ uint8_t vmxon[4096] __attribute((aligned(0x1000)));
 uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
 
 void bsp_main() {
-  // debug_server_init();
+#ifdef _DEBUG_SERVER
+  debug_server_init();
+#endif
   cpuid_setup();
-
-  /* TODO: test pagination id-map, gdt-flat, etc. */
-  /*if (cpuid_is_page1g_supported() == 0) {
-    panic("!#SETUP PG1");
-  }*/
 
   INFO("VMCS addresses %X %X\n", vmxon, vmcs0);
   INFO("_padding_begin_a %X\n", &_padding_begin_a);
@@ -51,27 +48,26 @@ void bsp_main() {
   mtrr_create_ranges();
   mtrr_print_ranges();
 
-  /* Test smp */
+  // Test smp
   smp_setup();
 
-  /*ept_create_tables();
+  // Virtualization
   msr_bitmap_setup();
-  // msr_bitmap_set_read_write(MSR_ADDRESS_IA32_EFER);
   msr_bitmap_set_for_mtrr();
   io_bitmap_setup();
   // Ethernet card protection
   io_bitmap_set_for_port(PCI_CONFIG_ADDR);
-  io_bitmap_set_for_port(PCI_CONFIG_DATA);*/
+  io_bitmap_set_for_port(PCI_CONFIG_DATA);
+  ept_create_tables();
 
-  /* TODO Dump the core state
-  struct core_gpr gpr;
-  struct core_cr cr;
-  read_core_state(&gpr, &cr);
-  dump_core_state(&gpr, &cr);*/
+  // Launch APs initialization chain
+  // TODO implement
+  
+  // Wait for the end of APs initialization chain
+  // TODO implement
 
-  /*vmm_setup();
-  vmm_vm_setup_and_launch();
-  extern uint8_t _padding_begin_b;*/
+  vmm_setup(/* TODO #core */);
+  vmm_vm_setup_and_launch(/* TODO #core */);
 }
 
 void vmm_setup() {
