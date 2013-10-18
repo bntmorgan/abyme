@@ -211,3 +211,44 @@ void vmcs_fill_vm_entry_control_fields(void) {
   cpu_vmwrite(VM_ENTRY_MSR_LOAD_COUNT, 0);
   cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, 0);
 }
+
+/* Dump a section of VMCS */
+static void print_section(char *header, uint32_t start, uint32_t end,
+    int incr) {
+  uint32_t addr, j;
+  unsigned long val;
+  int code, rc;
+  char *fmt[4] = {"0x%04x ", "0x%016x ", "0x%08x ", "0x%016x "};
+  char *err[4] = {"------ ", "------------------ ", 
+                  "---------- ", "------------------ "};
+  /* Find width of the field (encoded in bits 14:13 of address) */
+  code = (start>>13)&3;
+  if (header)
+    printk("\t %s", header);
+  for (addr=start, j=0; addr<=end; addr+=incr, j++) {
+    if (!(j&3))
+      printk("\n\t\t0x%08x: ", addr);
+    val = cpu_vmread_safe(addr, (long unsigned int *)&rc);
+    if (val != 0)
+      printk(fmt[code], rc);
+    else
+      printk("%s", err[code]);
+  }
+  printk("\n");
+}
+
+void vmcs_dump_vcpu(void)
+{
+    print_section("16-bit Guest-State Fields", 0x800, 0x80e, 2);
+    print_section("16-bit Host-State Fields", 0xc00, 0xc0c, 2);
+    print_section("64-bit Control Fields", 0x2000, 0x2013, 1);
+    print_section("64-bit Guest-State Fields", 0x2800, 0x2803, 1);
+    print_section("32-bit Control Fields", 0x4000, 0x401c, 2);
+    print_section("32-bit RO Data Fields", 0x4400, 0x440e, 2);
+    print_section("32-bit Guest-State Fields", 0x4800, 0x482a, 2);
+    print_section("32-bit Host-State Fields", 0x4c00, 0x4c00, 2);
+    print_section("Natural 64-bit Control Fields", 0x6000, 0x600e, 2);
+    print_section("64-bit RO Data Fields", 0x6400, 0x640A, 2);
+    print_section("Natural 64-bit Guest-State Fields", 0x6800, 0x6826, 2);
+    print_section("Natural 64-bit Host-State Fields", 0x6c00, 0x6c16, 2);
+}

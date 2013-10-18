@@ -54,6 +54,8 @@ void cpu_vmwrite(uint64_t field, uint64_t value);
 
 uint64_t cpu_vmread(uint64_t field);
 
+uint8_t cpu_vmread_safe(unsigned long field, unsigned long *value);
+
 void cpu_stop(void);
 
 uint32_t cpu_adjust32(uint32_t value, uint32_t msr);

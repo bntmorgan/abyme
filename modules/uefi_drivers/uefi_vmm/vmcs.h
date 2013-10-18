@@ -244,4 +244,6 @@ void vmcs_fill_vm_exit_control_fields(void);
 
 void vmcs_fill_vm_entry_control_fields(void);
 
+void vmcs_dump_vcpu(void);
+
 #endif
