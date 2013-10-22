@@ -5,6 +5,7 @@
 #include "addr.h"
 #include "cpu.h"
 #include "string.h"
+#include "debug_eth.h"
   
 // PCI device information
 pci_device_info info;
@@ -29,26 +30,59 @@ void wait(uint64_t time) {
   }
 }
 
-uint8_t eth_setup() {
-  // Get device info, bus address and function
-  if (eth_get_device() == -1) {
-    Print(L"LOLZ owned no ethernet controller found\n");
-  } else {
-    Print(L"LOLZY Intel 82579LM ethernet controller found at %02x:%02x:%02x\n", addr.bus, addr.device, addr.function);
-  }
-  return eth_init();
-}
-
-uint8_t eth_init() {
+uint8_t eth_set_bar0() {
   uint32_t id = PCI_MAKE_ID(addr.bus, addr.device, addr.function);
-  Print(L"Initializing ethernet\n");
   pci_bar bar;
   pci_get_bar(&bar, id, 0);
   if (bar.flags & PCI_BAR_IO) {
     // Only Memory Mapped I/O supported
+    Print(L"Only Memory Mapped I/O supported\n");
     return -1;
   }
   bar0 = (uint8_t *)bar.u.address;
+  return 0;
+}
+
+uint8_t eth_reset() {
+  Print(L"We reset the ethernet controller to ensure having a clear configuration\n");
+  uint16_t reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
+  // Reset the card
+  reg_ctrl |= (1 << 26);
+  cpu_mem_writed(bar0 + REG_CTRL, reg_ctrl);
+  wait(10000000);
+  return 0;
+}
+
+void eth_print_registers() {
+  Print(L"CTRL 0x%08x\n", cpu_mem_readd(bar0 + REG_CTRL));
+  Print(L"STATUS 0x%08x\n", cpu_mem_readd(bar0 + REG_STATUS));
+  Print(L"Interrupt Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_ICR));
+  Print(L"Receive Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_RCTL));
+  Print(L"Transmit Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_TCTL));
+}
+
+uint8_t eth_setup() {
+  // Get device info, bus address and function
+  if (eth_get_device() == -1) {
+    Print(L"LOLZ owned no ethernet controller found\n");
+    return -1;
+  } else {
+    Print(L"LOLZY Intel 82579LM ethernet controller found at %02x:%02x:%02x\n", addr.bus, addr.device, addr.function);
+  }
+  if(eth_set_bar0()) {
+    return -1;
+  }
+  eth_reset();
+  if (eth_init()) {
+    return -1;
+    Print(L"Failed to init the ethernet card\n");
+  }
+  eth_print_registers();
+  return 0;
+}
+
+uint8_t eth_init() {
+  Print(L"Initializing ethernet\n");
   // Get the mac address
   uint32_t laddr_l = cpu_mem_readd(bar0 + REG_RAL);
   if (!laddr_l) {
@@ -65,9 +99,6 @@ uint8_t eth_init() {
   laddr.n[5] = (uint8_t)(laddr_h >> 8);
   Print(L"MAC addr %02x:%02x:%02x:%02x:%02x:%02x\n", laddr.n[0], 
       laddr.n[1], laddr.n[2], laddr.n[3], laddr.n[4], laddr.n[5]);
-  // Set Link Up
-  Print(L"CTRL %x\n", cpu_mem_readd(bar0 + REG_CTRL));
-  Print(L"CTRL %x\n", cpu_mem_readd(bar0 + REG_STATUS));
   // cpu_mem_writed(bar0 + REG_CTRL, cpu_mem_readd(bar0 + REG_CTRL) | CTRL_SLU);
   // Clear Multicast Table Array
   int32_t i;
@@ -112,6 +143,7 @@ inline void eth_wait_tx(uint8_t idx) {
   // Wait until the packet is send
   while (!(tx_desc->status & 0xf)) {
     wait(1000000);
+    Print(L"WAIIT lol\n");
   }
 }
 
@@ -132,9 +164,9 @@ void eth_send(const void *buf, uint16_t len, uint8_t block) {
   // Increment the current tx decriptor
   idx = (idx + 1) & (TX_DESC_COUNT - 1);
   cpu_mem_writed(bar0 + REG_TDT, idx);
-  if (block) {
-    eth_wait_tx(idx);
-  }
+  // if (block) {
+  //   eth_wait_tx(idx);
+  // }
 }
 
 inline void eth_wait_rx(uint8_t idx) {

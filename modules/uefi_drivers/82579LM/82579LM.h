@@ -7,6 +7,11 @@
 #include "addr.h"
 #include "pci.h"
 
+// 
+// Intel® 82579 Gigabit Ethernet PHY Datasheet v2.1
+// 12.0 Intel® 6 Series Express Chipset MAC Programming Interface
+//
+
 //
 // Pci bus / device / port
 //

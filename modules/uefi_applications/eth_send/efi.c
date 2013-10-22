@@ -21,12 +21,10 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   for (i = 0; i < len ; i++) {
     buf[i] = 0xca;
   }
-  uint32_t nb = 16;
-  for (i = 0; i < nb; i++) {
-    // TODO Pourquoi uefi_call_wrapper ne marche pas ??
-    //uefi_call_wrapper(eth->send, 3, buf, len, 0);
-    eth->send(buf, len, 0);
-  }
+
+  // TODO Pourquoi uefi_call_wrapper ne marche pas ??
+  //uefi_call_wrapper(eth->send, 3, buf, len, 0);
+  eth->send(buf, len, 0);
 
   Print(L"Pointeur du service eth %x\n", eth);
 

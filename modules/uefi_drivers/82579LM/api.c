@@ -24,7 +24,13 @@ void _api_dump_eth_frame(void *frame, uint32_t payload_len) {
   dump(((void *)frame) + 12, 2, 2, 0, 2);
   // Payload
   Print(L"Payload len %d\n", payload_len);
-  dump(((void *)frame) + sizeof(eth_header), 1, payload_len, 0, 1);
+  // dump(((void *)frame) + sizeof(eth_header), 1, payload_len, 0, 1);
+}
+
+void test_send() {
+  static uint8_t test_buf[0x100] = {'H', 'E', 'L', 'L', 'O'};
+  Print(L"Sending test frame\n");
+  send(test_buf, 0x100, EFI_82579LM_API_BLOCK);
 }
 
 uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
@@ -35,8 +41,8 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
   uint32_t size = len + sizeof(eth_header);
   eth_header *eh = (eth_header *)&frame[0];
   // XXX destination MAC address
-  // eth_addr daddr = {.n = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
-  eth_addr daddr = {.n = {0x00, 0x1b, 0x21, 0xa5, 0xab, 0xd5}};
+  eth_addr daddr = {.n = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
+  // eth_addr daddr = {.n = {0x00, 0x1b, 0x21, 0xa5, 0xab, 0xd5}};
   eth_addr *laddr = eth_get_laddr();
   uint32_t i;
   for (i = 0; i < sizeof(eth_addr); i++) {
@@ -44,10 +50,12 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
     eh->dst.n[i] = daddr.n[i];
   }
   eh->type = htons(API_ETH_TYPE);
+  // Go to the payload zone
   eh++;
   // Copy the payload into the frame
   memcpy(eh, (void *)buf, len);
   eth_send(frame, size, (flags & EFI_82579LM_API_BLOCK));
+  // _api_dump_eth_frame((void *)frame, len);
   return len;
 }
 
