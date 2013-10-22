@@ -22,13 +22,15 @@ EFI_LIBS 				:= -lefi -lgnuefi $(LIB_GCC)
 EFI_CRT_OBJS 		:= $(EFI_PATH)/crt0-efi-$(ARCH).o
 EFI_LDS 				:= efi.ld
 
-CC_FLAGS_ALL		:= -fpic -Wall -Werror -Werror -O2 -fno-stack-protector -fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin
+# CC_FLAGS_ALL		:= -fPIC -Wall -Werror -Werror -O2 -fno-stack-protector -fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -D_DEBUG_SERVER -O0
+CC_FLAGS_ALL		:= -Wall -Werror -Werror -O2 -fno-stack-protector -fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC -O0 -D_DEBUG_SERVER
 
 ifeq ($(ARCH),x86_64)
 	CC_FLAGS_ALL	+= -DEFI_FUNCTION_WRAPPER
 endif
 
-LD_FLAGS_ALL		:= -nostdlib -T $(EFI_LDS) -fpic -shared -Bsymbolic -L$(EFI_PATH) $(EFI_CRT_OBJS) -znocombreloc --no-undefined
+# LD_FLAGS_ALL		:= -nostdlib -T $(EFI_LDS) -fPIC -shared -Bsymbolic -L$(EFI_PATH) $(EFI_CRT_OBJS) -znocombreloc --no-undefined
+LD_FLAGS_ALL		:= -nostdlib -T $(EFI_LDS) -shared -Bsymbolic -L$(EFI_PATH) $(EFI_CRT_OBJS) -znocombreloc -fPIC --no-undefined
 
 define SRC_2_OBJ
     $(foreach src,$(1),$(patsubst modules/%,build/%,$(src)))
@@ -102,7 +104,7 @@ binary/%.efi: binary/%.elf
 	  $< $@
 		@cp $< $<.toto
 		
-	@#strip $@
+	@strip $@
 
 binary/%.elf:
 	@echo "  [LD]    $@"

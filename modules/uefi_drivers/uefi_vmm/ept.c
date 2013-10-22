@@ -88,6 +88,7 @@ void ept_create_tables(void) {
   // Network card
   // MMIO pci space protection
   //
+#ifdef _DEBUG_SERVER
   uint64_t base_addr = 0xf80c8000;
   uint32_t PDX = 1984;
   uint32_t PML40_X = base_addr >> 30;
@@ -139,6 +140,7 @@ void ept_create_tables(void) {
     }
     address += 0x1000;
   }
+#endif
 }
 
 uint64_t ept_get_eptp(void) {

@@ -47,9 +47,10 @@ void bsp_main() {
   paging_setup_host_paging();
   mtrr_create_ranges();
   mtrr_print_ranges();
+  ept_create_tables();
 
   // Test smp
-  smp_setup();
+  // smp_setup();
 
   // Virtualization
   msr_bitmap_setup();
@@ -58,7 +59,6 @@ void bsp_main() {
   // Ethernet card protection
   io_bitmap_set_for_port(PCI_CONFIG_ADDR);
   io_bitmap_set_for_port(PCI_CONFIG_DATA);
-  ept_create_tables();
 
   // Launch APs initialization chain
   // TODO implement

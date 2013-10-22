@@ -65,7 +65,7 @@ void debug_server_init() {
   if (EFI_ERROR(status)) {
     ERROR("FAILED LOL LocateProtocol\n");
   }
-  printk("BAR0 %X\n", eth->bar0);
+  printk("DEBUG SERVER INIT : ETH BAR0 %X\n", eth->bar0);
 }
 
 void debug_server_handle_memory_read(message_memory_read *mr) {

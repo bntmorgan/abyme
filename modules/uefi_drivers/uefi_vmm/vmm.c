@@ -82,7 +82,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
   uint8_t mode = vmm_get_cpu_mode(); 
 
-#if _DEBUG_SERVER
+#ifdef _DEBUG_SERVER
   // if (exit_reason == EXIT_REASON_IO_INSTRUCTION) {
   // if (exit_reason == EXIT_REASON_VMCALL) {
   if (exit_reason != EXIT_REASON_CPUID && exit_reason != EXIT_REASON_IO_INSTRUCTION && exit_reason != EXIT_REASON_WRMSR && exit_reason != EXIT_REASON_CR_ACCESS) {
@@ -301,7 +301,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         // printk("CR4 %016X, SHAD CR4 %016X\n", cpu_vmread(GUEST_CR4), cpu_vmread(CR4_READ_SHADOW));
       } else if (n == 3) {
         cr3_count++;
-#if _DEBUG_SERVER
+#ifdef _DEBUG_SERVER
         debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
 #endif
         uint8_t desc[16] = { cpu_vmread(VIRTUAL_PROCESSOR_ID), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -325,7 +325,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       return;
       break;
     default: {
-#if _DEBUG_SERVER
+#ifdef _DEBUG_SERVER
       message_vmexit ms = {
         MESSAGE_UNHANDLED_VMEXIT,
         debug_server_get_core(),

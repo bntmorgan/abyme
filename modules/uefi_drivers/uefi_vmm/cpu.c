@@ -163,11 +163,7 @@ void cpu_vmlaunch(void) {
   __asm__ __volatile__("mov %%rsp, %0" : "=a" (reg));
   cpu_vmwrite(GUEST_RSP, reg);
   cpu_vmwrite(GUEST_RIP, ((uint64_t) &&vm_entrypoint));
-  vmcs_dump_vcpu();
-  INFO("YOLOOO !\n");
-  while(1);
   __asm__ __volatile__("vmlaunch;\n");
-  INFO("FAILED LOLZz !\n");
   panic("!#CPU VMLAUNCH [%x]", cpu_vmread(VM_INSTRUCTION_ERROR));
 vm_entrypoint:
   __asm__ __volatile__(
@@ -207,18 +203,6 @@ uint64_t cpu_vmread(uint64_t field) {
   return value;
 }
 
-uint8_t cpu_vmread_safe(unsigned long field, unsigned long *value)
-{
-  uint8_t okay;
-  __asm__ __volatile__ (
-                 "vmread %2, %1\n\t"
-                 /* CF==1 or ZF==1 --> rc = 0 */
-                 "setnbe %0"
-                 : "=qm" (okay), "=rm" (*value)
-                 : "r" (field));
-  return okay;
-}
-
 uint32_t cpu_adjust32(uint32_t value, uint32_t msr_address) {
   uint64_t msr_value = msr_read(msr_address);
   value |= (msr_value >>  0) & 0xffffffff;
@@ -234,4 +218,16 @@ void cpu_stop(void) {
   __asm__ __volatile__("cli");
   __asm__ __volatile__("hlt");
   while (1);
+}
+
+uint8_t cpu_vmread_safe(unsigned long field, unsigned long *value)
+{
+  uint8_t okay;
+  __asm__ __volatile__ (
+                 "vmread %2, %1\n\t"
+                 /* CF==1 or ZF==1 --> rc = 0 */
+                 "setnbe %0"
+                 : "=qm" (okay), "=rm" (*value)
+                 : "r" (field));
+  return okay;
 }
