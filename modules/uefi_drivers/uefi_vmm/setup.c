@@ -14,7 +14,9 @@
 #include "string.h"
 #include "msr_bitmap.h"
 #include "io_bitmap.h"
+#ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
+#endif
 #include "smp.h"
 
 //extern char __text;
@@ -43,22 +45,33 @@ void bsp_main() {
   INFO("_padding_end_b   %X\n", &_padding_end_b);
 
   gdt_setup_guest_gdt();
+  INFO("GUEST GDT DONE\n");
   gdt_setup_host_gdt();
+  INFO("HOST GDT DONE\n");
   paging_setup_host_paging();
+  INFO("PAGING HOST DONE\n");
   mtrr_create_ranges();
+  INFO("MTRR CREATE RANGES DONE\n");
   mtrr_print_ranges();
+  INFO("MTRR PRINT RANGES DONE\n");
   ept_create_tables();
+  INFO("EPT CREATE TABLES DONE\n");
 
   // Test smp
   // smp_setup();
 
   // Virtualization
   msr_bitmap_setup();
+  INFO("MSR BITMAP DONE\n");
   msr_bitmap_set_for_mtrr();
+  INFO("MSR BITMAP FOR MTRR DONE\n");
   io_bitmap_setup();
+  INFO("IO BITMAP DONE\n");
   // Ethernet card protection
   io_bitmap_set_for_port(PCI_CONFIG_ADDR);
+  INFO("IO BITMAP FOR PCI CONFIG DONE\n");
   io_bitmap_set_for_port(PCI_CONFIG_DATA);
+  INFO("IO BITMAP FOR PCI DATA DONE\n");
 
   // Launch APs initialization chain
   // TODO implement
@@ -67,6 +80,7 @@ void bsp_main() {
   // TODO implement
 
   vmm_setup(/* TODO #core */);
+  INFO("SETUP DONE\n");
   vmm_vm_setup_and_launch(/* TODO #core */);
 }
 
@@ -77,7 +91,9 @@ void vmm_setup() {
   cpu_enable_vmxe();
   cpu_write_cr4(cpu_adjust64(cpu_read_cr4(), MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
   msr_check_feature_control_msr_lock();
+  INFO("VMWON\n");
   cpu_vmxon((uint8_t *) vmxon);
+  INFO("VMXON DONE\n");
 }
 
 void vmm_create_vmxon_and_vmcs_regions(void) {

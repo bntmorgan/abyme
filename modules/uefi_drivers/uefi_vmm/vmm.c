@@ -12,7 +12,9 @@
 #include "mtrr.h"
 #include "ept.h"
 #include "debug.h"
+#ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
+#endif
 #include "mtrr.h"
 
 void vmm_print_guest_regs(struct registers *guest_regs) {
@@ -57,6 +59,7 @@ int vmm_get_cpu_mode() {
 }
 
 void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_regs) {
+#ifdef _DEBUG_SERVER
   message_vmm_panic m = {
     MESSAGE_VMM_PANIC,
     debug_server_get_core(),
@@ -69,6 +72,7 @@ void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_regs) {
   } else {
     while(1);
   }
+#endif
 }
 
 uint64_t io_count = 0;

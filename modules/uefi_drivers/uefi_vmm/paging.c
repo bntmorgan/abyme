@@ -10,11 +10,11 @@ struct paging_ia32e paging_ia32e;
 
 void paging_setup_host_paging(void) {
   /* TODO: pcide dans le registre cr4 */
+  INFO("SETTING HOST UP PAGING\n");
   uint64_t i;
   uint64_t j;
   for (i = 0; i < 512; i++) {
     paging_ia32e.PML4[i] = ((uint64_t) &paging_ia32e.PDPT[i][0]) | 0x7;
-//printk("%08X \n", paging_ia32e.PML4[i]);
     for (j = 0; j < 512; j++) {
       paging_ia32e.PDPT[i][j] = ((i * 512 + j) << 30) | (1 << 7) | 0x7;
 //printk("%08X \n", paging_ia32e.PDPT[i][j]);

@@ -19,9 +19,6 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
   INFO("VMM driver startup\n");
   INFO("main at %X\n", efi_main);
 
-  // cpuid features
-  cpuid_setup();
-
   // Install smp, install vmm, activate ap cores, launch VM
   bsp_main();
 
