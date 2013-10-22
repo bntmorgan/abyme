@@ -46,6 +46,8 @@
 //
 
 #define CTRL_SLU                        (1 << 6)    // Set Link Up
+#define CTRL_LCD_RST                    (1 << 31)   // LAN Connected device reset
+#define CTRL_SWRST                      (1 << 26)  // Host sofware reset
 
 // 
 // RCTL Register

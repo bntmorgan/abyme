@@ -47,7 +47,7 @@ uint8_t eth_reset() {
   Print(L"We reset the ethernet controller to ensure having a clear configuration\n");
   uint16_t reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
   // Reset the card
-  reg_ctrl |= (1 << 26);
+  reg_ctrl |= CTRL_SWRST | CTRL_LCD_RST;
   cpu_mem_writed(bar0 + REG_CTRL, reg_ctrl);
   wait(10000000);
   return 0;

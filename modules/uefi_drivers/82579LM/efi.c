@@ -31,6 +31,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   if (eth_setup() == -1) {
     return EFI_NOT_FOUND;
   }
+  test_send();
 
   // Add an unload handler
   EFI_STATUS status;
