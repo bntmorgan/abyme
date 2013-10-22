@@ -213,7 +213,7 @@ void vmcs_fill_vm_entry_control_fields(void) {
 }
 
 /* Dump a section of VMCS */
-static void print_section(char *header, uint32_t start, uint32_t end,
+void print_section(char *header, uint32_t start, uint32_t end,
     int incr) {
   uint32_t addr, j;
   unsigned long val;

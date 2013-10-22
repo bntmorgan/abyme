@@ -4,6 +4,18 @@
 #include <efi.h>
 #include "types.h"
 
+static inline void _stdio_stop(void) {
+  __asm__ __volatile__("cli");
+  __asm__ __volatile__("hlt");
+  while (1);
+}
+
+/* WHY IT DOESN'T WORK ?
+ TODO
+      __asm__ __volatile__("cli");                                   
+      __asm__ __volatile__("hlt");                                   
+      while (1);                                                     */
+
 #define PRINTK(stop, msg, ...)                                       \
   do {                                                               \
     printk("%s(%03d): ", __FUNCTION__, __LINE__);                    \
@@ -11,9 +23,7 @@
     printk(msg);                                                     \
     printk(__VA_ARGS__);                                             \
     if (stop == 1) {                                                 \
-      __asm__ __volatile__("cli");                                   \
-      __asm__ __volatile__("hlt");                                   \
-      while (1);                                                     \
+      _stdio_stop();                                                 \
     }                                                                \
   } while (0)
 
