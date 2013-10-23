@@ -22,9 +22,13 @@
 
 #define REG_CTRL                        0x0000      // Device Control
 #define REG_STATUS                      0x0008      // Status
+#define REG_STRAP                       0x000c      // Strapping option register
 #define REG_EERD                        0x0014      // EEPROM Read
+#define REG_CTRL_EXT                    0x0018      // Extended control device register
+#define REG_MDIC                        0x0020      // MDI Control Register
 #define REG_ICR                         0x00c0      // Interrupt Cause Read
 #define REG_IMS                         0x00d0      // Interrupt Mask Set/Read
+#define REG_IMC                         0x00d8      // Interrupt Mask Clear
 #define REG_RCTL                        0x0100      // Receive Control
 #define REG_TCTL                        0x0400      // Transmit Control
 #define REG_RDBAL                       0x2800      // Receive Descriptor Base Low
@@ -47,7 +51,28 @@
 
 #define CTRL_SLU                        (1 << 6)    // Set Link Up
 #define CTRL_LCD_RST                    (1 << 31)   // LAN Connected device reset
-#define CTRL_SWRST                      (1 << 26)  // Host sofware reset
+#define CTRL_SWRST                      (1 << 26)   // Host sofware reset
+
+//
+// IMC Register
+//
+#define IMC_RXT0                        (1 << 7)    // Clears mask for Receiver
+                                                    // Timer Interrupt
+#define IMC_MDAC                        (1 << 9)    // Clears mask for MDIO
+                                                    // Access Complete Interrupt
+#define IMC_PHYINT                      (1 << 12)   // Clears PHY Interrupt
+#define IMC_LSECPN                      (1 << 14)   // Clears the MACsec Packet
+                                                    // Number Interrupt
+#define IMC_SRPD                        (1 << 16)   // Clears mask for Small
+                                                    // Receive Packet Detect
+                                                    // Interrupt
+#define IMC_ACK                         (1 << 17)   // Clears the mask for
+                                                    // Receive ACK frame detect
+                                                    // Interrupt
+#define IMC_MNG                         (1 << 18)   // Clears mask for the
+                                                    // Manageability Event Interrupt
+
+
 
 // 
 // RCTL Register

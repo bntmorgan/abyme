@@ -43,6 +43,15 @@ uint8_t eth_set_bar0() {
   return 0;
 }
 
+uint8_t eth_disable_interrupts() {
+  uint16_t reg_imc = cpu_mem_readd(bar0 + REG_IMC);
+  // Reset the card
+  reg_imc |=  IMC_RXT0 | IMC_MDAC | IMC_PHYINT | IMC_LSECPN IMC_SRPD | IMC_ACK |
+    IMC_MNG;
+  cpu_mem_writed(bar0 + REG_IMC, reg_imc);
+
+}
+
 uint8_t eth_reset() {
   Print(L"We reset the ethernet controller to ensure having a clear configuration\n");
   uint16_t reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
@@ -61,6 +70,7 @@ void eth_print_registers() {
   Print(L"Transmit Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_TCTL));
 }
 
+// See 11.0 Initialization and Reset Operation
 uint8_t eth_setup() {
   // Get device info, bus address and function
   if (eth_get_device() == -1) {
@@ -72,7 +82,10 @@ uint8_t eth_setup() {
   if(eth_set_bar0()) {
     return -1;
   }
+  // See 11.4.1 Interrupts During Initialization
+  eth_disable_interrupts();
   eth_reset();
+  eth_disable_interrupts();
   if (eth_init()) {
     return -1;
     Print(L"Failed to init the ethernet card\n");
