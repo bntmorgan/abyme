@@ -6,15 +6,15 @@ INCLUDE_DIR			:= sources/include
 
 ARCH := $(shell uname -m | sed s,i[3456789]86,ia32,)
 
-# EFI_INCLUDE			:= /usr/include/efi
+EFI_INCLUDE			:= /usr/include/efi
 # Installation gnu-efi 3.0 locale
-EFI_INCLUDE			:= /usr/local/include/efi
+# EFI_INCLUDE			:= /usr/local/include/efi
 
 EFI_INCLUDES 		:= -I$(EFI_INCLUDE) -I$(EFI_INCLUDE)/$(ARCH) -I$(EFI_INCLUDE)/protocol -I$(INCLUDE_DIR)
 
-#EFI_PATH 				:= /usrlib
+EFI_PATH 				:= /usr/lib
 # Installation gnu-efi 3.0 locale
-EFI_PATH 				:= /usr/local/lib
+# EFI_PATH 				:= /usr/local/lib
 
 LIB_GCC	 				:= $(shell $(CC) -print-libgcc-file-name)
 EFI_LIBS 				:= -lefi -lgnuefi $(LIB_GCC)

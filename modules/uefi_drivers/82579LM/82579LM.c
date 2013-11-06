@@ -46,10 +46,11 @@ uint8_t eth_set_bar0() {
 uint8_t eth_disable_interrupts() {
   uint16_t reg_imc = cpu_mem_readd(bar0 + REG_IMC);
   // Reset the card
-  reg_imc |=  IMC_RXT0 | IMC_MDAC | IMC_PHYINT | IMC_LSECPN IMC_SRPD | IMC_ACK |
+  reg_imc |=  IMC_RXT0 | IMC_MDAC | IMC_PHYINT | IMC_LSECPN | IMC_SRPD | IMC_ACK |
     IMC_MNG;
   cpu_mem_writed(bar0 + REG_IMC, reg_imc);
 
+  return 0;
 }
 
 uint8_t eth_reset() {
