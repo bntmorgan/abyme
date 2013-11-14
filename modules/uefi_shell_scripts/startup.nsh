@@ -1,7 +1,7 @@
 echo changing terminal mode
 mode 100 31
 echo Startup !
-fs1:
+fs0:
 cd \EFI\uefi_drivers\82579LM
 echo Loading ethernet driver
 echo press any key

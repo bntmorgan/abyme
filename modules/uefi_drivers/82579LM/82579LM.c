@@ -178,9 +178,9 @@ void eth_send(const void *buf, uint16_t len, uint8_t block) {
   // Increment the current tx decriptor
   idx = (idx + 1) & (TX_DESC_COUNT - 1);
   cpu_mem_writed(bar0 + REG_TDT, idx);
-  // if (block) {
-  //   eth_wait_tx(idx);
-  // }
+  if (block) {
+    eth_wait_tx(idx);
+  }
 }
 
 inline void eth_wait_rx(uint8_t idx) {
