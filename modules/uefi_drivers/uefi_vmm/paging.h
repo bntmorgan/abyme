@@ -10,7 +10,7 @@ uint64_t paging_get_host_cr3(void);
 
 extern uint64_t paging_error;
 
-int paging_walk(uint64_t cr3, uintptr_t linear, uint64_t *e, uintptr_t *a);
+int paging_walk(uint64_t cr3, uint64_t linear, uint64_t *e, uint64_t *a);
 
 #define PAGING_MAXPHYADDR 0xfffffffff // 36 bit max phy addr
 

@@ -35,24 +35,24 @@ uint64_t paging_get_host_cr3(void) {
 /**
  * Return the entry
  */
-uint64_t paging_get_pml4e(uint64_t e, uintptr_t linear) {
+uint64_t paging_get_pml4e(uint64_t e, uint64_t linear) {
   return *(((uint64_t *)(e & PAGING_CR3_PLM4_ADDR)) + PAGING_LINEAR_PML4E(linear));
 }
 
-inline uint64_t paging_get_pdpte(uint64_t e, uintptr_t linear) {
+inline uint64_t paging_get_pdpte(uint64_t e, uint64_t linear) {
   return *(((uint64_t *)(e & PAGING_PML4E_PDPT_ADDR)) + PAGING_LINEAR_PDPTE(linear));
 }
 
-inline uint64_t paging_get_pde(uint64_t e, uintptr_t linear) {
+inline uint64_t paging_get_pde(uint64_t e, uint64_t linear) {
   return *(((uint64_t *)(e & PAGING_PDPTE_PD_ADDR)) + PAGING_LINEAR_PDE(linear));
 }
 
 
-inline uint64_t paging_get_pte(uint64_t e, uintptr_t linear) {
+inline uint64_t paging_get_pte(uint64_t e, uint64_t linear) {
   return *(((uint64_t *)(e & PAGING_PDE_PT_ADDR)) + PAGING_LINEAR_PTE(linear));
 }
 
-int paging_walk(uint64_t cr3, uintptr_t linear, uint64_t *e, uintptr_t *a) {
+int paging_walk(uint64_t cr3, uint64_t linear, uint64_t *e, uint64_t *a) {
   *e = cr3;
   // Cr3 -> PML4E
   *e = paging_get_pml4e(*e, linear);

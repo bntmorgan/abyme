@@ -22,9 +22,9 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
 
   INFO("Walk test\n");
   uint64_t cr3 = cpu_read_cr3();
-  uintptr_t linear = 0xf8000000;
+  uint64_t linear = 0xf8000000;
   uint64_t e = 0;
-  uintptr_t a = 0;
+  uint64_t a = 0;
 
   
   if (paging_walk(cr3, linear, &e, &a)) {
