@@ -15,7 +15,7 @@ extern uint64_t paging_error;
  * It is returning the location pointer to the entry referecing the frame,
  * the size of the frame and of course, the physical address.
  */
-int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **e, uint64_t *a, uint64_t *s);
+int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **entry, uint64_t *address, uint64_t *size);
 
 #define PAGING_MAXPHYADDR(x)      (((uint64_t)1 << x) - 1) // 36 bit max phy addr
 
@@ -32,9 +32,9 @@ int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **e, uint64_t *a, uint64
 //
 
 // Page sizes
-#define PAGING_FRAME_1GB 0
-#define PAGING_FRAME_2MB 1
-#define PAGING_FRAME_4KB 2
+#define PAGING_ENTRY_PTPTE        0
+#define PAGING_ENTRY_PDE          1
+#define PAGING_ENTRY_PTE          2
 
 // Linear address
 #define PAGING_LINEAR_PML4E(x)          ((x >> 39) & 0x1ff)

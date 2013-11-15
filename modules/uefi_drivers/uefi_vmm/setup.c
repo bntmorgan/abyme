@@ -41,19 +41,22 @@ void bsp_main() {
   
   INFO("Walk test\n");
   uint64_t cr3 = cpu_read_cr3();
-  uint64_t linear = 0xf8000000;
+  uint64_t linear = 0x200000;
   uint64_t *e = 0;
   uint64_t a = 0;
   uint64_t s = 0;
+  uint8_t t = -1;
   
   if (paging_walk(cr3, linear, &e, &a, &s)) {
     INFO("ERROR walking address\n");
   } else {
-    INFO("Virtual 0x%016X is walked at 0x%016X by the entry 0x%016X at 0x%016X\n", linear, a, *e, e);
+    INFO("Virtual 0x%016X is walked at 0x%016X by the entry 0x%016X at 0x%016X of size %02x\n", linear, a, *e, e, s);
   }
   
   pat_setup();
 
+  t = pat_get_memory_type(*e, s);
+  INFO("MEMORY TYPE %02x\n", t, PAT_TYPE_STRING(t));
 #if 0
 
 
