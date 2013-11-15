@@ -7,6 +7,7 @@
 #include "pci.h"
 #include "debug.h"
 #include "paging.h"
+#include "pat.h"
 #include "msr.h"
 #include "cpu.h"
 #include "cpuid.h"
@@ -48,8 +49,10 @@ void bsp_main() {
   if (paging_walk(cr3, linear, &e, &a, &s)) {
     INFO("ERROR walking address\n");
   } else {
-    INFO("Virtual 0x%X is walked at 0x%X by the entry 0x%X\n", linear, a, e);
+    INFO("Virtual 0x%016X is walked at 0x%016X by the entry 0x%016X at 0x%016X\n", linear, a, *e, e);
   }
+  
+  pat_setup();
 
 #if 0
 

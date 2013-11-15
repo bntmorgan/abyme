@@ -4,6 +4,12 @@
 #include <efi.h>
 #include "types.h"
 
+#define MEMORY_TYPE_UC 0
+#define MEMORY_TYPE_WC 1
+#define MEMORY_TYPE_WT 4
+#define MEMORY_TYPE_WP 5
+#define MEMORY_TYPE_WB 6
+
 struct memory_range {
   uint8_t type;
   uint64_t range_address_begin;
