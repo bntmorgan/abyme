@@ -38,62 +38,65 @@ uint64_t paging_get_host_cr3(void) {
 /**
  * Return the entry
  */
-uint64_t paging_get_pml4e(uint64_t e, uint64_t linear) {
-  return *(((uint64_t *)(e & PAGING_CR3_PLM4_ADDR)) + PAGING_LINEAR_PML4E(linear));
+uint64_t *paging_get_pml4e(uint64_t e, uint64_t linear) {
+  return ((uint64_t *)(e & PAGING_CR3_PLM4_ADDR)) + PAGING_LINEAR_PML4E(linear);
 }
 
-inline uint64_t paging_get_pdpte(uint64_t e, uint64_t linear) {
-  return *(((uint64_t *)(e & PAGING_PML4E_PDPT_ADDR)) + PAGING_LINEAR_PDPTE(linear));
+inline uint64_t *paging_get_pdpte(uint64_t e, uint64_t linear) {
+  return ((uint64_t *)(e & PAGING_PML4E_PDPT_ADDR)) + PAGING_LINEAR_PDPTE(linear);
 }
 
-inline uint64_t paging_get_pde(uint64_t e, uint64_t linear) {
-  return *(((uint64_t *)(e & PAGING_PDPTE_PD_ADDR)) + PAGING_LINEAR_PDE(linear));
+inline uint64_t *paging_get_pde(uint64_t e, uint64_t linear) {
+  return ((uint64_t *)(e & PAGING_PDPTE_PD_ADDR)) + PAGING_LINEAR_PDE(linear);
 }
 
 
-inline uint64_t paging_get_pte(uint64_t e, uint64_t linear) {
-  return *(((uint64_t *)(e & PAGING_PDE_PT_ADDR)) + PAGING_LINEAR_PTE(linear));
+inline uint64_t *paging_get_pte(uint64_t e, uint64_t linear) {
+  return ((uint64_t *)(e & PAGING_PDE_PT_ADDR)) + PAGING_LINEAR_PTE(linear);
 }
 
-int paging_walk(uint64_t cr3, uint64_t linear, uint64_t *e, uint64_t *a) {
+int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **e, uint64_t *a, uint64_t *s) {
   max_phyaddr = cpuid_get_maxphyaddr();
   INFO("Max phy 0x%016x, 0x%016x\n", max_phyaddr, PAGING_MAXPHYADDR(max_phyaddr));
-  *e = cr3;
+  *e = &cr3;
   // Cr3 -> PML4E
-  *e = paging_get_pml4e(*e, linear);
-  if (!(*e & PAGING_PML4E_P)) {
+  *e = paging_get_pml4e(**e, linear);
+  if (!(**e & PAGING_PML4E_P)) {
     paging_error = PAGING_WALK_NOT_PRESENT;
     return -1;
   }
   // PML4E -> PDPTE
-  *e = paging_get_pdpte(*e, linear);
-  if (!(*e & PAGING_PDPTE_P)) {
+  *e = paging_get_pdpte(**e, linear);
+  if (!(**e & PAGING_PDPTE_P)) {
     paging_error = PAGING_WALK_NOT_PRESENT;
     return -1;
   }
-  if (*e & PAGING_PDPTE_PAGE) {
+  if (**e & PAGING_PDPTE_PAGE) {
     // 1 Go Frame
-    *a = (*e & PAGING_PDPTE_FRAME_ADDR) | PAGING_LINEAR_PDPTE_OFFSET(linear);
+    *a = (**e & PAGING_PDPTE_FRAME_ADDR) | PAGING_LINEAR_PDPTE_OFFSET(linear);
+    *s = PAGING_FRAME_1GB;
     return 0;
   }
   // PDPTE -> PDE
-  *e = paging_get_pde(*e, linear);
-  if (!(*e & PAGING_PDE_P)) {
+  *e = paging_get_pde(**e, linear);
+  if (!(**e & PAGING_PDE_P)) {
     paging_error = PAGING_WALK_NOT_PRESENT;
     return -1;
   }
-  if (*e & PAGING_PDE_PAGE) {
+  if (**e & PAGING_PDE_PAGE) {
     // 2 Mo Frame
-    *a = (*e & PAGING_PDE_FRAME_ADDR) | PAGING_LINEAR_PDE_OFFSET(linear);
+    *a = (**e & PAGING_PDE_FRAME_ADDR) | PAGING_LINEAR_PDE_OFFSET(linear);
+    *s = PAGING_FRAME_2MB;
     return 0;
   }
   // PDE -> PTE
-  *e = paging_get_pte(*e, linear);
-  if (!(*e & PAGING_PTE_P)) {
+  *e = paging_get_pte(**e, linear);
+  if (!(**e & PAGING_PTE_P)) {
     paging_error = PAGING_WALK_NOT_PRESENT;
     return -1;
   }
   // 4 Ko Frame
-  *a = (*e & PAGING_PTE_FRAME_ADDR) | PAGING_LINEAR_PTE_OFFSET(linear);
+  *a = (**e & PAGING_PTE_FRAME_ADDR) | PAGING_LINEAR_PTE_OFFSET(linear);
+  *s = PAGING_FRAME_4KB;
   return 0;
 }

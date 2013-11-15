@@ -41,10 +41,11 @@ void bsp_main() {
   INFO("Walk test\n");
   uint64_t cr3 = cpu_read_cr3();
   uint64_t linear = 0xf8000000;
-  uint64_t e = 0;
+  uint64_t *e = 0;
   uint64_t a = 0;
+  uint64_t s = 0;
   
-  if (paging_walk(cr3, linear, &e, &a)) {
+  if (paging_walk(cr3, linear, &e, &a, &s)) {
     INFO("ERROR walking address\n");
   } else {
     INFO("Virtual 0x%X is walked at 0x%X by the entry 0x%X\n", linear, a, e);

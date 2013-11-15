@@ -10,7 +10,12 @@ uint64_t paging_get_host_cr3(void);
 
 extern uint64_t paging_error;
 
-int paging_walk(uint64_t cr3, uint64_t linear, uint64_t *e, uint64_t *a);
+/**
+ * This function is computing physical address from a linear one
+ * It is returning the location pointer to the entry referecing the frame,
+ * the size of the frame and of course, the physical address.
+ */
+int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **e, uint64_t *a, uint64_t *s);
 
 #define PAGING_MAXPHYADDR(x)      (((uint64_t)1 << x) - 1) // 36 bit max phy addr
 
@@ -25,6 +30,11 @@ int paging_walk(uint64_t cr3, uint64_t linear, uint64_t *e, uint64_t *a);
 // Paging masks
 // And Macros
 //
+
+// Page sizes
+#define PAGING_FRAME_1GB 0
+#define PAGING_FRAME_2MB 1
+#define PAGING_FRAME_4KB 2
 
 // Linear address
 #define PAGING_LINEAR_PML4E(x)          ((x >> 39) & 0x1ff)
