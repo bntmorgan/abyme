@@ -1,5 +1,6 @@
 #include "paging.h"
 #include "stdio.h"
+#include "cpuid.h"
 
 struct paging_ia32e {
   uint64_t PML4[512]      __attribute__((aligned(0x1000)));
@@ -9,6 +10,8 @@ struct paging_ia32e {
 struct paging_ia32e paging_ia32e;
 
 uint64_t paging_error;
+
+uint8_t max_phyaddr;
 
 void paging_setup_host_paging(void) {
   /* TODO: pcide dans le registre cr4 */
@@ -53,6 +56,8 @@ inline uint64_t paging_get_pte(uint64_t e, uint64_t linear) {
 }
 
 int paging_walk(uint64_t cr3, uint64_t linear, uint64_t *e, uint64_t *a) {
+  max_phyaddr = cpuid_get_maxphyaddr();
+  INFO("Max phy 0x%016x, 0x%016x\n", max_phyaddr, PAGING_MAXPHYADDR(max_phyaddr));
   *e = cr3;
   // Cr3 -> PML4E
   *e = paging_get_pml4e(*e, linear);

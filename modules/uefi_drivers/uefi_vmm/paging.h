@@ -12,7 +12,7 @@ extern uint64_t paging_error;
 
 int paging_walk(uint64_t cr3, uint64_t linear, uint64_t *e, uint64_t *a);
 
-#define PAGING_MAXPHYADDR 0xfffffffff // 36 bit max phy addr
+#define PAGING_MAXPHYADDR(x)      (((uint64_t)1 << x) - 1) // 36 bit max phy addr
 
 //
 // Errors
@@ -38,7 +38,7 @@ int paging_walk(uint64_t cr3, uint64_t linear, uint64_t *e, uint64_t *a);
 // CR3
 #define PAGING_CR3_PWT            (1 <<  3)
 #define PAGING_CR3_PCD            (1 <<  4)
-#define PAGING_CR3_PLM4_ADDR      (PAGING_MAXPHYADDR & ~0xfff)
+#define PAGING_CR3_PLM4_ADDR      (PAGING_MAXPHYADDR(max_phyaddr) & ~0xfff)
 
 // PML4E
 #define PAGING_PML4E_P            (1 <<  0)
@@ -47,7 +47,7 @@ int paging_walk(uint64_t cr3, uint64_t linear, uint64_t *e, uint64_t *a);
 #define PAGING_PML4E_PWT          (1 <<  3)
 #define PAGING_PML4E_PCD          (1 <<  4)
 #define PAGING_PML4E_A            (1 <<  5)
-#define PAGING_PML4E_PDPT_ADDR    (PAGING_MAXPHYADDR & ~0xfff)
+#define PAGING_PML4E_PDPT_ADDR    (PAGING_MAXPHYADDR(max_phyaddr) & ~0xfff)
 #define PAGING_PML4E_XD           (1 << 63)
 
 // PDPTE
@@ -61,8 +61,8 @@ int paging_walk(uint64_t cr3, uint64_t linear, uint64_t *e, uint64_t *a);
 #define PAGING_PDPTE_PAGE         (1 <<  7)
 #define PAGING_PDPTE_G            (1 <<  8)
 #define PAGING_PDPTE_PAT          (1 << 12)
-#define PAGING_PDPTE_PD_ADDR      (PAGING_MAXPHYADDR & ~0xfff)
-#define PAGING_PDPTE_FRAME_ADDR   (PAGING_MAXPHYADDR & ~0x1fffffff) // 1Go
+#define PAGING_PDPTE_PD_ADDR      (PAGING_MAXPHYADDR(max_phyaddr) & ~0xfff)
+#define PAGING_PDPTE_FRAME_ADDR   (PAGING_MAXPHYADDR(max_phyaddr) & ~0x1fffffff) // 1Go
 #define PAGING_PDPTE_XD           (1 << 63)
 
 // PDE
@@ -76,8 +76,8 @@ int paging_walk(uint64_t cr3, uint64_t linear, uint64_t *e, uint64_t *a);
 #define PAGING_PDE_PAGE           (1 <<  7)
 #define PAGING_PDE_G              (1 <<  8)
 #define PAGING_PDE_PAT            (1 << 12)
-#define PAGING_PDE_PT_ADDR        (PAGING_MAXPHYADDR & ~0xfff)
-#define PAGING_PDE_FRAME_ADDR     (PAGING_MAXPHYADDR & ~0xfffff) // 2Mo
+#define PAGING_PDE_PT_ADDR        (PAGING_MAXPHYADDR(max_phyaddr) & ~0xfff)
+#define PAGING_PDE_FRAME_ADDR     (PAGING_MAXPHYADDR(max_phyaddr) & ~0xfffff) // 2Mo
 
 // PTE
 #define PAGING_PTE_P              (1 << 0)
@@ -89,6 +89,6 @@ int paging_walk(uint64_t cr3, uint64_t linear, uint64_t *e, uint64_t *a);
 #define PAGING_PTE_D              (1 << 6)
 #define PAGING_PTE_PAT            (1 << 7)
 #define PAGING_PTE_G              (1 << 8)
-#define PAGING_PTE_FRAME_ADDR     (PAGING_MAXPHYADDR & ~0xfff) // 4ko
+#define PAGING_PTE_FRAME_ADDR     (PAGING_MAXPHYADDR(max_phyaddr) & ~0xfff) // 4ko
 
 #endif

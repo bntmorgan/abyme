@@ -37,6 +37,21 @@ void bsp_main() {
   debug_server_init();
 #endif
   cpuid_setup();
+  
+  INFO("Walk test\n");
+  uint64_t cr3 = cpu_read_cr3();
+  uint64_t linear = 0xf8000000;
+  uint64_t e = 0;
+  uint64_t a = 0;
+  
+  if (paging_walk(cr3, linear, &e, &a)) {
+    INFO("ERROR walking address\n");
+  } else {
+    INFO("Virtual 0x%X is walked at 0x%X by the entry 0x%X\n", linear, a, e);
+  }
+
+#if 0
+
 
   INFO("VMCS addresses %X %X\n", vmxon, vmcs0);
   INFO("_padding_begin_a %X\n", &_padding_begin_a);
@@ -82,6 +97,7 @@ void bsp_main() {
   vmm_setup(/* TODO #core */);
   INFO("SETUP DONE\n");
   vmm_vm_setup_and_launch(/* TODO #core */);
+#endif
 }
 
 void vmm_setup() {
