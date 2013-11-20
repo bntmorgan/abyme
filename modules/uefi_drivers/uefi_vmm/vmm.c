@@ -6,7 +6,6 @@
 #include <efi.h>
 #include <efilib.h>
 
-#include "systab.h"
 #include "vmcs.h"
 #include "pci.h"
 #include "mtrr.h"
@@ -27,7 +26,7 @@ void vmm_print_guest_regs(struct registers *guest_regs) {
 void vmm_WAIT(void) {
   uint64_t key = 0;
   while (key != 0xd0000) {
-    uefi_call_wrapper(systab->ConIn->ReadKeyStroke, 2, systab->ConIn, &key);
+    uefi_call_wrapper(ST->ConIn->ReadKeyStroke, 2, ST->ConIn, &key);
   }
 }
 

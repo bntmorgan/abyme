@@ -96,6 +96,10 @@ void cpu_write_cr0(uint64_t value) {
   __asm__ __volatile__("mov %0, %%cr0" : : "a" (value));
 }
 
+void cpu_write_cr3(uint64_t value) {
+  __asm__ __volatile__("mov %0, %%cr3" : : "a" (value));
+}
+
 void cpu_write_cr4(uint64_t value) {
   __asm__ __volatile__("mov %0, %%cr4" : : "a" (value));
 }

@@ -28,8 +28,8 @@ struct pat_entries_t {
       uint8_t pat7:3;
       uint8_t reserved7:5;
     } __attribute__((packed));
+    uint8_t entries[8];
   } __attribute__((packed));
-  uint8_t entries[8];
 };
 
 void pat_setup();

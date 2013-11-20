@@ -36,6 +36,8 @@ uint64_t cpu_read_dr7(void);
 
 void cpu_write_cr0(uint64_t reg);
 
+void cpu_write_cr3(uint64_t reg);
+
 void cpu_write_cr4(uint64_t reg);
 
 void cpu_enable_vmxe(void);

@@ -83,7 +83,15 @@ uint8_t eth_setup() {
   if(eth_set_bar0()) {
     return -1;
   }
-  // See 11.4.1 Interrupts During Initialization
+  // Allocate memory for rx tx buffers and descriptors
+  // TODO
+  return 0;
+}
+
+uint8_t eth_init() {
+  // Change the cache policy for the buffers and descriptors
+  // TODO
+  Print(L"Experimental Intel 82579LM Ethernet driver initialization\n\r");
   eth_disable_interrupts();
   eth_reset();
   eth_disable_interrupts();
@@ -92,10 +100,6 @@ uint8_t eth_setup() {
     Print(L"Failed to init the ethernet card\n");
   }
   eth_print_registers();
-  return 0;
-}
-
-uint8_t eth_init() {
   Print(L"Initializing ethernet\n");
   // Get the mac address
   uint32_t laddr_l = cpu_mem_readd(bar0 + REG_RAL);

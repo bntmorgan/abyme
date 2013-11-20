@@ -7,16 +7,15 @@
 #include "cpuid.h"
 #include "stdio.h"
 #include "paging.h"
-
-EFI_SYSTEM_TABLE *systab;
+#include "efiw.h"
 
 EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
-
-  // Save the uefi systab
-  systab = st;
-
   // Initialize gnuefi lib
   InitializeLib(image_handle, st);
+  
+  paging_ia32e = efi_allocate_pool(sizeof(struct paging_ia32e));
+  INFO("Pointer allocated 0x%016X\n", (uintptr_t)&paging_ia32e);
+
   INFO("VMM driver startup\n");
   INFO("main at %X\n", efi_main);
 

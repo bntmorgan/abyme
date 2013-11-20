@@ -86,7 +86,7 @@ uint8_t smp_allocate_trampoline() {
   uint32_t pages = (&trampoline_end - &trampoline_start) / 0x1000 +
     (((&trampoline_end - &trampoline_start) * 1. / 0x1000 > 0) ? 1 : 0 );
   INFO("Number of pages to allocate for trampoline 0x%x\n", pages);
-  uint32_t code = uefi_call_wrapper(systab->BootServices->AllocatePages, 4
+  uint32_t code = uefi_call_wrapper(ST->BootServices->AllocatePages, 4
       AllocateMaxAddress, EfiBootServicesCode, pages, address);
   // XXX ULTRA DIRTY
   // http://wiki.osdev.org/Memory_Map_(x86)
@@ -532,8 +532,10 @@ void smp_activate_cores() {
 #include "stdio.h"
 #include "msr.h"
 #include "cpu.h"
-#include "systab.h"
 #include "string.h"
+
+#include <efi.h>
+#include <efilib.h>
 
 /*
  * See [Intel_August_2012], volume 3, section 8.4.4.

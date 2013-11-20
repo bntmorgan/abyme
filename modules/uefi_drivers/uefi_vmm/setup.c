@@ -39,9 +39,23 @@ void bsp_main() {
 #endif
   cpuid_setup();
   
+#if 1
+  // BEGIN TEST PAT
+  
+  // paging_setup_host_paging();
+  // cpu_write_cr3(paging_get_host_cr3());
+
+  INFO("CR0 0x%016X\n", cpu_read_cr0());
+  INFO("CR4 0x%016X\n", cpu_read_cr4());
+  
+  mtrr_create_ranges();
+  INFO("MTRR CREATE RANGES DONE\n");
+  mtrr_print_ranges();
+  INFO("MTRR PRINT RANGES DONE\n");
+
   INFO("Walk test\n");
   uint64_t cr3 = cpu_read_cr3();
-  uint64_t linear = 0x200000;
+  uint64_t linear = 0xcb98ebf0;
   uint64_t *e = 0;
   uint64_t a = 0;
   uint64_t s = 0;
@@ -56,10 +70,12 @@ void bsp_main() {
   pat_setup();
 
   t = pat_get_memory_type(*e, s);
-  INFO("MEMORY TYPE %02x\n", t, PAT_TYPE_STRING(t));
+  INFO("MEMORY TYPE %02x : %s\n", t, PAT_TYPE_STRING(t));
+
+  // END TEST PAT
+#endif
+
 #if 0
-
-
   INFO("VMCS addresses %X %X\n", vmxon, vmcs0);
   INFO("_padding_begin_a %X\n", &_padding_begin_a);
   INFO("_padding_begin_b %X\n", &_padding_begin_b);

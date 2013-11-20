@@ -34,6 +34,8 @@ inline uint8_t pat_decode_entry_pdpte(uint64_t e) {
 }
 
 inline uint8_t pat_decode_entry_pde(uint64_t e) {
+  INFO("ENTRY 0x%016X\n", e);
+  INFO("PWT %d PCD %d PAT %d\n", e & PAGING_PDE_PWT, e & PAGING_PDE_PCD, e & PAGING_PDE_PAT);
   return (((e & PAGING_PDE_PWT) != 0) << 0) |
          (((e & PAGING_PDE_PCD) != 0) << 1) |
          (((e & PAGING_PDE_PAT) != 0) << 2) ;
@@ -46,17 +48,29 @@ inline uint8_t pat_decode_entry_pte(uint64_t e) {
 }
 
 inline uint8_t pat_decode_entry(uint64_t e, uint8_t s) {
-  if (s == PAGING_ENTRY_PTPTE) {
+  if (s == PAGING_ENTRY_PDPTE) {
+    INFO("PDPTE 0x%02x\n", pat_decode_entry_pdpte(e));
     return pat_decode_entry_pdpte(e);
   } else if (s == PAGING_ENTRY_PDE) {
+    INFO("PDE 0x%02x\n", pat_decode_entry_pde(e));
     return pat_decode_entry_pde(e);
   } else if (s == PAGING_ENTRY_PTE) {
+    INFO("PTE 0x%02x\n", pat_decode_entry_pte(e));
     return pat_decode_entry_pte(e);
   }
   return -1;
 }
 
 uint8_t pat_get_memory_type(uint64_t e, uint8_t s) {
+  INFO("%02x %02x %02x %02x %02x %02x %02x %02x\n",
+      pat_entries.entries[0],
+      pat_entries.entries[1],
+      pat_entries.entries[2],
+      pat_entries.entries[3],
+      pat_entries.entries[4],
+      pat_entries.entries[5],
+      pat_entries.entries[6],
+      pat_entries.entries[7]);
   return pat_entries.entries[pat_decode_entry(e, s)];
 }
 

@@ -4,6 +4,17 @@
 #include <efi.h>
 #include "types.h"
 
+#define MAX_ADDRESS_WIDTH_PDPT_1 0x40
+
+struct paging_ia32e {
+  uint64_t PML4[512]      __attribute__((aligned(0x1000)));
+  uint64_t PDPT[512][512] __attribute__((aligned(0x1000)));
+  uint64_t PD[MAX_ADDRESS_WIDTH_PDPT_1][512] __attribute__((aligned(0x1000)));
+  uint64_t PT[MAX_ADDRESS_WIDTH_PDPT_1][512][512]__attribute__((aligned(0x1000)));
+} __attribute__((aligned(8)));
+
+extern struct paging_ia32e *paging_ia32e;
+
 void paging_setup_host_paging(void);
 
 uint64_t paging_get_host_cr3(void);
@@ -32,7 +43,7 @@ int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **entry, uint64_t *addre
 //
 
 // Page sizes
-#define PAGING_ENTRY_PTPTE        0
+#define PAGING_ENTRY_PDPTE        0
 #define PAGING_ENTRY_PDE          1
 #define PAGING_ENTRY_PTE          2
 
