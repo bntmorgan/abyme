@@ -1,4 +1,5 @@
 #include "vmm.h"
+#include "vmx.h"
 #include "gdt.h"
 #include "idt.h"
 #include "mtrr.h"

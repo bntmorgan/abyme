@@ -1,4 +1,5 @@
 #include "vmm.h"
+#include "vmx.h"
 #include "stdio.h"
 #include "cpu.h"
 #include "msr.h"

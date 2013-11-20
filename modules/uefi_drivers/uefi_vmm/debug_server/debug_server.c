@@ -4,6 +4,7 @@
 #include "stdio.h"
 #include "string.h"
 #include "vmm.h"
+#include "vmx.h"
 #include "vmcs.h"
 #include "cpu.h"
 #include "debug_server.h"

@@ -160,7 +160,7 @@ pre-launch:
 	cp -r binary/ qemu/hda-contents
 
 launch: pre-launch
-	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,model=6,+vmx -monitor stdio -S
+	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,model=6,+vmx -monitor stdio -m 8G #-enable-kvm
 
 #pre-launch:
 #	rm -rf qemu/roms/*
