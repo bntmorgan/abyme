@@ -6,6 +6,7 @@
 #include "efi/efi_82579LM.h"
 #include "string.h"
 #include "debug.h"
+#include "stdio.h"
 
 static inline uint16_t htons(uint16_t data) {
   return ((data >> 8) & 0xff) | ((data << 8) & 0xff00);
@@ -17,19 +18,19 @@ static inline uint16_t ntohs(uint16_t data) {
 
 void _api_dump_eth_frame(void *frame, uint32_t payload_len) {
   // Addresses
-  Print(L"MAC Addresses\n");
+  INFO("MAC Addresses\n");
   dump((void *)frame, 6, 12, 0, 6);
   // Type
-  Print(L"Type\n");
+  INFO("Type\n");
   dump(((void *)frame) + 12, 2, 2, 0, 2);
   // Payload
-  Print(L"Payload len %d\n", payload_len);
+  INFO("Payload len %d\n", payload_len);
   // dump(((void *)frame) + sizeof(eth_header), 1, payload_len, 0, 1);
 }
 
 void test_send() {
   static uint8_t test_buf[0x100] = {'H', 'E', 'L', 'L', 'O'};
-  Print(L"Sending test frame\n");
+  INFO("Sending test frame\n");
   send(test_buf, 0x100, EFI_82579LM_API_BLOCK);
 }
 

@@ -22,3 +22,24 @@ void *efi_allocate_pool(uint64_t size) {
   }
   return buf;
 }
+
+void *efi_allocate_pages(uint64_t count) {
+  EFI_PHYSICAL_ADDRESS addr;
+  // allocate the page tables 
+  efiw_status = uefi_call_wrapper(ST->BootServices->AllocatePages, 4,
+      AllocateAnyPages, EfiRuntimeServicesData, count, &addr); 
+  switch (efiw_status) {
+    case EFI_SUCCESS:
+      break;
+    case EFI_OUT_OF_RESOURCES:
+      return NULL;
+    case EFI_INVALID_PARAMETER:
+      return NULL;
+    case EFI_NOT_FOUND:
+      return NULL;
+    default:
+      // Unrecognized error code
+      return NULL;
+  }
+  return (void *)addr;
+}

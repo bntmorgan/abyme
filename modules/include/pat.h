@@ -36,6 +36,7 @@ void pat_setup();
 
 uint8_t pat_supported();
 
-uint8_t pat_get_memory_type(uint64_t e, uint8_t s);
+uint8_t pat_get_memory_type(uint64_t entry, uint8_t type);
+uint8_t pat_set_memory_type(uint64_t *entry, uint8_t type, uint8_t mem_type);
 
 #endif//__PAT_H__

@@ -40,7 +40,7 @@ void bsp_main() {
 #endif
   cpuid_setup();
   
-#if 1
+#if 0
   // BEGIN TEST PAT
   
   // paging_setup_host_paging();
@@ -59,7 +59,7 @@ void bsp_main() {
   uint64_t linear = 0xcb98ebf0;
   uint64_t *e = 0;
   uint64_t a = 0;
-  uint64_t s = 0;
+  uint8_t s = -1;
   uint8_t t = -1;
   
   if (paging_walk(cr3, linear, &e, &a, &s)) {
@@ -76,7 +76,7 @@ void bsp_main() {
   // END TEST PAT
 #endif
 
-#if 0
+#if 1
   INFO("VMCS addresses %X %X\n", vmxon, vmcs0);
   INFO("_padding_begin_a %X\n", &_padding_begin_a);
   INFO("_padding_begin_b %X\n", &_padding_begin_b);
@@ -120,6 +120,9 @@ void bsp_main() {
 
   vmm_setup(/* TODO #core */);
   INFO("SETUP DONE\n");
+#ifdef _DEBUG_SERVER
+  debug_server_eth_init();
+#endif
   vmm_vm_setup_and_launch(/* TODO #core */);
 #endif
 }

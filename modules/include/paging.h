@@ -4,7 +4,7 @@
 #include <efi.h>
 #include "types.h"
 
-#define MAX_ADDRESS_WIDTH_PDPT_1 0x40
+#define MAX_ADDRESS_WIDTH_PDPT_1 0x24
 
 struct paging_ia32e {
   uint64_t PML4[512]      __attribute__((aligned(0x1000)));
@@ -24,9 +24,14 @@ extern uint64_t paging_error;
 /**
  * This function is computing physical address from a linear one
  * It is returning the location pointer to the entry referecing the frame,
- * the size of the frame and of course, the physical address.
+ * the type of the frame and of course, the physical address.
  */
-int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **entry, uint64_t *address, uint64_t *size);
+int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **entry, uint64_t *address, uint8_t *type);
+
+/**
+ * Return the frame address according to the entry type
+ */
+uint8_t paging_get_frame_address(uint64_t entry, uint64_t type, uint64_t *address);
 
 #define PAGING_MAXPHYADDR(x)      (((uint64_t)1 << x) - 1) // 36 bit max phy addr
 

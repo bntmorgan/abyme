@@ -6,6 +6,7 @@
 #include "api.h"
 #include "pci.h"
 #include "efi/efi_82579LM.h"
+#include "stdio.h"
 
 //
 // Protocol structure definition
@@ -27,7 +28,7 @@ EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID;
 
 EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image_handle, systab);
-  Print(L"Experimental Intel 82579LM Ethernet driver initialization\n\r");
+  INFO("Experimental Intel 82579LM Ethernet driver initialization\n");
   if (eth_setup() == -1) {
     return EFI_NOT_FOUND;
   }
@@ -40,7 +41,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   ASSERT (!EFI_ERROR(status)); 
   image->Unload = vmm_rt_unload;
 
-  Print(L"Unload handler added %x\n", (uint64_t)image_handle);
+  INFO("Unload handler added %x\n", (uint64_t)image_handle);
 
   // Share the pci address in the uefi protocol
   pci_device_addr *pci_addr = eth_get_pci_addr();
@@ -48,6 +49,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   proto.pci_addr.device = pci_addr->device;
   proto.pci_addr.function = pci_addr->function;
   proto.bar0 = (uint64_t)bar0;
+  proto.init = eth_init;
 
   // Add a protocol so someone can locate us 
   status = uefi_call_wrapper(BS->InstallProtocolInterface, 4, &image_handle, &guid_82579LM, NULL, &proto);
@@ -57,6 +59,6 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
 }
 
 EFI_STATUS vmm_rt_unload (IN EFI_HANDLE image) {
-  Print(L"Driver unload :(\n");
+  INFO("Driver unload :(\n");
   return (EFI_SUCCESS);
 }

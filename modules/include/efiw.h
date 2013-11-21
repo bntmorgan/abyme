@@ -5,6 +5,7 @@
 #include <efilib.h>
 
 void *efi_allocate_pool(uint64_t size);
+void *efi_allocate_pages(uint64_t count);
 
 extern EFI_STATUS efiw_status;
 

@@ -4,8 +4,14 @@
 #include "82579LM.h"
 #include "addr.h"
 #include "cpu.h"
+#include "efiw.h"
 #include "string.h"
 #include "debug_eth.h"
+#include "stdio.h"
+#include "cpuid.h"
+#include "pat.h"
+#include "mtrr.h"
+#include "paging.h"
   
 // PCI device information
 pci_device_info info;
@@ -15,14 +21,18 @@ pci_device_addr addr;
 eth_addr laddr;
 
 // Transmission and receive descriptors
-recv_desc rx_descs[RX_DESC_COUNT] __attribute__((aligned(0x10)));
-trans_desc tx_descs[TX_DESC_COUNT] __attribute__((aligned(0x10)));
+// recv_desc rx_descs[RX_DESC_COUNT] __attribute__((aligned(0x10)));
+// trans_desc tx_descs[TX_DESC_COUNT] __attribute__((aligned(0x10)));
+recv_desc *rx_descs;
+trans_desc *tx_descs;
 
 // BAR0
 uint8_t *bar0;
 
-uint8_t rx_bufs[RX_DESC_COUNT * NET_BUF_SIZE];
-uint8_t tx_bufs[TX_DESC_COUNT * NET_BUF_SIZE];
+// uint8_t rx_bufs[RX_DESC_COUNT * NET_BUF_SIZE];
+// uint8_t tx_bufs[TX_DESC_COUNT * NET_BUF_SIZE];
+uint8_t *rx_bufs;
+uint8_t *tx_bufs;
 
 void wait(uint64_t time) {
   uint64_t i;
@@ -36,7 +46,7 @@ uint8_t eth_set_bar0() {
   pci_get_bar(&bar, id, 0);
   if (bar.flags & PCI_BAR_IO) {
     // Only Memory Mapped I/O supported
-    Print(L"Only Memory Mapped I/O supported\n");
+    INFO("Only Memory Mapped I/O supported\n");
     return -1;
   }
   bar0 = (uint8_t *)bar.u.address;
@@ -54,7 +64,7 @@ uint8_t eth_disable_interrupts() {
 }
 
 uint8_t eth_reset() {
-  Print(L"We reset the ethernet controller to ensure having a clear configuration\n");
+  INFO("We reset the ethernet controller to ensure having a clear configuration\n");
   uint16_t reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
   // Reset the card
   reg_ctrl |= CTRL_SWRST | CTRL_LCD_RST;
@@ -64,48 +74,82 @@ uint8_t eth_reset() {
 }
 
 void eth_print_registers() {
-  Print(L"CTRL 0x%08x\n", cpu_mem_readd(bar0 + REG_CTRL));
-  Print(L"STATUS 0x%08x\n", cpu_mem_readd(bar0 + REG_STATUS));
-  Print(L"Interrupt Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_ICR));
-  Print(L"Receive Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_RCTL));
-  Print(L"Transmit Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_TCTL));
+  INFO("CTRL 0x%08x\n", cpu_mem_readd(bar0 + REG_CTRL));
+  INFO("STATUS 0x%08x\n", cpu_mem_readd(bar0 + REG_STATUS));
+  INFO("Interrupt Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_ICR));
+  INFO("Receive Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_RCTL));
+  INFO("Transmit Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_TCTL));
 }
 
 // See 11.0 Initialization and Reset Operation
 uint8_t eth_setup() {
+  cpuid_setup();
+  mtrr_create_ranges();
+  INFO("MTRR CREATE RANGES DONE\n");
+  mtrr_print_ranges();
+  INFO("MTRR PRINT RANGES DONE\n");
+  pat_setup();
   // Get device info, bus address and function
   if (eth_get_device() == -1) {
-    Print(L"LOLZ owned no ethernet controller found\n");
+    INFO("LOLZ owned no ethernet controller found\n");
     return -1;
   } else {
-    Print(L"LOLZY Intel 82579LM ethernet controller found at %02x:%02x:%02x\n", addr.bus, addr.device, addr.function);
+    INFO("LOLZY Intel 82579LM ethernet controller found at %02x:%02x:%02x\n", addr.bus, addr.device, addr.function);
   }
   if(eth_set_bar0()) {
     return -1;
   }
   // Allocate memory for rx tx buffers and descriptors
-  // TODO
-  return 0;
+  rx_bufs = efi_allocate_pages((RX_DESC_COUNT * NET_BUF_SIZE) / 0x1000 + ((RX_DESC_COUNT * NET_BUF_SIZE) % 0x1000 != 0.0));
+  if (!rx_bufs) {
+    INFO("Failed to allocate rx_bufs\n");
+    return -1;
+  }
+  tx_bufs = efi_allocate_pages((TX_DESC_COUNT * NET_BUF_SIZE) / 0x1000 + ((RX_DESC_COUNT * NET_BUF_SIZE) % 0x1000 != 0.0));
+  if (!rx_bufs) {
+    INFO("Failed to allocate tx_bufs\n");
+    return -1;
+  }
+  // descs check alignement to 0x10
+  rx_descs = efi_allocate_pages(1);
+  if (!rx_descs || (((uint64_t)rx_descs) & 0xf)) {
+    INFO("Failed to allocate rx_descs or unaligned to 0x10 : 0x%016X lol %d\n", (uint64_t)rx_descs);
+    return -1;
+  }
+  tx_descs = efi_allocate_pages(1);
+  if (!tx_descs || (((uint64_t)tx_descs) & 0xf)) {
+    INFO("Failed to allocate tx_bufs or unaligned to 0x10 : 0x%016X\n", (uint64_t)tx_descs);
+    return -1;
+  }
+  return 0; 
 }
 
 uint8_t eth_init() {
-  // Change the cache policy for the buffers and descriptors
+  // Change the cache policy for the buffers and descriptors with PAT
+  uint64_t frame_addr = 0;
+  uint64_t *entry = NULL;
+  uint8_t type;
+  uint64_t cr3 = cpu_read_cr3();
+  // rx_bufs
+  if (paging_walk(cr3, (uint64_t)rx_bufs, &entry, &frame_addr, &type)) {
+    INFO("Error while walking rx_bufs address\n");
+    return -1;
+  }
+  if (pat_set_memory_type(entry, type, MEMORY_TYPE_UC)) {
+    return -1;
+  }
   // TODO
-  Print(L"Experimental Intel 82579LM Ethernet driver initialization\n\r");
+  INFO("Experimental Intel 82579LM Ethernet driver initialization\n\r");
   eth_disable_interrupts();
   eth_reset();
   eth_disable_interrupts();
-  if (eth_init()) {
-    return -1;
-    Print(L"Failed to init the ethernet card\n");
-  }
   eth_print_registers();
-  Print(L"Initializing ethernet\n");
+  INFO("Initializing ethernet\n");
   // Get the mac address
   uint32_t laddr_l = cpu_mem_readd(bar0 + REG_RAL);
   if (!laddr_l) {
     // We don't support EEPROM registers
-    Print(L"EEPROM registers unsupported\n");
+    INFO("EEPROM registers unsupported\n");
     return -1;
   }
   uint32_t laddr_h = cpu_mem_readd(bar0 + REG_RAH);
@@ -115,7 +159,7 @@ uint8_t eth_init() {
   laddr.n[3] = (uint8_t)(laddr_l >> 24);
   laddr.n[4] = (uint8_t)(laddr_h >> 0);
   laddr.n[5] = (uint8_t)(laddr_h >> 8);
-  Print(L"MAC addr %02x:%02x:%02x:%02x:%02x:%02x\n", laddr.n[0], 
+  INFO("MAC addr %02x:%02x:%02x:%02x:%02x:%02x\n", laddr.n[0], 
       laddr.n[1], laddr.n[2], laddr.n[3], laddr.n[4], laddr.n[5]);
   // cpu_mem_writed(bar0 + REG_CTRL, cpu_mem_readd(bar0 + REG_CTRL) | CTRL_SLU);
   // Clear Multicast Table Array
@@ -131,7 +175,7 @@ uint8_t eth_init() {
     recv_desc *rx_desc = rx_descs + i;
     rx_desc->addr = (uint64_t)(uintptr_t)buf;
     rx_desc->status = 0;
-    //Print(L"@0x%x rx_desc[0x%x]{addr: 0x%x, status: 0x%x}\n", rx_desc, i, rx_desc->addr, rx_desc->status);
+    //INFO("@0x%x rx_desc[0x%x]{addr: 0x%x, status: 0x%x}\n", rx_desc, i, rx_desc->addr, rx_desc->status);
   }
   cpu_mem_writed(bar0 + REG_RDBAL, (uintptr_t)rx_descs);
   cpu_mem_writed(bar0 + REG_RDBAH, (uintptr_t)rx_descs >> 32);
@@ -144,7 +188,7 @@ uint8_t eth_init() {
   for (i = 0; i < TX_DESC_COUNT; i++) {
     trans_desc *tx_desc = tx_descs + i;
     tx_desc->status = TSTA_DD;      // mark descriptor as 'complete'
-    //Print(L"@0x%x tx_desc[0x%x]{addr: 0x%x, status: 0x%x}\n", tx_desc, i, tx_desc->addr, tx_desc->status);
+    //INFO("@0x%x tx_desc[0x%x]{addr: 0x%x, status: 0x%x}\n", tx_desc, i, tx_desc->addr, tx_desc->status);
   }
   cpu_mem_writed(bar0 + REG_TDBAL, (uintptr_t)tx_descs);
   cpu_mem_writed(bar0 + REG_TDBAH, (uintptr_t)tx_descs >> 32);
@@ -161,7 +205,7 @@ inline void eth_wait_tx(uint8_t idx) {
   // Wait until the packet is send
   while (!(tx_desc->status & 0xf)) {
     wait(1000000);
-    Print(L"WAIIT lol\n");
+    INFO("WAIIT lol\n");
   }
 }
 
@@ -207,7 +251,7 @@ uint32_t eth_recv(void *buf, uint32_t len, uint8_t block) {
   uint32_t l = 0;
   while ((rx_desc->status & RSTA_DD) && (l < len)) {
     if (rx_desc->errors) {
-      Print(L"Packet Error: (0x%x)\n", rx_desc->errors);
+      INFO("Packet Error: (0x%x)\n", rx_desc->errors);
     } else {
       uint8_t *b = rx_bufs + (idx * NET_BUF_SIZE);
       uint32_t len = rx_desc->len;

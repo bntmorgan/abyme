@@ -12,6 +12,80 @@
 #define MEMORY_TYPE_WB 6
 #define MEMORY_TYPE_UC_MINUS 7
 
+uint8_t pat_decode_mtrr_pat_type[7][8] = {
+  { 
+    // mtrr UC
+    MEMORY_TYPE_UC, // pat UC
+    MEMORY_TYPE_WC, // pat WC
+    -1,
+    -1,
+    MEMORY_TYPE_UC, // pat WT
+    MEMORY_TYPE_UC, // pat WP
+    MEMORY_TYPE_UC, // pat WB
+    MEMORY_TYPE_UC, // pat UC-
+  },{
+    // mtrr WC
+    MEMORY_TYPE_UC, // pat UC
+    MEMORY_TYPE_WC, // pat WC
+    -1,
+    -1,
+    MEMORY_TYPE_UC, // pat WT
+    MEMORY_TYPE_UC, // pat WP
+    MEMORY_TYPE_WC, // pat WB
+    MEMORY_TYPE_WC, // pat UC-
+  },{
+    -1, -1, -1, -1, -1, -1, -1, -1
+  },{
+    -1, -1, -1, -1, -1, -1, -1, -1
+  },{
+    // mtrr WT
+    MEMORY_TYPE_UC, // pat UC
+    MEMORY_TYPE_WC, // pat WC
+    -1,
+    -1,
+    MEMORY_TYPE_WT, // pat WT
+    MEMORY_TYPE_WP, // pat WP
+    MEMORY_TYPE_WT, // pat WB
+    MEMORY_TYPE_UC, // pat UC-
+  },{
+    // mtrr WP
+    MEMORY_TYPE_UC, // pat UC
+    MEMORY_TYPE_WC, // pat WC
+    -1,
+    -1,
+    MEMORY_TYPE_WT, // pat WT
+    MEMORY_TYPE_WP, // pat WP
+    MEMORY_TYPE_WP, // pat WB
+    MEMORY_TYPE_WC, // pat UC-
+  },{
+    // mtrr WB
+    MEMORY_TYPE_UC, // pat UC
+    MEMORY_TYPE_WC, // pat WC
+    -1,
+    -1,
+    MEMORY_TYPE_WT, // pat WT
+    MEMORY_TYPE_WP, // pat WP
+    MEMORY_TYPE_WB, // pat WB
+    MEMORY_TYPE_UC, // pat UC-
+  }
+};
+
+uint8_t pat_set_memory_type(uint64_t *entry, uint8_t type, uint8_t mem_type) {
+  uint64_t frame_addr;
+  const struct memory_range *mtrr_range;
+  uint8_t mtrr_type;
+  // Get the page address
+  if (paging_get_frame_address(*entry, type, &frame_addr)) {
+    return -1;
+  }
+  INFO("Frame address : 0x%016X\n", frame_addr);
+  // Get the mtrr memory type
+  mtrr_range = mtrr_get_memory_range(frame_addr);
+  mtrr_type = mtrr_range->type;
+  INFO("Mtrr memory type : 0x%02x\n", mtrr_type);
+  return 0;
+}
+
 // 0x100 : 0x8 to 0xff are reserved
 char *pat_type_strings[0x100] = {
   "Uncacheable (UC)",
