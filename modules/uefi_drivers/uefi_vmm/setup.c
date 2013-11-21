@@ -87,9 +87,12 @@ void bsp_main() {
   vmm_setup(/* TODO #core */);
   INFO("SETUP DONE\n");
 #ifdef _DEBUG_SERVER
+  // XXX XXX XXX XXX XXX XXX XXX ...
   uint64_t cr3 = cpu_read_cr3();
+  // The memory context need to be the future host memory contexte (4ko pages)
   cpu_write_cr3(paging_get_host_cr3());
   debug_server_eth_init();
+  // Restore uefi context
   cpu_write_cr3(cr3);
 #endif
   vmm_vm_setup_and_launch(/* TODO #core */);
