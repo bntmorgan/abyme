@@ -83,11 +83,13 @@ void eth_print_registers() {
 
 // See 11.0 Initialization and Reset Operation
 uint8_t eth_setup() {
+  INFO("CPUID SETUP\n");
   cpuid_setup();
   mtrr_create_ranges();
   INFO("MTRR CREATE RANGES DONE\n");
   mtrr_print_ranges();
   INFO("MTRR PRINT RANGES DONE\n");
+  INFO("PAT SETUP\n");
   pat_setup();
   // Get device info, bus address and function
   if (eth_get_device() == -1) {
@@ -111,12 +113,14 @@ uint8_t eth_setup() {
     return -1;
   }
   // descs check alignement to 0x10
+  // XXX
   rx_descs = efi_allocate_pages(1);
   if (!rx_descs || (((uint64_t)rx_descs) & 0xf)) {
     INFO("Failed to allocate rx_descs or unaligned to 0x10 : 0x%016X lol %d\n", (uint64_t)rx_descs);
     return -1;
   }
   tx_descs = efi_allocate_pages(1);
+  // XXX
   if (!tx_descs || (((uint64_t)tx_descs) & 0xf)) {
     INFO("Failed to allocate tx_bufs or unaligned to 0x10 : 0x%016X\n", (uint64_t)tx_descs);
     return -1;
@@ -126,19 +130,26 @@ uint8_t eth_setup() {
 
 uint8_t eth_init() {
   // Change the cache policy for the buffers and descriptors with PAT
-  uint64_t frame_addr = 0;
-  uint64_t *entry = NULL;
-  uint8_t type;
-  uint64_t cr3 = cpu_read_cr3();
-  // rx_bufs
-  if (paging_walk(cr3, (uint64_t)rx_bufs, &entry, &frame_addr, &type)) {
-    INFO("Error while walking rx_bufs address\n");
+  if (pat_set_memory_type_range((uint64_t)rx_bufs, MEMORY_TYPE_UC, RX_DESC_COUNT
+        * NET_BUF_SIZE)) {
+    INFO("Failed to install the right memory type for rx_bufs...\n");
     return -1;
   }
-  if (pat_set_memory_type(entry, type, MEMORY_TYPE_UC)) {
+  if (pat_set_memory_type_range((uint64_t)tx_bufs, MEMORY_TYPE_UC, TX_DESC_COUNT
+        * NET_BUF_SIZE)) {
+    INFO("Failed to install the right memory type for tx_bufs...\n");
     return -1;
   }
-  // TODO
+  // XXX
+  if (pat_set_memory_type_range((uint64_t)rx_descs, MEMORY_TYPE_UC, 0x1000)) {
+    INFO("Failed to install the right memory type for rx_bufs...\n");
+    return -1;
+  }
+  // XXX
+  if (pat_set_memory_type_range((uint64_t)tx_descs, MEMORY_TYPE_UC, 0x1000)) {
+    INFO("Failed to install the right memory type for tx_bufs...\n");
+    return -1;
+  }
   INFO("Experimental Intel 82579LM Ethernet driver initialization\n\r");
   eth_disable_interrupts();
   eth_reset();

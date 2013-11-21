@@ -38,45 +38,11 @@ void bsp_main() {
 #ifdef _DEBUG_SERVER
   debug_server_init();
 #endif
+  INFO("CPUID SETUP\n");
   cpuid_setup();
-  
-#if 0
-  // BEGIN TEST PAT
-  
-  // paging_setup_host_paging();
-  // cpu_write_cr3(paging_get_host_cr3());
-
-  INFO("CR0 0x%016X\n", cpu_read_cr0());
-  INFO("CR4 0x%016X\n", cpu_read_cr4());
-  
-  mtrr_create_ranges();
-  INFO("MTRR CREATE RANGES DONE\n");
-  mtrr_print_ranges();
-  INFO("MTRR PRINT RANGES DONE\n");
-
-  INFO("Walk test\n");
-  uint64_t cr3 = cpu_read_cr3();
-  uint64_t linear = 0xcb98ebf0;
-  uint64_t *e = 0;
-  uint64_t a = 0;
-  uint8_t s = -1;
-  uint8_t t = -1;
-  
-  if (paging_walk(cr3, linear, &e, &a, &s)) {
-    INFO("ERROR walking address\n");
-  } else {
-    INFO("Virtual 0x%016X is walked at 0x%016X by the entry 0x%016X at 0x%016X of size %02x\n", linear, a, *e, e, s);
-  }
-  
+  INFO("PAT SETUP\n");
   pat_setup();
 
-  t = pat_get_memory_type(*e, s);
-  INFO("MEMORY TYPE %02x : %s\n", t, PAT_TYPE_STRING(t));
-
-  // END TEST PAT
-#endif
-
-#if 1
   INFO("VMCS addresses %X %X\n", vmxon, vmcs0);
   INFO("_padding_begin_a %X\n", &_padding_begin_a);
   INFO("_padding_begin_b %X\n", &_padding_begin_b);
@@ -121,10 +87,12 @@ void bsp_main() {
   vmm_setup(/* TODO #core */);
   INFO("SETUP DONE\n");
 #ifdef _DEBUG_SERVER
+  uint64_t cr3 = cpu_read_cr3();
+  cpu_write_cr3(paging_get_host_cr3());
   debug_server_eth_init();
+  cpu_write_cr3(cr3);
 #endif
   vmm_vm_setup_and_launch(/* TODO #core */);
-#endif
 }
 
 void vmm_setup() {

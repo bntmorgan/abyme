@@ -13,7 +13,8 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
   // Initialize gnuefi lib
   InitializeLib(image_handle, st);
   
-  paging_ia32e = efi_allocate_pool(sizeof(struct paging_ia32e));
+  paging_ia32e = efi_allocate_pages(sizeof(struct paging_ia32e) / 0x1000 +
+      (sizeof(struct paging_ia32e) % 0x1000 != 0 ));
   INFO("Pointer allocated 0x%016X\n", (uintptr_t)&paging_ia32e);
 
   INFO("VMM driver startup\n");

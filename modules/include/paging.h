@@ -4,7 +4,7 @@
 #include <efi.h>
 #include "types.h"
 
-#define MAX_ADDRESS_WIDTH_PDPT_1 0x24
+#define MAX_ADDRESS_WIDTH_PDPT_1 (((uint64_t)1 << 36) >> 30)
 
 struct paging_ia32e {
   uint64_t PML4[512]      __attribute__((aligned(0x1000)));

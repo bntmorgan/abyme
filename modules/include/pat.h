@@ -38,5 +38,6 @@ uint8_t pat_supported();
 
 uint8_t pat_get_memory_type(uint64_t entry, uint8_t type);
 uint8_t pat_set_memory_type(uint64_t *entry, uint8_t type, uint8_t mem_type);
+uint8_t pat_set_memory_type_range(uint64_t address, uint8_t mem_type, uint64_t size);
 
 #endif//__PAT_H__
