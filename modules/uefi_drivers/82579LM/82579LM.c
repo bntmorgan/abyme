@@ -130,22 +130,26 @@ uint8_t eth_setup() {
 
 uint8_t eth_init() {
   // Change the cache policy for the buffers and descriptors with PAT
+  INFO("Install the right memory type for rx_bufs...\n");
   if (pat_set_memory_type_range((uint64_t)rx_bufs, MEMORY_TYPE_UC, RX_DESC_COUNT
         * NET_BUF_SIZE)) {
     INFO("Failed to install the right memory type for rx_bufs...\n");
     return -1;
   }
+  INFO("Install the right memory type for tx_bufs...\n");
   if (pat_set_memory_type_range((uint64_t)tx_bufs, MEMORY_TYPE_UC, TX_DESC_COUNT
         * NET_BUF_SIZE)) {
     INFO("Failed to install the right memory type for tx_bufs...\n");
     return -1;
   }
   // XXX
+  INFO("Install the right memory type for rx_bufs...\n");
   if (pat_set_memory_type_range((uint64_t)rx_descs, MEMORY_TYPE_UC, 0x1000)) {
     INFO("Failed to install the right memory type for rx_bufs...\n");
     return -1;
   }
   // XXX
+  INFO("Install the right memory type for tx_bufs...\n");
   if (pat_set_memory_type_range((uint64_t)tx_descs, MEMORY_TYPE_UC, 0x1000)) {
     INFO("Failed to install the right memory type for tx_bufs...\n");
     return -1;

@@ -33,7 +33,7 @@
 #define PCI_CONFIG_SUBCLASS             0x0a
 #define PCI_CONFIG_CLASS_CODE           0x0b
 #define PCI_CONFIG_CACHELINE_SIZE       0x0c
-#define PCI_CONFIG_LATENCY              0x0d
+#define PCI_CONFIG_LATENCY_TIMER        0x0d
 #define PCI_CONFIG_HEADER_TYPE          0x0e
 #define PCI_CONFIG_BIST                 0x0f
 
@@ -57,6 +57,20 @@
 #define PCI_BAR_64                      0x04
 #define PCI_BAR_PREFETCH                0x08
 
+//
+// High fields
+//
+#define PCI_CONFIG_CARDBUS_CIS_POINTER         0x28
+#define PCI_CONFIG_SUBSYSTEM_VENDOR_ID         0x2c
+#define PCI_CONFIG_SUBSYSTEM_ID                0x2e
+#define PCI_CONFIG_EXPANSION_ROM_BASE_ADDRESS  0x30
+#define PCI_CONFIG_CAPABILITY_POINTER          0x34
+#define PCI_CONFIG_INTERRUPT_LINE              0x3c
+#define PCI_CONFIG_INTERRUPT_PIN               0x3d
+#define PCI_CONFIG_MIN_GNT                     0x3e
+#define PCI_CONFIG_MAX_LATENCY                 0x3f
+
+
 typedef struct _pci_device_addr {
   uint8_t bus;
   uint8_t device;
@@ -66,10 +80,34 @@ typedef struct _pci_device_addr {
 typedef struct _pci_device_info {
   uint16_t vendor_id;
   uint16_t device_id;
-  uint8_t class_code;
-  uint8_t sub_class;
+  uint16_t command;
+  uint16_t status;
+  uint8_t revision_id;
   uint8_t prog_intf;
-} pci_device_info;
+  uint8_t sub_class;
+  uint8_t class_code;
+  uint8_t cacheline_size;
+  uint8_t latency_timer;
+  uint8_t header_type;
+  uint8_t bist;
+  uint32_t bar0;
+  uint32_t bar1;
+  uint32_t bar2;
+  uint32_t bar3;
+  uint32_t bar4;
+  uint32_t bar5;
+  uint32_t cardbus_cis_pointer;
+  uint16_t subsystem_vendor_id;
+  uint16_t subsystem_id;
+  uint32_t expansion_rom_base_address;
+  uint32_t capability_pointer:8;
+  uint32_t :24;
+  uint32_t :32;
+  uint8_t interrupt_line;
+  uint8_t interrupt_pin;
+  uint8_t min_gnt;
+  uint8_t max_latency;
+} __attribute__((packed)) pci_device_info;
 
 typedef struct _pci_bar {
   union {

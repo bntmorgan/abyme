@@ -15,6 +15,7 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
 	Print(L"b=%lx\n", b);
 	Print(L"c=%lx\n", c);
 	Print(L"d=%lx\n", d);
+  Print(L"%4s%4s%4s\n", (char *)&b, (char *)&d, (char *)&c);
 
   return EFI_SUCCESS;
 }

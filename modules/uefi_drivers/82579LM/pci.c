@@ -42,6 +42,77 @@ void pci_writed(uint32_t id, uint32_t reg, uint32_t data) {
     cpu_outportd(PCI_CONFIG_DATA, data);
 }
 
+void pci_get_device_info(pci_device_info *info, uint32_t id) {
+  info->vendor_id = pci_readw(id, PCI_CONFIG_VENDOR_ID);
+  info->device_id = pci_readw(id, PCI_CONFIG_DEVICE_ID);
+  info->command = pci_readw(id, PCI_CONFIG_COMMAND);
+  info->status = pci_readw(id, PCI_CONFIG_STATUS);
+
+  info->revision_id = pci_readb(id, PCI_CONFIG_REVISION_ID);
+  info->prog_intf = pci_readb(id, PCI_CONFIG_PROG_INTF);
+  info->sub_class = pci_readb(id, PCI_CONFIG_SUBCLASS);
+  info->class_code = pci_readb(id, PCI_CONFIG_CLASS_CODE);
+  info->cacheline_size = pci_readb(id, PCI_CONFIG_CACHELINE_SIZE);
+  info->latency_timer = pci_readb(id, PCI_CONFIG_LATENCY_TIMER);
+  info->header_type = pci_readb(id, PCI_CONFIG_HEADER_TYPE);
+  info->bist = pci_readb(id, PCI_CONFIG_BIST);
+
+  info->bar0 = pci_readd(id, PCI_CONFIG_BAR0);
+  info->bar1 = pci_readd(id, PCI_CONFIG_BAR1);
+  info->bar2 = pci_readd(id, PCI_CONFIG_BAR2);
+  info->bar3 = pci_readd(id, PCI_CONFIG_BAR3);
+  info->bar4 = pci_readd(id, PCI_CONFIG_BAR4);
+  info->bar5 = pci_readd(id, PCI_CONFIG_BAR5);
+  info->cardbus_cis_pointer = pci_readd(id, PCI_CONFIG_CARDBUS_CIS_POINTER);
+
+  info->subsystem_vendor_id = pci_readw(id, PCI_CONFIG_SUBSYSTEM_VENDOR_ID);
+  info->subsystem_id = pci_readw(id, PCI_CONFIG_SUBSYSTEM_ID);
+
+  info->expansion_rom_base_address = pci_readd(id, PCI_CONFIG_EXPANSION_ROM_BASE_ADDRESS);
+
+  info->capability_pointer = pci_readb(id, PCI_CONFIG_CAPABILITY_POINTER);
+  info->interrupt_line = pci_readb(id, PCI_CONFIG_INTERRUPT_LINE);
+  info->interrupt_pin = pci_readb(id, PCI_CONFIG_INTERRUPT_PIN);
+  info->min_gnt = pci_readb(id, PCI_CONFIG_MIN_GNT);
+  info->max_latency = pci_readb(id, PCI_CONFIG_MAX_LATENCY);
+}
+
+void pci_print_device_info(pci_device_info *info) {
+  Print(L"info->vendor_id %04x\n", info->vendor_id);
+  Print(L"info->device_id %04x\n", info->device_id);
+  Print(L"info->command %04x\n", info->command);
+  Print(L"info->status %04x\n", info->status);
+  
+  Print(L"info->revision_id %02x\n", info->revision_id);
+  Print(L"info->prog_intf %02x\n", info->prog_intf);
+  Print(L"info->sub_class %02x\n", info->sub_class);
+  Print(L"info->class_code %02x\n", info->class_code);
+  Print(L"info->cacheline_size %02x\n", info->cacheline_size);
+  Print(L"info->latency_timer %02x\n", info->latency_timer);
+  Print(L"info->header_type %02x\n", info->header_type);
+  Print(L"info->bist %02x\n", info->bist);
+
+  Print(L"info->bar0 %08x\n", info->bar0);
+  Print(L"info->bar1 %08x\n", info->bar1);
+  Print(L"info->bar2 %08x\n", info->bar2);
+  Print(L"info->bar3 %08x\n", info->bar3);
+  Print(L"info->bar4 %08x\n", info->bar4);
+  Print(L"info->bar5 %08x\n", info->bar5);
+
+  Print(L"info->cardbus_cis_pointer %08x\n", info->cardbus_cis_pointer);
+
+  Print(L"info->subsystem_vendor_id %04x\n", info->subsystem_vendor_id);
+  Print(L"info->subsystem_id %04x\n", info->subsystem_id);
+
+  Print(L"info->expansion_rom_base_address %08x\n", info->expansion_rom_base_address);
+
+  Print(L"info->capability_pointer %02x\n", info->capability_pointer);
+  Print(L"info->interrupt_line %02x\n", info->interrupt_line);
+  Print(L"info->interrupt_pin %02x\n", info->interrupt_pin);
+  Print(L"info->min_gnt %02x\n", info->min_gnt);
+  Print(L"info->max_latency %02x\n", info->max_latency);
+}
+
 uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_info *info, pci_device_addr *addr) {
   uint8_t ok = 0;
   uint16_t bus;
@@ -62,11 +133,10 @@ uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_info *
         if (vid == 0xffff || vid != vendor_id || did != device_id) {
           continue;
         } else {
-          info->vendor_id = vid;
-          info->device_id = did;
-          info->prog_intf = pci_readb(id, PCI_CONFIG_PROG_INTF);
-          info->sub_class = pci_readb(id, PCI_CONFIG_SUBCLASS);
-          info->class_code = pci_readb(id, PCI_CONFIG_CLASS_CODE);
+          pci_get_device_info(info, id);
+          // Powerup PIO & MMIO
+          pci_writew(id, PCI_CONFIG_COMMAND, 0x7);
+          pci_print_device_info(info);
           addr->bus = bus;
           addr->device = dev;
           addr->function = func;

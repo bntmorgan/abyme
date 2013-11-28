@@ -179,6 +179,14 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         guest_regs.rcx = cr3_count;
       } else if (guest_regs.rax == 0x99999999) {
         vmm_panic(VMM_PANIC_RDMSR, 1234, &guest_regs);
+      } else if (guest_regs.rax == 0x0) {
+        __asm__ __volatile__("cpuid"
+            : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
+            :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));
+        char *gilles = "30000%MAKINA";
+        guest_regs.rbx = *((uint32_t *)gilles);
+        guest_regs.rdx = *((uint32_t *)gilles + 1);
+        guest_regs.rcx = *((uint32_t *)gilles + 2);
       } else {
         __asm__ __volatile__("cpuid"
             : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
