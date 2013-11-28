@@ -77,6 +77,25 @@ void pci_get_device_info(pci_device_info *info, uint32_t id) {
   info->max_latency = pci_readb(id, PCI_CONFIG_MAX_LATENCY);
 }
 
+void pci_get_device_info_ext(pci_device_info_ext *info, uint32_t id) {
+  info->clist1 = pci_readw(id, PCI_CONFIG_CLIST1);
+  info->pmc = pci_readw(id, PCI_CONFIG_PMC);
+  info->pmcs = pci_readw(id, PCI_CONFIG_PMCS);
+
+  info->dr = pci_readb(id, PCI_CONFIG_DR);
+
+  info->clist2 = pci_readw(id, PCI_CONFIG_CLIST2);
+  info->mctl = pci_readw(id, PCI_CONFIG_MCTL);
+
+  info->maddl = pci_readd(id, PCI_CONFIG_MADDL);
+  info->maddh = pci_readd(id, PCI_CONFIG_MADDH);
+
+  info->mdat = pci_readw(id, PCI_CONFIG_MDAT);
+  info->flrcap = pci_readw(id, PCI_CONFIG_FLRCAP);
+  info->flrclv = pci_readw(id, PCI_CONFIG_FLRCLV);
+  info->devctrl = pci_readw(id, PCI_CONFIG_DEVCTRL);
+}
+
 void pci_print_device_info(pci_device_info *info) {
   Print(L"info->vendor_id %04x\n", info->vendor_id);
   Print(L"info->device_id %04x\n", info->device_id);
@@ -113,12 +132,31 @@ void pci_print_device_info(pci_device_info *info) {
   Print(L"info->max_latency %02x\n", info->max_latency);
 }
 
-uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_info *info, pci_device_addr *addr) {
+void pci_print_device_info_ext(pci_device_info_ext *info) {
+  Print(L"info->clist1 %04x\n", info->clist1); // pci_readw
+  Print(L"info->pmc %04x\n", info->pmc); // pci_readw
+  Print(L"info->pmcs %04x\n", info->pmcs); // pci_readw
+
+  Print(L"info->dr %02x\n", info->dr); // pci_readb
+
+  Print(L"info->clist2 %04x\n", info->clist2); // pci_readw
+  Print(L"info->mctl %04x\n", info->mctl); // pci_readw
+
+  Print(L"info->maddl %08x\n", info->maddl); // pci_readd
+  Print(L"info->maddh %08x\n", info->maddh); // pci_readd
+
+  Print(L"info->mdat %04x\n", info->mdat); // pci_readw
+  Print(L"info->flrcap %04x\n", info->flrcap); // pci_readw
+  Print(L"info->flrclv %04x\n", info->flrclv); // pci_readw
+  Print(L"info->devctrl %04x\n", info->devctrl); // pci_readw
+}
+
+uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_addr *addr) {
   uint8_t ok = 0;
   uint16_t bus;
   uint8_t dev;
   for (bus = 0; bus < 256; bus++) {
-    for (dev = 0; dev < 32; dev++) {
+    for (dev = 0; dev < 32 && ok == 0; dev++) {
       uint32_t base_id = PCI_MAKE_ID(bus, dev, 0);
       uint8_t header_type = pci_readb(base_id, PCI_CONFIG_HEADER_TYPE);
       uint32_t func_count = header_type & PCI_TYPE_MULTIFUNC ? 8 : 1;
@@ -133,10 +171,6 @@ uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_info *
         if (vid == 0xffff || vid != vendor_id || did != device_id) {
           continue;
         } else {
-          pci_get_device_info(info, id);
-          // Powerup PIO & MMIO
-          pci_writew(id, PCI_CONFIG_COMMAND, 0x7);
-          pci_print_device_info(info);
           addr->bus = bus;
           addr->device = dev;
           addr->function = func;

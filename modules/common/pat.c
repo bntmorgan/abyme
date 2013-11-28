@@ -245,22 +245,25 @@ uint8_t pat_set_memory_type_range(uint64_t address, uint8_t mem_type, uint64_t s
       INFO("Error while walking 0x%016X\n\n", frame_addr);
       return -1;
     }
-    if (pat_set_memory_type(entry, type, MEMORY_TYPE_UC)) {
+    if (pat_set_memory_type(entry, type, mem_type)) {
       INFO("Failed to install the right memory type for 0x%016X\n", frame_addr);
       return -1;
     }
     switch (type) {
       case PAGING_ENTRY_PDPTE:
+        INFO("PDPTE entry");
         laddr += (1 << 30);
         break;
       case PAGING_ENTRY_PDE:
+        INFO("PDE entry");
         laddr += (1 << 21);
         break;
       case PAGING_ENTRY_PTE:
+        INFO("PTE entry");
         laddr += (1 << 12);
         break;
     }
-    // INFO("Address 0x%016X\n", laddr);
+    printk(" for linear 0x%016X\n is %s\n", laddr, PAT_TYPE_STRING(mem_type));
   }
   return 0;
 }

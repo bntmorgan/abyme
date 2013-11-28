@@ -15,6 +15,7 @@
   
 // PCI device information
 pci_device_info info;
+pci_device_info_ext info_ext;
 pci_device_addr addr;
 
 // MAC address
@@ -95,9 +96,18 @@ uint8_t eth_setup() {
   if (eth_get_device() == -1) {
     INFO("LOLZ owned no ethernet controller found\n");
     return -1;
-  } else {
-    INFO("LOLZY Intel 82579LM ethernet controller found at %02x:%02x:%02x\n", addr.bus, addr.device, addr.function);
   }
+  // Get PCI info and info_ext
+  INFO("LOLZY Intel 82579LM ethernet controller found at %02x:%02x:%02x\n",
+      addr.bus, addr.device, addr.function);
+  uint32_t id = PCI_MAKE_ID(addr.bus, addr.device, addr.function);
+  // Powerup PIO & MMI_extO
+  pci_writew(id, PCI_CONFIG_COMMAND, 0x7);
+  pci_writeb(id, PCI_CONFIG_INTERRUPT_LINE, 0x5);
+  pci_get_device_info(&info, id);
+  pci_get_device_info_ext(&info_ext, id);
+  pci_print_device_info(&info);
+  pci_print_device_info_ext(&info_ext);
   if(eth_set_bar0()) {
     return -1;
   }
@@ -283,5 +293,5 @@ uint32_t eth_recv(void *buf, uint32_t len, uint8_t block) {
 }
 
 uint8_t eth_get_device() {
-  return pci_get_device(ETH_VENDOR_ID, ETH_DEVICE_ID, &info, &addr);
+  return pci_get_device(ETH_VENDOR_ID, ETH_DEVICE_ID, &addr);
 }
