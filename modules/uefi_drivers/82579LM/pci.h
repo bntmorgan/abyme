@@ -47,6 +47,15 @@
 #define PCI_CONFIG_BAR3                 0x1c
 #define PCI_CONFIG_BAR4                 0x20
 #define PCI_CONFIG_BAR5                 0x24
+#define PCI_CONFIG_CARDBUS_CIS_POINTER         0x28
+#define PCI_CONFIG_SUBSYSTEM_VENDOR_ID         0x2c
+#define PCI_CONFIG_SUBSYSTEM_ID                0x2e
+#define PCI_CONFIG_EXPANSION_ROM_BASE_ADDRESS  0x30
+#define PCI_CONFIG_CAPABILITY_POINTER          0x34
+#define PCI_CONFIG_INTERRUPT_LINE              0x3c
+#define PCI_CONFIG_INTERRUPT_PIN               0x3d
+#define PCI_CONFIG_MIN_GNT                     0x3e
+#define PCI_CONFIG_MAX_LATENCY                 0x3f
 
 //
 // PCI BAR
@@ -60,16 +69,18 @@
 //
 // High fields
 //
-#define PCI_CONFIG_CARDBUS_CIS_POINTER         0x28
-#define PCI_CONFIG_SUBSYSTEM_VENDOR_ID         0x2c
-#define PCI_CONFIG_SUBSYSTEM_ID                0x2e
-#define PCI_CONFIG_EXPANSION_ROM_BASE_ADDRESS  0x30
-#define PCI_CONFIG_CAPABILITY_POINTER          0x34
-#define PCI_CONFIG_INTERRUPT_LINE              0x3c
-#define PCI_CONFIG_INTERRUPT_PIN               0x3d
-#define PCI_CONFIG_MIN_GNT                     0x3e
-#define PCI_CONFIG_MAX_LATENCY                 0x3f
-
+#define PCI_CONFIG_CLIST1               0xc8
+#define PCI_CONFIG_PMC                  0xca
+#define PCI_CONFIG_PMCS                 0xcc
+#define PCI_CONFIG_DR                   0xcf
+#define PCI_CONFIG_CLIST2               0xd0
+#define PCI_CONFIG_MCTL                 0xd2
+#define PCI_CONFIG_MADDL                0xd4
+#define PCI_CONFIG_MADDH                0xd8
+#define PCI_CONFIG_MDAT                 0xdc
+#define PCI_CONFIG_FLRCAP               0xe0
+#define PCI_CONFIG_FLRCLV               0xe2
+#define PCI_CONFIG_DEVCTRL              0xe4
 
 typedef struct _pci_device_addr {
   uint8_t bus;
@@ -109,6 +120,21 @@ typedef struct _pci_device_info {
   uint8_t max_latency;
 } __attribute__((packed)) pci_device_info;
 
+typedef struct _pci_device_info_ext {
+  uint16_t clist1; // ro
+  uint16_t pmc; // ro
+  uint16_t pmcs; // rw
+  uint8_t dr; // ro
+  uint16_t clist2; // rw
+  uint16_t mctl; // rw
+  uint32_t maddl; // rw
+  uint32_t maddh; // rw
+  uint16_t mdat; // rw
+  uint16_t flrcap; // ro
+  uint16_t flrclv; // rw
+  uint16_t devctrl; // rw
+} __attribute__((packed)) pci_device_info_ext;
+
 typedef struct _pci_bar {
   union {
     void *address;
@@ -118,8 +144,19 @@ typedef struct _pci_bar {
   uint32_t flags;
 } pci_bar;
 
-uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_info *info, pci_device_addr *addr);
+uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_addr *addr);
+void pci_print_device_info_ext(pci_device_info_ext *info);
+void pci_get_device_info_ext(pci_device_info_ext *info, uint32_t id);
+void pci_print_device_info(pci_device_info *info);
+void pci_get_device_info(pci_device_info *info, uint32_t id);
 void pci_read_bar(uint32_t id, uint32_t index, uint32_t *address, uint32_t *mask);
 void pci_get_bar(pci_bar *bar, uint32_t id, uint32_t index);
+
+uint8_t pci_readb(uint32_t id, uint32_t reg);
+uint16_t pci_readw(uint32_t id, uint32_t reg);
+uint32_t pci_readd(uint32_t id, uint32_t reg);
+void pci_writeb(uint32_t id, uint32_t reg, uint8_t data);
+void pci_writew(uint32_t id, uint32_t reg, uint16_t data);
+void pci_writed(uint32_t id, uint32_t reg, uint32_t data);
 
 #endif
