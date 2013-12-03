@@ -20,6 +20,8 @@ dir	:= $(d)/shadowck
 include	$(dir)/rules.mk
 dir	:= $(d)/test_web
 include	$(dir)/rules.mk
+dir	:= $(d)/mp
+include	$(dir)/rules.mk
 
 d		:= $(dirstack_$(sp))
 sp		:= $(basename $(sp))
