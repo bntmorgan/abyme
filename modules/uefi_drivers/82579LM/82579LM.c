@@ -80,6 +80,7 @@ void eth_print_registers() {
   INFO("Interrupt Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_ICR));
   INFO("Receive Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_RCTL));
   INFO("Transmit Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_TCTL));
+  INFO("Extended Configuration Control register 0x%08x\n", cpu_mem_readd(bar0 + REG_EXTCNF_CTRL));
 }
 
 // See 11.0 Initialization and Reset Operation

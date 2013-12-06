@@ -31,6 +31,7 @@
 #define REG_IMC                         0x00d8      // Interrupt Mask Clear
 #define REG_RCTL                        0x0100      // Receive Control
 #define REG_TCTL                        0x0400      // Transmit Control
+#define REG_EXTCNF_CTRL                 0x0f00      // Extended Configuration Control
 #define REG_RDBAL                       0x2800      // Receive Descriptor Base Low
 #define REG_RDBAH                       0x2804      // Receive Descriptor Base High
 #define REG_RDLEN                       0x2808      // Receive Descriptor Length
