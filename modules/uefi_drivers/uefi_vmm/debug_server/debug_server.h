@@ -4,7 +4,6 @@
 #include "vmm.h"
 
 void debug_server_init();
-void debug_server_eth_init();
 void debug_server_send(void *buf, uint32_t len);
 uint32_t debug_server_recv(void *buf, uint32_t len);
 

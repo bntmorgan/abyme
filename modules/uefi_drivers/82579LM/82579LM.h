@@ -153,6 +153,11 @@
 #define STAT_TSCTC                      0x40F8
 #define STAT_IAC                        0x4100
 
+//
+// Extended configuration control register
+//
+#define EXTCNF_CTRL_SWFLAG              (1 << 5)
+
 
 //
 // Buffer Sizes

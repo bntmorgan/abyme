@@ -34,10 +34,6 @@ void test_send() {
   send(test_buf, 0x100, EFI_82579LM_API_BLOCK);
 }
 
-uint8_t init() {
-  return eth_init(); 
-}
-
 uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
   static uint8_t frame[ETH_LEN];
   if (len > ETH_MTU) {

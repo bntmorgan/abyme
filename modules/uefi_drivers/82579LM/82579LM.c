@@ -85,14 +85,6 @@ void eth_print_registers() {
 
 // See 11.0 Initialization and Reset Operation
 uint8_t eth_setup() {
-  INFO("CPUID SETUP\n");
-  cpuid_setup();
-  mtrr_create_ranges();
-  INFO("MTRR CREATE RANGES DONE\n");
-  mtrr_print_ranges();
-  INFO("MTRR PRINT RANGES DONE\n");
-  INFO("PAT SETUP\n");
-  pat_setup();
   // Get device info, bus address and function
   if (eth_get_device() == -1) {
     INFO("LOLZ owned no ethernet controller found\n");
@@ -139,9 +131,8 @@ uint8_t eth_setup() {
   return 0; 
 }
 
-uint8_t eth_init() {
-  // Change the cache policy for the buffers and descriptors with PAT
-  INFO("Install the right memory type for rx_bufs...\n");
+uint8_t eth_set_memory_type() {
+  /*INFO("Install the right memory type for rx_bufs...\n");
   if (pat_set_memory_type_range((uint64_t)rx_bufs, MEMORY_TYPE_UC, RX_DESC_COUNT
         * NET_BUF_SIZE)) {
     INFO("Failed to install the right memory type for rx_bufs...\n");
@@ -164,7 +155,18 @@ uint8_t eth_init() {
   if (pat_set_memory_type_range((uint64_t)tx_descs, MEMORY_TYPE_UC, 0x1000)) {
     INFO("Failed to install the right memory type for tx_bufs...\n");
     return -1;
-  }
+  }*/
+  return 0;
+}
+
+uint8_t eth_init() {
+  // Gain acces to the shared registers
+  uint32_t extcnf_ctrl = cpu_mem_readd(bar0 + REG_EXTCNF_CTRL);
+  cpu_mem_writed(bar0 + REG_EXTCNF_CTRL, extcnf_ctrl | EXTCNF_CTRL_SWFLAG); 
+  /*if (eth_set_memory_type()) {
+    return -1;
+  }*/
+  // Change the cache policy for the buffers and descriptors with PAT
   INFO("Experimental Intel 82579LM Ethernet driver initialization\n\r");
   eth_disable_interrupts();
   eth_reset();

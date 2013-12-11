@@ -69,10 +69,6 @@ void debug_server_init() {
   printk("DEBUG SERVER INIT : ETH BAR0 %X\n", eth->bar0);
 }
 
-void debug_server_eth_init() {
-  eth->init();
-}
-
 void debug_server_handle_memory_read(message_memory_read *mr) {
   uint64_t length = (mr->length + sizeof(message_memory_data) > eth->mtu) ? eth->mtu - sizeof(message_memory_data) : mr->length;
   // Handle message memory request
