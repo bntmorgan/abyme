@@ -8,6 +8,6 @@ void screen_print(uint8_t value) {
   uefi_call_wrapper(ST->ConOut->OutputString, 2, ST->ConOut, (uint16_t*)&v);
   if (value == '\n') {
     v = '\r' & 0x000000ff;
-    uefi_call_wrapper(ST->ConOut->OutputString, 2, ST->ConOut, &v);
+    uefi_call_wrapper(ST->ConOut->OutputString, 2, ST->ConOut, (CHAR16*)&v);
   }
 }

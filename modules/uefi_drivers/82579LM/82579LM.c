@@ -65,6 +65,7 @@ uint8_t eth_disable_interrupts() {
 }
 
 uint8_t eth_reset() {
+#if 0
   INFO("We reset the ethernet controller to ensure having a clear configuration\n");
   uint16_t reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
   // Reset the card
@@ -72,15 +73,26 @@ uint8_t eth_reset() {
   cpu_mem_writed(bar0 + REG_CTRL, reg_ctrl);
   wait(10000000);
   return 0;
-}
-
-void eth_print_registers() {
-  INFO("CTRL 0x%08x\n", cpu_mem_readd(bar0 + REG_CTRL));
-  INFO("STATUS 0x%08x\n", cpu_mem_readd(bar0 + REG_STATUS));
-  INFO("Interrupt Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_ICR));
-  INFO("Receive Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_RCTL));
-  INFO("Transmit Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_TCTL));
-  INFO("Extended Configuration Control register 0x%08x\n", cpu_mem_readd(bar0 + REG_EXTCNF_CTRL));
+#endif
+  uint32_t reg_ctrl;
+  // uint32_t reg_ctrl_ext;
+  // uint32_t reg_status;
+  // uint32_t extcnf_ctrl;
+  INFO("We reset the ethernet controller to ensure having a clear configuration\n");
+  // Remove the lan init done
+  /*reg_status = cpu_mem_readd(bar0 + REG_STATUS);
+  cpu_mem_writed(bar0 + REG_STATUS, reg_status & ~(STATUS_LAN_INIT_DONE));
+  reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
+  cpu_mem_writed(bar0 + REG_CTRL, reg_ctrl);*/
+  // Reset the card
+  reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
+  cpu_mem_writed(bar0 + REG_CTRL, reg_ctrl | CTRL_SWRST);
+  reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
+  // Get control of the hardware
+  /*reg_ctrl_ext = cpu_mem_readd(bar0 + REG_CTRL_EXT);
+  cpu_mem_writed(bar0 + REG_CTRL_EXT, reg_ctrl_ext | CTRL_EXT_DRV_LOAD);*/
+  wait(10000000);
+  return 0;
 }
 
 // See 11.0 Initialization and Reset Operation
@@ -118,14 +130,14 @@ uint8_t eth_setup() {
   // descs check alignement to 0x10
   // XXX
   rx_descs = efi_allocate_pages(1);
-  if (!rx_descs || (((uint64_t)rx_descs) & 0xf)) {
-    INFO("Failed to allocate rx_descs or unaligned to 0x10 : 0x%016X lol %d\n", (uint64_t)rx_descs);
+  if (!rx_descs || (((uintptr_t)rx_descs) & 0xf)) {
+    INFO("Failed to allocate rx_descs or unaligned to 0x10 : 0x%016X lol %d\n", (uintptr_t)rx_descs);
     return -1;
   }
   tx_descs = efi_allocate_pages(1);
   // XXX
-  if (!tx_descs || (((uint64_t)tx_descs) & 0xf)) {
-    INFO("Failed to allocate tx_bufs or unaligned to 0x10 : 0x%016X\n", (uint64_t)tx_descs);
+  if (!tx_descs || (((uintptr_t)tx_descs) & 0xf)) {
+    INFO("Failed to allocate tx_bufs or unaligned to 0x10 : 0x%016X\n", (uintptr_t)tx_descs);
     return -1;
   }
   return 0; 
@@ -160,9 +172,7 @@ uint8_t eth_set_memory_type() {
 }
 
 uint8_t eth_init() {
-  // Gain acces to the shared registers
-  uint32_t extcnf_ctrl = cpu_mem_readd(bar0 + REG_EXTCNF_CTRL);
-  cpu_mem_writed(bar0 + REG_EXTCNF_CTRL, extcnf_ctrl | EXTCNF_CTRL_SWFLAG); 
+  // uint32_t extcnf_ctrl;
   /*if (eth_set_memory_type()) {
     return -1;
   }*/
@@ -171,7 +181,10 @@ uint8_t eth_init() {
   eth_disable_interrupts();
   eth_reset();
   eth_disable_interrupts();
-  eth_print_registers();
+  // Gain acces to the shared registers
+  /*extcnf_ctrl = cpu_mem_readd(bar0 + REG_EXTCNF_CTRL);
+  extcnf_ctrl &= ~EXTCNF_CNTRL_GATEPHYCONF;
+  cpu_mem_writed(bar0 + REG_EXTCNF_CTRL, extcnf_ctrl | EXTCNF_CTRL_SWFLAG);*/
   INFO("Initializing ethernet\n");
   // Get the mac address
   uint32_t laddr_l = cpu_mem_readd(bar0 + REG_RAL);
@@ -219,12 +232,18 @@ uint8_t eth_init() {
     //INFO("@0x%x tx_desc[0x%x]{addr: 0x%x, status: 0x%x}\n", tx_desc, i, tx_desc->addr, tx_desc->status);
   }
   cpu_mem_writed(bar0 + REG_TDBAL, (uintptr_t)tx_descs);
-  cpu_mem_writed(bar0 + REG_TDBAH, (uintptr_t)tx_descs >> 32);
+  cpu_mem_writed(bar0 + REG_TDBAH, 0);
   cpu_mem_writed(bar0 + REG_TDLEN, TX_DESC_COUNT * 16);
   cpu_mem_writed(bar0 + REG_TDH, 0);
   cpu_mem_writed(bar0 + REG_TDT, 0);
   cpu_mem_writed(bar0 + REG_TCTL, TCTL_EN | TCTL_PSP | (15 << TCTL_CT_SHIFT)
       | (64 << TCTL_COLD_SHIFT) | TCTL_RTLC);
+  // Finally dump the registers
+  eth_print_registers_general();
+  eth_print_registers_interrupt();
+  eth_print_registers_receive();
+  eth_print_registers_transmit();
+  // eth_print_registers_statistic();
   return 0;
 }
 
@@ -297,4 +316,150 @@ uint32_t eth_recv(void *buf, uint32_t len, uint8_t block) {
 
 uint8_t eth_get_device() {
   return pci_get_device(ETH_VENDOR_ID, ETH_DEVICE_ID, &addr);
+}
+
+void eth_print_registers() {
+  INFO("CTRL 0x%08x\n", cpu_mem_readd(bar0 + REG_CTRL));
+  INFO("STATUS 0x%08x\n", cpu_mem_readd(bar0 + REG_STATUS));
+  INFO("STRAP 0x%08x\n", cpu_mem_readd(bar0 + REG_STRAP));
+  INFO("EERD 0x%08x\n", cpu_mem_readd(bar0 + REG_EERD));
+  INFO("CTRL_EXT 0x%08x\n", cpu_mem_readd(bar0 + REG_CTRL_EXT));
+  INFO("MDIC 0x%08x\n", cpu_mem_readd(bar0 + REG_MDIC));
+
+  INFO("Interrupt Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_ICR));
+  INFO("Receive Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_RCTL));
+  INFO("Transmit Control Register 0x%08x\n", cpu_mem_readd(bar0 + REG_TCTL));
+  INFO("Extended Configuration Control register 0x%08x\n", cpu_mem_readd(bar0 + REG_EXTCNF_CTRL));
+}
+
+// s/#define \([^ ]*\).*\(0x[^ ]*\).*\(\/\/ .*\)/\1 \2 \3/gc
+// s/#define \([^ ]*\).*\(0x[^ ]*\).*\(\/\/ .*\)/  INFO("\1 : 0x%08x\\n", cpu_mem_readd(bar0 \+ \2));/gc
+// s/#define \([^ ]*\).*\(0x[^ ]*\).*\(\/\/ .*\)/  INFO("\1 : 0x%08x\\n", cpu_mem_readd(bar0 + \1));/gc
+void eth_print_registers_general() {
+  INFO("--== general registers ==--\n");
+  INFO("REG_CTRL : 0x%08x\n", cpu_mem_readd(bar0 + REG_CTRL));
+  INFO("REG_STATUS : 0x%08x\n", cpu_mem_readd(bar0 + REG_STATUS));
+  INFO("REG_STRAP : 0x%08x\n", cpu_mem_readd(bar0 + REG_STRAP));
+  INFO("REG_EERD : 0x%08x\n", cpu_mem_readd(bar0 + REG_EERD));
+  INFO("REG_CTRL_EXT : 0x%08x\n", cpu_mem_readd(bar0 + REG_CTRL_EXT));
+  INFO("REG_MDIC : 0x%08x\n", cpu_mem_readd(bar0 + REG_MDIC));
+  INFO("REG_FEXTNVM4 : 0x%08x\n", cpu_mem_readd(bar0 + REG_FEXTNVM4));
+  INFO("REG_FEXTNVM : 0x%08x\n", cpu_mem_readd(bar0 + REG_FEXTNVM));
+  INFO("REG_FEXT : 0x%08x\n", cpu_mem_readd(bar0 + REG_FEXT));
+  INFO("REG_FEXTNVM2 : 0x%08x\n", cpu_mem_readd(bar0 + REG_FEXTNVM2));
+  INFO("REG_KUMCTRLSTA : 0x%08x\n", cpu_mem_readd(bar0 + REG_KUMCTRLSTA));
+  INFO("REG_BUSNUM : 0x%08x\n", cpu_mem_readd(bar0 + REG_BUSNUM));
+  INFO("REG_LTRV : 0x%08x\n", cpu_mem_readd(bar0 + REG_LTRV));
+  INFO("REG_LPIC : 0x%08x\n", cpu_mem_readd(bar0 + REG_LPIC));
+  INFO("REG_FCTTV : 0x%08x\n", cpu_mem_readd(bar0 + REG_FCTTV));
+  INFO("REG_FCRTV : 0x%08x\n", cpu_mem_readd(bar0 + REG_FCRTV));
+  INFO("REG_EXTCNF_CTRL : 0x%08x\n", cpu_mem_readd(bar0 + REG_EXTCNF_CTRL));
+  INFO("REG_EXTCNF_SIZE : 0x%08x\n", cpu_mem_readd(bar0 + REG_EXTCNF_SIZE));
+  INFO("REG_PHY_CTRL : 0x%08x\n", cpu_mem_readd(bar0 + REG_PHY_CTRL));
+  INFO("REG_PCIEANACFG : 0x%08x\n", cpu_mem_readd(bar0 + REG_PCIEANACFG));
+  INFO("REG_PBA : 0x%08x\n", cpu_mem_readd(bar0 + REG_PBA));
+  INFO("REG_PBS : 0x%08x\n", cpu_mem_readd(bar0 + REG_PBS));
+  INFO("REG_DCR : 0x%08x\n", cpu_mem_readd(bar0 + REG_DCR));
+}
+
+void eth_print_registers_interrupt() {
+  INFO("--== interrupt registers ==--\n");
+  INFO("REG_ICR : 0x%08x\n", cpu_mem_readd(bar0 + REG_ICR));
+  INFO("REG_ITR : 0x%08x\n", cpu_mem_readd(bar0 + REG_ITR));
+  INFO("REG_ICS : 0x%08x\n", cpu_mem_readd(bar0 + REG_ICS));
+  INFO("REG_IMS : 0x%08x\n", cpu_mem_readd(bar0 + REG_IMS));
+  INFO("REG_IMC : 0x%08x\n", cpu_mem_readd(bar0 + REG_IMC));
+  INFO("REG_IAM : 0x%08x\n", cpu_mem_readd(bar0 + REG_IAM));
+}
+
+void eth_print_registers_receive() {
+  INFO("--== receive registers ==--\n");
+  INFO("REG_RCTL : 0x%08x\n", cpu_mem_readd(bar0 + REG_RCTL));
+  INFO("REG_RCTL1 : 0x%08x\n", cpu_mem_readd(bar0 + REG_RCTL1));
+  INFO("REG_ERT : 0x%08x\n", cpu_mem_readd(bar0 + REG_ERT));
+  INFO("REG_RDBAL : 0x%08x\n", cpu_mem_readd(bar0 + REG_RDBAL));
+  INFO("REG_RDBAH : 0x%08x\n", cpu_mem_readd(bar0 + REG_RDBAH));
+  INFO("REG_RDLEN : 0x%08x\n", cpu_mem_readd(bar0 + REG_RDLEN));
+  INFO("REG_RDH : 0x%08x\n", cpu_mem_readd(bar0 + REG_RDH));
+  INFO("REG_RDT : 0x%08x\n", cpu_mem_readd(bar0 + REG_RDT));
+  INFO("REG_PSRCTL : 0x%08x\n", cpu_mem_readd(bar0 + REG_PSRCTL));
+  INFO("REG_FCRTL : 0x%08x\n", cpu_mem_readd(bar0 + REG_FCRTL));
+  INFO("REG_FCRTH : 0x%08x\n", cpu_mem_readd(bar0 + REG_FCRTH));
+  INFO("REG_RDTR : 0x%08x\n", cpu_mem_readd(bar0 + REG_RDTR));
+  INFO("REG_RXDCTL : 0x%08x\n", cpu_mem_readd(bar0 + REG_RXDCTL));
+  INFO("REG_RADV : 0x%08x\n", cpu_mem_readd(bar0 + REG_RADV));
+  INFO("REG_RSRPD : 0x%08x\n", cpu_mem_readd(bar0 + REG_RSRPD));
+  INFO("REG_RAID : 0x%08x\n", cpu_mem_readd(bar0 + REG_RAID));
+  INFO("REG_CPUVEC : 0x%08x\n", cpu_mem_readd(bar0 + REG_CPUVEC));
+  INFO("REG_RXCSUM : 0x%08x\n", cpu_mem_readd(bar0 + REG_RXCSUM));
+  INFO("REG_RFCTL : 0x%08x\n", cpu_mem_readd(bar0 + REG_RFCTL));
+  INFO("REG_MTA : 0x%08x\n", cpu_mem_readd(bar0 + REG_MTA));
+  INFO("REG_RAL : 0x%08x\n", cpu_mem_readd(bar0 + REG_RAL));
+  INFO("REG_RAH : 0x%08x\n", cpu_mem_readd(bar0 + REG_RAH));
+  INFO("REG_SRAL : 0x%08x\n", cpu_mem_readd(bar0 + REG_SRAL));
+  INFO("REG_SRAH : 0x%08x\n", cpu_mem_readd(bar0 + REG_SRAH));
+  INFO("REG_SHRAH : 0x%08x\n", cpu_mem_readd(bar0 + REG_SHRAH));
+  INFO("REG_MRQC : 0x%08x\n", cpu_mem_readd(bar0 + REG_MRQC));
+  INFO("REG_RSSIM : 0x%08x\n", cpu_mem_readd(bar0 + REG_RSSIM));
+  INFO("REG_RSSIR : 0x%08x\n", cpu_mem_readd(bar0 + REG_RSSIR));
+  INFO("REG_RETA : 0x%08x\n", cpu_mem_readd(bar0 + REG_RETA));
+  INFO("REG_RSSRK : 0x%08x\n", cpu_mem_readd(bar0 + REG_RSSRK));
+}
+
+void eth_print_registers_transmit() {
+  INFO("--== transmit registers ==--\n");
+  INFO("REG_TCTL : 0x%08x\n", cpu_mem_readd(bar0 + REG_TCTL));
+  INFO("REG_TIPG : 0x%08x\n", cpu_mem_readd(bar0 + REG_TIPG));
+  INFO("REG_AIT : 0x%08x\n", cpu_mem_readd(bar0 + REG_AIT));
+  INFO("REG_TDBAL : 0x%08x\n", cpu_mem_readd(bar0 + REG_TDBAL));
+  INFO("REG_TDBAH : 0x%08x\n", cpu_mem_readd(bar0 + REG_TDBAH));
+  INFO("REG_TDLEN : 0x%08x\n", cpu_mem_readd(bar0 + REG_TDLEN));
+  INFO("REG_TDH : 0x%08x\n", cpu_mem_readd(bar0 + REG_TDH));
+  INFO("REG_TDT : 0x%08x\n", cpu_mem_readd(bar0 + REG_TDT));
+  INFO("REG_ARC : 0x%08x\n", cpu_mem_readd(bar0 + REG_ARC));
+  INFO("REG_IDV : 0x%08x\n", cpu_mem_readd(bar0 + REG_IDV));
+  INFO("REG_TXDCTL : 0x%08x\n", cpu_mem_readd(bar0 + REG_TXDCTL));
+  INFO("REG_TDAV : 0x%08x\n", cpu_mem_readd(bar0 + REG_TDAV));
+}
+
+void eth_print_registers_statistic() {
+  INFO("--== statistic registers ==--\n");
+  INFO("REG_CRCERRS : 0x%08x\n", cpu_mem_readd(bar0 + REG_CRCERRS));
+  INFO("REG_ALGNERRC : 0x%08x\n", cpu_mem_readd(bar0 + REG_ALGNERRC));
+  INFO("REG_RXERRC : 0x%08x\n", cpu_mem_readd(bar0 + REG_RXERRC));
+  INFO("REG_MPC : 0x%08x\n", cpu_mem_readd(bar0 + REG_MPC));
+  INFO("REG_CEXTERR : 0x%08x\n", cpu_mem_readd(bar0 + REG_CEXTERR));
+  INFO("REG_RLEC : 0x%08x\n", cpu_mem_readd(bar0 + REG_RLEC));
+  INFO("REG_XONRXC : 0x%08x\n", cpu_mem_readd(bar0 + REG_XONRXC));
+  INFO("REG_XONTXC : 0x%08x\n", cpu_mem_readd(bar0 + REG_XONTXC));
+  INFO("REG_XOFFRXC : 0x%08x\n", cpu_mem_readd(bar0 + REG_XOFFRXC));
+  INFO("REG_XOFFTXC : 0x%08x\n", cpu_mem_readd(bar0 + REG_XOFFTXC));
+  INFO("REG_FCRUC : 0x%08x\n", cpu_mem_readd(bar0 + REG_FCRUC));
+  INFO("REG_GPRC : 0x%08x\n", cpu_mem_readd(bar0 + REG_GPRC));
+  INFO("REG_BPRC : 0x%08x\n", cpu_mem_readd(bar0 + REG_BPRC));
+  INFO("REG_MPRC : 0x%08x\n", cpu_mem_readd(bar0 + REG_MPRC));
+  INFO("REG_GPTC : 0x%08x\n", cpu_mem_readd(bar0 + REG_GPTC));
+  INFO("REG_GORCL : 0x%08x\n", cpu_mem_readd(bar0 + REG_GORCL));
+  INFO("REG_GORCH : 0x%08x\n", cpu_mem_readd(bar0 + REG_GORCH));
+  INFO("REG_GOTCL : 0x%08x\n", cpu_mem_readd(bar0 + REG_GOTCL));
+  INFO("REG_GOTCH : 0x%08x\n", cpu_mem_readd(bar0 + REG_GOTCH));
+  INFO("REG_RNBC : 0x%08x\n", cpu_mem_readd(bar0 + REG_RNBC));
+  INFO("REG_RUC : 0x%08x\n", cpu_mem_readd(bar0 + REG_RUC));
+  INFO("REG_RFC : 0x%08x\n", cpu_mem_readd(bar0 + REG_RFC));
+  INFO("REG_ROC : 0x%08x\n", cpu_mem_readd(bar0 + REG_ROC));
+  INFO("REG_RJC : 0x%08x\n", cpu_mem_readd(bar0 + REG_RJC));
+  INFO("REG_MNGPRC : 0x%08x\n", cpu_mem_readd(bar0 + REG_MNGPRC));
+  INFO("REG_MNGPDC : 0x%08x\n", cpu_mem_readd(bar0 + REG_MNGPDC));
+  INFO("REG_MNGPTC : 0x%08x\n", cpu_mem_readd(bar0 + REG_MNGPTC));
+  INFO("REG_TCBPD : 0x%08x\n", cpu_mem_readd(bar0 + REG_TCBPD));
+  INFO("REG_TORL : 0x%08x\n", cpu_mem_readd(bar0 + REG_TORL));
+  INFO("REG_TORH : 0x%08x\n", cpu_mem_readd(bar0 + REG_TORH));
+  INFO("REG_TOTL : 0x%08x\n", cpu_mem_readd(bar0 + REG_TOTL));
+  INFO("REG_TOTH : 0x%08x\n", cpu_mem_readd(bar0 + REG_TOTH));
+  INFO("REG_TPR : 0x%08x\n", cpu_mem_readd(bar0 + REG_TPR));
+  INFO("REG_TPT : 0x%08x\n", cpu_mem_readd(bar0 + REG_TPT));
+  INFO("REG_MPTC : 0x%08x\n", cpu_mem_readd(bar0 + REG_MPTC));
+  INFO("REG_BPTC : 0x%08x\n", cpu_mem_readd(bar0 + REG_BPTC));
+  INFO("REG_TSCTC : 0x%08x\n", cpu_mem_readd(bar0 + REG_TSCTC));
+  INFO("REG_IAC : 0x%08x\n", cpu_mem_readd(bar0 + REG_IAC));
 }
