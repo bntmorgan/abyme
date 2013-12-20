@@ -11,7 +11,8 @@ EFI_INCLUDE			:= $(PREFIX)/include/efi
 # Installation gnu-efi 3.0 locale
 # EFI_INCLUDE			:= /usr/local/include/efi
 
-EFI_INCLUDES 		:= -I$(EFI_INCLUDE) -I$(EFI_INCLUDE)/$(ARCH) -I$(EFI_INCLUDE)/protocol -I$(INCLUDE_DIR)
+EFI_INCLUDES 		:= -I$(EFI_INCLUDE) -I$(EFI_INCLUDE)/$(ARCH) \
+		-I$(EFI_INCLUDE)/protocol -I$(INCLUDE_DIR)
 
 EFI_PATH 				:= $(PREFIX)/lib
 # Installation gnu-efi 3.0 locale
@@ -23,38 +24,40 @@ EFI_LIBS 				:= -lefi -lgnuefi $(LIB_GCC)
 EFI_CRT_OBJS 		:= $(EFI_PATH)/crt0-efi-$(ARCH).o
 EFI_LDS 				:= efi.ld
 
-# CC_FLAGS_ALL		:= -fPIC -Wall -Werror -Werror -O2 -fno-stack-protector -fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -D_DEBUG_SERVER -O0
-CC_FLAGS_ALL		:= -Wall -Werror -Werror -O2 -fno-stack-protector -fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC -O0 -D_DEBUG_SERVER
+CC_FLAGS_ALL		:= -Wall -Werror -Werror -O2 -fno-stack-protector \
+		-fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC -O0 \
+		-D_DEBUG_SERVER
 
 ifeq ($(ARCH),x86_64)
 	CC_FLAGS_ALL	+= -DEFI_FUNCTION_WRAPPER
 endif
 
-# LD_FLAGS_ALL		:= -nostdlib -T $(EFI_LDS) -fPIC -shared -Bsymbolic -L$(EFI_PATH) $(EFI_CRT_OBJS) -znocombreloc --no-undefined
-LD_FLAGS_ALL		:= -nostdlib -T $(EFI_LDS) -shared -Bsymbolic -L$(EFI_PATH) $(EFI_CRT_OBJS) -znocombreloc -fPIC --no-undefined
+LD_FLAGS_ALL		:= -nostdlib -T $(EFI_LDS) -shared -Bsymbolic -L$(EFI_PATH) \
+		$(EFI_CRT_OBJS) -znocombreloc -fPIC --no-undefined
 
 define SRC_2_OBJ
-    $(foreach src,$(1),$(patsubst modules/%,build/%,$(src)))
+  $(foreach src,$(1),$(patsubst modules/%,build/%,$(src)))
 endef
 
 define SRC_2_BIN
-    $(foreach src,$(1),$(patsubst modules/%,binary/%,$(src)))
+  $(foreach src,$(1),$(patsubst modules/%,binary/%,$(src)))
 endef
 
 define MOD_2_SRC
-    $(foreach src,$(1),$(patsubst modules/%,sources/%,$(src)))
+  $(foreach src,$(1),$(patsubst modules/%,sources/%,$(src)))
 endef
 
 define SVG_2_PDF
-    $(foreach src,$(1),$(patsubst modules/%.svg,sources/%.pdf,$(src)))
+  $(foreach src,$(1),$(patsubst modules/%.svg,sources/%.pdf,$(src)))
 endef
 
 define FIND
-    $(shell find $(1) -type f | grep -v '/\.' | grep -v 'mk$$' | grep -v '\.w$$' | grep -v '\.svg$$')
+	$(shell find $(1) -type f | grep -v '/\.' | grep -v 'mk$$' | grep -v \
+			'\.w$$' | grep -v '\.svg$$')
 endef
 
 define FIND_FIGURES
-    $(shell find $(1) -type f | grep -i '\.svg$$')
+  $(shell find $(1) -type f | grep -i '\.svg$$')
 endef
 
 all: targets
@@ -76,11 +79,14 @@ sources/%temoin:
 		filename=`basename $$w`; \
 		if [ "$${filename%.*}" = "root" ]; then \
 			echo '  [W@]    '$$w; \
-			$(PYTHON) literale/prepare.py -b `dirname $$w` `basename $$w` | $(PYTHON) literale/tangle.py -d $(dir $@); \
-			$(PYTHON) literale/prepare.py -b `dirname $$w` `basename $$w` | $(PYTHON) literale/weave.py latex > $(dir $@)/doc.tex; \
+			$(PYTHON) literale/prepare.py -b `dirname $$w` `basename $$w` | \
+					$(PYTHON) literale/tangle.py -d $(dir $@); \
+			$(PYTHON) literale/prepare.py -b `dirname $$w` `basename $$w` | \
+					$(PYTHON) literale/weave.py latex > $(dir $@)/doc.tex; \
 			touch $@; \
 			echo '  [TX]    '$(dir $@)doc.tex; \
-			cd $(dir $@) && pdflatex doc.tex > /dev/null && pdflatex doc.tex > /dev/null;\
+			cd $(dir $@) && pdflatex doc.tex > /dev/null && pdflatex doc.tex > \
+					/dev/null;\
 		fi \
 	done
 
@@ -161,7 +167,9 @@ pre-launch:
 	cp -r binary/ qemu/hda-contents
 
 launch: pre-launch
-	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,model=6,+vmx -monitor stdio -m 8G #-enable-kvm
+	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
+			tcp:localhost:6666 -cpu qemu64,model=6,+vmx -monitor stdio -m 8G \
+			#-enable-kvm
 
 #pre-launch:
 #	rm -rf qemu/roms/*
@@ -175,12 +183,18 @@ launch: pre-launch
 #	cp -r binary/ qemu/hda-contents
 
 #launch: pre-launch
-#	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,model=6,+vmx,+pdpe1gb -monitor stdio -S
-#qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,+sse2 -D /tmp/gg
-###qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -cpu qemu64,model=3
-###qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666
-#qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb tcp:localhost:6666 -s -S
-#qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -monitor telnet:127.0.0.1:5555,server,nowait -gdb tcp::6666 -s -S
+#	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
+			tcp:localhost:6666 -cpu qemu64,model=6,+vmx,+pdpe1gb -monitor stdio -S
+# qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
+			tcp:localhost:6666 -cpu qemu64,+sse2 -D /tmp/gg
+# qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
+			tcp:localhost:6666 -cpu qemu64,model=3
+# qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
+			tcp:localhost:6666
+# qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
+			tcp:localhost:6666 -s -S
+# qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents \
+			-monitor telnet:127.0.0.1:5555,server,nowait -gdb tcp::6666 -s -S
 # –monitor telnet:127.0.0.1:5555,server,nowait
 #qemu-system-x86_64 -L qemu/roms -hda fat:qemu/hda-contents
 #qemu-system-x86_64 -L qemu/roms -hda fat:qemu/hda-contents -no-kvm
