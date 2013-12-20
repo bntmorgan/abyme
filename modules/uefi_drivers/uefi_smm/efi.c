@@ -13,6 +13,8 @@ EFI_STATUS smm_is_smram_locked() {
   uint32_t SmramMapSize = SMRAM_MAP_SIZE * sizeof(EFI_SMRAM_DESCRIPTOR);
   uint32_t i;
 
+  Print(L"Vendor %s, Revision %d\n", ST->FirmwareVendor, ST->FirmwareRevision); 
+
   status = uefi_call_wrapper(BS->LocateProtocol, 3, &smm_access_guid, NULL,
                              (void **)&smm_access);
   if (EFI_ERROR(status)) {
@@ -46,31 +48,131 @@ EFI_STATUS smm_is_smram_locked() {
   return 0;
 }
 
+EFI_STATUS load_image(CHAR16 *path, EFI_HANDLE parent_image_handle,
+    EFI_HANDLE *loaded_image_handle, EFI_LOADED_IMAGE **ImageInfo) {
+  UINTN NumberFileSystemHandles = 0;
+  EFI_HANDLE *FileSystemHandles = NULL;
+  UINTN Index;
+  EFI_STATUS status;
+  EFI_BLOCK_IO* BlkIo;
+  EFI_DEVICE_PATH *FilePath;
+
+  status = uefi_call_wrapper(BS->LocateHandleBuffer, 5, ByProtocol,
+      &BlockIoProtocol, NULL, &NumberFileSystemHandles, &FileSystemHandles);
+  Print(L"NumberFileSystemHandles 0x%08x FileSystemHandles 0x%016X\n",
+      NumberFileSystemHandles, FileSystemHandles);
+  if (EFI_ERROR(status)) {
+    Print(L"LocateHandleBuffer %r\n", status);
+    return status;
+  }
+
+  for(Index = 0; Index < NumberFileSystemHandles; ++Index) {
+    Print(L"Index %d\n", Index);
+    status = uefi_call_wrapper(BS->HandleProtocol, 3, FileSystemHandles[Index],
+        &BlockIoProtocol, (VOID**) &BlkIo);
+    if (EFI_ERROR(status)) {
+      Print(L"HandleProtocol %r\n", status);
+      return status;
+    }
+    Print(L"BlkIo 0x%016X\n", BlkIo);
+    if(!BlkIo->Media->RemovableMedia || BlkIo->Media->RemovableMedia) {
+      FilePath = FileDevicePath(FileSystemHandles[Index],
+          path);
+      Print(L"after FileDevicePath - 0x%x - 0x%x\n", FilePath->Type,
+          FilePath->SubType); 
+      status = uefi_call_wrapper (BS->LoadImage, 6, FALSE, parent_image_handle,
+          FilePath, NULL, 0, loaded_image_handle);
+      Print(L"after LoadImage - 0x%08x - %d - %r \n", *loaded_image_handle,
+          EFI_ERROR(status), status); 
+      if(!EFI_ERROR(status)) {
+        status = uefi_call_wrapper(BS->HandleProtocol, 3, *loaded_image_handle,
+            &LoadedImageProtocol, (VOID **) ImageInfo);
+        if (EFI_ERROR(status)) {
+          Print(L"HandleProtocol %r\n", status);
+          return status;
+        }
+        Print(L"Image base        : %lx\n", (*ImageInfo)->ImageBase);
+        Print(L"Image file        : %s\n",
+            DevicePathToStr((*ImageInfo)->FilePath));
+        Print(L"Image size        : %lx\n", (*ImageInfo)->ImageSize);
+        if(!EFI_ERROR(status)) {
+          if((*ImageInfo)->ImageCodeType == EfiLoaderCode) {
+            uefi_call_wrapper(BS->FreePool, 1, FilePath);
+          }
+          return EFI_SUCCESS;
+        }
+      }
+    }
+  }
+  return EFI_NOT_FOUND;
+}
+
+EFI_STATUS smm_register(CHAR16 *path, EFI_HANDLE *image_handle_smm,
+    EFI_SMM_BASE_PROTOCOL *smm_base) {
+  UINTN NumberFileSystemHandles = 0;
+  EFI_HANDLE *FileSystemHandles = NULL;
+  UINTN Index;
+  EFI_STATUS status;
+  EFI_BLOCK_IO* BlkIo;
+  EFI_DEVICE_PATH *FilePath;
+
+  status = uefi_call_wrapper(BS->LocateHandleBuffer, 5, ByProtocol,
+      &BlockIoProtocol, NULL, &NumberFileSystemHandles, &FileSystemHandles);
+  Print(L"NumberFileSystemHandles 0x%08x FileSystemHandles 0x%016X\n",
+      NumberFileSystemHandles, FileSystemHandles);
+  if (EFI_ERROR(status)) {
+    Print(L"LocateHandleBuffer %r\n", status);
+    return status;
+  }
+
+  for(Index = 0; Index < NumberFileSystemHandles; ++Index) {
+    Print(L"Index %d\n", Index);
+    status = uefi_call_wrapper(BS->HandleProtocol, 3, FileSystemHandles[Index],
+        &BlockIoProtocol, (VOID**) &BlkIo);
+    if (EFI_ERROR(status)) {
+      Print(L"HandleProtocol %r\n", status);
+      return status;
+    }
+    Print(L"BlkIo 0x%016X\n", BlkIo);
+    if(!BlkIo->Media->RemovableMedia || BlkIo->Media->RemovableMedia) {
+      FilePath = FileDevicePath(FileSystemHandles[Index],
+          path);
+      Print(L"after FileDevicePath - 0x%x - 0x%x\n", FilePath->Type,
+          FilePath->SubType); 
+      // Try to load with SMM BASE register() function YOLO
+      status = uefi_call_wrapper(smm_base->Register, 6, smm_base, FilePath, 
+          NULL, 0, &image_handle_smm, FALSE);
+      Print(L"after register() - %r \n", status); 
+      if(!EFI_ERROR(status)) {
+        return EFI_SUCCESS;
+      }
+    }
+  }
+  return EFI_NOT_FOUND;
+}
+
 EFI_STATUS
 InitializeChild (EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab)
 {
   InitializeLib(image_handle, systab);
   EFI_STATUS status;
   EFI_GUID smm_base_guid = EFI_SMM_BASE_PROTOCOL_GUID;
-  EFI_GUID loaded_image_protocol = LOADED_IMAGE_PROTOCOL;
   EFI_SMM_BASE_PROTOCOL *smm_base;
   uint8_t in_smm = 0;
-  EFI_DEVICE_PATH *dev_path = NULL;
-  // EFI_DEVICE_PATH *dev_path_smm = NULL;
   EFI_LOADED_IMAGE *loaded_image = NULL;
-  EFI_HANDLE image_handle_smm = NULL;
-  uint32_t image_size = 0;
-  // uint32_t image_size_smm = 0;
+  EFI_HANDLE image_handle_smm;
+  EFI_HANDLE loaded_image_handle;
+  // Two != types of architecture
+  CHAR16 *image_x86_64 = L"\\EFI\\uefi_drivers\\uefi_smm\\efi.efi";
+  CHAR16 *image_i386 = L"\\EFI\\uefi_drivers\\uefi_smm_handler\\efi.efi";
 
   if (smm_is_smram_locked()) {
     Print(L"SMM is locked, we need to deal with UEFI SMM framedwork\n");
   }
 
-  status = uefi_call_wrapper(systab->BootServices->LocateProtocol,
-                             3,
-                             &smm_base_guid,
-                             NULL,
-                             (void **)&smm_base);
+  status = uefi_call_wrapper(systab->BootServices->LocateProtocol, 3,
+      &smm_base_guid, NULL, (void **)&smm_base);
+
   if (EFI_ERROR(status)) {
     Print(L"EFI_SMM_BASE_PROTOCOL 0x%08x\n", status);
     return status;
@@ -87,34 +189,48 @@ InitializeChild (EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab)
   } else {
     // First pass we are in not in FUCKA SMM
     Print(L"YOLO DUDE this is the first pass 0x%08x\n", in_smm);
-    // Get the device path
-    status = uefi_call_wrapper(systab->BootServices->HandleProtocol, 3,
-        image_handle, 
-        &loaded_image_protocol, 
-        (void **) &loaded_image);
-    if (EFI_ERROR(status)) {
-      Print(L"HandleProtocol(): %r\n", status);
-      return status;
-    }
-    dev_path = loaded_image->FilePath;
-    image_size = loaded_image->ImageSize;
-    Print(L"Image base        : %lx\n", loaded_image->ImageBase);
-    Print(L"Image file        : %s\n", DevicePathToStr(dev_path));
-    Print(L"Image size        : %lx\n", image_size);
-    Print(L"Image first byte 0x%02x 0x4d is PE :)\n",
-        *((uint8_t*)loaded_image->ImageBase));
 
-    // It is time to register the image YOLO
-    status = uefi_call_wrapper(smm_base->Register,
-        6,
-        smm_base,
-        NULL, 
-        (VOID *) loaded_image->ImageBase, 
-        image_size,
-        &image_handle_smm,
-        FALSE);
+    Print(L"-== LOAD IMAGE TEST ON i386 and x86_64 images ==-\n");
+
+    // Load the x86_64 image
+    Print(L"Trying to load %s\n", image_x86_64);
+    status = load_image(image_x86_64,
+        image_handle, &loaded_image_handle, &loaded_image);
     if (EFI_ERROR(status)) {
-      Print(L"SMM BASE register error: %r\n", status);
+      Print(L"load_image %r\n", status);
+    } else {
+      Print(L"Success ! Image first byte 0x%02x 0x4d is PE :)\n",
+          *((uint8_t*)loaded_image->ImageBase));
+    }
+    // Load the i386 image
+    Print(L"Trying to load %s\n", image_i386);
+    status = load_image(image_i386,
+        image_handle, &loaded_image_handle, &loaded_image);
+    if (EFI_ERROR(status)) {
+      Print(L"load_image %r\n", status);
+    } else {
+      Print(L"Success ! Image first byte 0x%02x 0x4d is PE :)\n",
+          *((uint8_t*)loaded_image->ImageBase));
+    }
+    
+    Print(L"-== SMBASE REGISTER TEST WITH THE PATH ON i386 and x86_64 images \
+        ==-\n");
+    Print(L"Trying to load %s\n", image_x86_64);
+    status = smm_register(image_x86_64, &image_handle_smm, smm_base);
+    if (EFI_ERROR(status)) {
+      Print(L"load_image %r\n", status);
+    } else {
+      Print(L"Success ! Image first byte 0x%02x 0x4d is PE :)\n",
+          *((uint8_t*)loaded_image->ImageBase));
+    }
+    // Load the i386 image
+    Print(L"Trying to load %s\n", image_i386);
+    status = smm_register(image_i386, &image_handle_smm, smm_base);
+    if (EFI_ERROR(status)) {
+      Print(L"load_image %r\n", status);
+    } else {
+      Print(L"Success ! Image first byte 0x%02x 0x4d is PE :)\n",
+          *((uint8_t*)loaded_image->ImageBase));
     }
   }
 
