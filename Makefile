@@ -84,9 +84,9 @@ sources/%temoin:
 			$(PYTHON) literale/prepare.py -b `dirname $$w` `basename $$w` | \
 					$(PYTHON) literale/weave.py latex > $(dir $@)/doc.tex; \
 			touch $@; \
-			echo '  [TX]    '$(dir $@)doc.tex; \
-			cd $(dir $@) && pdflatex doc.tex > /dev/null && pdflatex doc.tex > \
-					/dev/null;\
+			#echo '  [TX]    '$(dir $@)doc.tex; \
+			#cd $(dir $@) && pdflatex doc.tex > /dev/null && pdflatex doc.tex > \
+			#		/dev/null;\
 		fi \
 	done
 
