@@ -221,7 +221,8 @@
 
 #define ETH_VENDOR_ID 0x8086 // Intel
 
-#define ETH_DEVICE_ID 0x1502 // 82579LM
+//#define ETH_DEVICE_ID 0x1502 // 82579LM
+#define ETH_DEVICE_ID 0x153A // I217-LM
 
 #define RX_DESC_COUNT                   32
 #define TX_DESC_COUNT                   8
