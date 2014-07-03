@@ -87,7 +87,6 @@ uint8_t eth_reset() {
   // Reset the card
   reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
   cpu_mem_writed(bar0 + REG_CTRL, reg_ctrl | CTRL_SWRST);
-  reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
   // Get control of the hardware
   /*reg_ctrl_ext = cpu_mem_readd(bar0 + REG_CTRL_EXT);
   cpu_mem_writed(bar0 + REG_CTRL_EXT, reg_ctrl_ext | CTRL_EXT_DRV_LOAD);*/
@@ -239,10 +238,10 @@ uint8_t eth_init() {
   cpu_mem_writed(bar0 + REG_TCTL, TCTL_EN | TCTL_PSP | (15 << TCTL_CT_SHIFT)
       | (64 << TCTL_COLD_SHIFT) | TCTL_RTLC);
   // Finally dump the registers
-  eth_print_registers_general();
+  /*eth_print_registers_general();
   eth_print_registers_interrupt();
   eth_print_registers_receive();
-  eth_print_registers_transmit();
+  eth_print_registers_transmit();*/
   // eth_print_registers_statistic();
   return 0;
 }
