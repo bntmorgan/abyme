@@ -5,6 +5,7 @@
 
 #include "mtrr.h"
 #include "debug_server/debug_server.h"
+#include "pci.h"
 
 struct ept_tables {
   uint64_t PML4[512]               __attribute__((aligned(0x1000)));
@@ -89,12 +90,43 @@ void ept_create_tables(void) {
   // MMIO pci space protection
   //
 #ifdef _DEBUG_SERVER
-  uint64_t base_addr = 0xf80c8000;
-  uint32_t PDX = 1984;
+  uint8_t MMCONFIG_length = (pci_readb(0,0x60) & 0x6) >> 1; // bit 1:2 of PCIEXBAR (offset 60)
+  uint16_t MMCONFIG_mask;
+
+  /* MMCONFIG corresponds to bits 38 to 28 of the pci base address
+     the length decrease to 27 or 26 the lsb of MMCONFIG */
+  switch (MMCONFIG_length) {
+    case 0:
+      MMCONFIG_mask = 0xF07F;
+      break;
+    case 1:
+      MMCONFIG_mask = 0xF87F;
+      break;
+    case 2:
+      MMCONFIG_mask = 0xFC7F;
+      break;
+    default:
+      panic("Bad MMCONFIG Length\n");
+  }
+
+  // bit 38:28-26 of PCIEXBAR (offset 60) -> 14:4-2 of PCIEXBAR + 3
+  uint16_t MMCONFIG = pci_readw(0,0x63) & MMCONFIG_mask;
+
+  uint64_t base_addr =  ((uint64_t)MMCONFIG << 16)
+                        + PCI_MAKE_MMCONFIG(eth->pci_addr.bus,
+                                      eth->pci_addr.device,
+                                      eth->pci_addr.function);
+
   uint32_t PML40_X = base_addr >> 30;
   uint32_t PDPT_PML40_X = (base_addr - (PML40_X << 30)) >> 21;
+
+  /* Map memory associated to eth MMIO configuration with 2mb except for the first entry.
+   * This first entry is mapped using 4ko pages. */
   ept_tables.PD_PDPT_PML40[PML40_X][PDPT_PML40_X] = ((uint64_t) &ept_tables.PT_PDX[0]) | 0x7;
-  address = PDX * 0x200000;
+
+  // align addr on 2Mo
+  address = base_addr & ~(0x200000 - 1);
+
   memory_range = NULL;
   for (i = 0; i < 512; i++) {
     if (memory_range == NULL || address < memory_range->range_address_begin || memory_range->range_address_end < address) {
@@ -106,6 +138,8 @@ void ept_create_tables(void) {
     if (memory_range->range_address_end < address + 0xfff) {
       panic("!#EPT MR4KB [?%x<%X<0x%X:%d]", memory_range->range_address_begin, address, memory_range->range_address_end, memory_range->type);
     }
+
+    // protect PCI MMIO Access
     if (address == base_addr) {
       ept_tables.PT_PDX[i] = ((uint64_t) &trap_pci[0]) | 0x7 | (memory_range->type << 3);
     } else {
