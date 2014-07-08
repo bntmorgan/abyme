@@ -33,6 +33,7 @@ void ept_create_tables(void) {
 
   for (i = 0; i < sizeof(trap_pci); i++) {
     trap_pci[i] = 0xff;
+    trap_bar[i] = 0xff;
   }
 
   /* Everything stands into the first 4GB, so we only need the first entry of PML4. */
