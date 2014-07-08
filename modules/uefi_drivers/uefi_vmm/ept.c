@@ -41,6 +41,12 @@ void ept_create_tables(void) {
   for (i = 1; i < 512; i++) {
     ept_tables.PML4[i] = 0;
   }
+
+  /* VMM pages are between bound_a and bound_b */
+  uint64_t bound_a = ((uint64_t) &_padding_begin_b) & ~((uint64_t) 0x200000);
+  uint64_t bound_b = ((uint64_t) &_padding_end_b) & ~((uint64_t) 0x200000);
+  uint64_t Tmp;
+
   /* Map all memory with 2mb except for the first entry. This first entry is mapped using 4ko pages. */
   uint64_t address = 0;
   const struct memory_range *memory_range = NULL;
@@ -59,9 +65,8 @@ void ept_create_tables(void) {
           panic("!#EPT MR2MB [?%X<%X<%X:%d]", memory_range->range_address_begin, address, memory_range->range_address_end, memory_range->type);
         }
         ept_tables.PD_PDPT_PML40[i][j] = (((uint64_t) (i * 512 + j)) << 21) | (1 << 7) | 0x7 | (memory_range->type << 3);
-        uint64_t Tmp = (((uint64_t) (i * 512 + j)) << 21);
-        uint64_t bound_a = ((uint64_t) &_padding_begin_b) & ~((uint64_t) 0x200000);
-        uint64_t bound_b = ((uint64_t) &_padding_end_b) & ~((uint64_t) 0x200000);
+
+        Tmp = (((uint64_t) (i * 512 + j)) << 21);
         if (Tmp >= bound_a && Tmp <= bound_b) {
           ept_tables.PD_PDPT_PML40[i][j] = (((uint64_t) (i * 512 + j)) << 21) | (1 << 7) | 0x1 | (memory_range->type << 3);
         }
