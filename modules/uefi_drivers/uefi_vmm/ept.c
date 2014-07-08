@@ -66,9 +66,11 @@ void ept_create_tables(void) {
         }
         ept_tables.PD_PDPT_PML40[i][j] = (((uint64_t) (i * 512 + j)) << 21) | (1 << 7) | 0x7 | (memory_range->type << 3);
 
+        /* FIXME : VMM address range need to be unprotected
+         * because his code need to be executed after vmxlaunch */
         Tmp = (((uint64_t) (i * 512 + j)) << 21);
         if (Tmp >= bound_a && Tmp <= bound_b) {
-          ept_tables.PD_PDPT_PML40[i][j] = (((uint64_t) (i * 512 + j)) << 21) | (1 << 7) | 0x1 | (memory_range->type << 3);
+          ept_tables.PD_PDPT_PML40[i][j] = (((uint64_t) (i * 512 + j)) << 21) | (1 << 7) | 0x7 | (memory_range->type << 3);
         }
       }
       address += ((uint64_t) 1 << 21);
