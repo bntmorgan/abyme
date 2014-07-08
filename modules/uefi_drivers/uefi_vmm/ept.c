@@ -132,9 +132,8 @@ void ept_create_tables(void) {
    * This first entry is mapped using 4ko pages. */
   ept_tables.PD_PDPT_PML40[PML40_X][PDPT_PML40_X] = ((uint64_t) &ept_tables.PT_PDX[0]) | 0x7;
 
-  // align addr on 2Mo
-  address = base_addr & ~(0x200000 - 1);
 
+  address = base_addr & ~(0x200000 - 1);    // align addr on 2Mo
   memory_range = NULL;
   for (i = 0; i < 512; i++) {
     if (memory_range == NULL || address < memory_range->range_address_begin || memory_range->range_address_end < address) {
@@ -163,7 +162,8 @@ void ept_create_tables(void) {
   PML40_X = base_addr >> 30;
   PDPT_PML40_X = (base_addr - (PML40_X << 30)) >> 21;
   ept_tables.PD_PDPT_PML40[PML40_X][PDPT_PML40_X] = ((uint64_t) &ept_tables.PT_PDX2[0]) | 0x7;
-  address = eth->bar0;
+
+  address = base_addr & ~(0x200000 - 1);    // align addr on 2Mo
   memory_range = NULL;
   for (i = 0; i < 512; i++) {
     if (memory_range == NULL || address < memory_range->range_address_begin || memory_range->range_address_end < address) {
@@ -175,6 +175,7 @@ void ept_create_tables(void) {
     if (memory_range->range_address_end < address + 0xfff) {
       panic("!#EPT MR4KB [?%x<%X<0x%X:%d]", memory_range->range_address_begin, address, memory_range->range_address_end, memory_range->type);
     }
+
     if (address == base_addr) {
       ept_tables.PT_PDX2[i] = ((uint64_t) &trap_bar[0]) | 0x7 | (memory_range->type << 3);
     } else {
