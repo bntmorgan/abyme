@@ -22,10 +22,8 @@
 #include "smp.h"
 
 //extern char __text;
-extern uint8_t _padding_begin_a;
-extern uint8_t _padding_begin_b;
-extern uint8_t _padding_end_a;
-extern uint8_t _padding_end_b;
+extern uint8_t _protected_begin;
+extern uint8_t _protected_end;
 
 uint32_t vmcs_revision_identifier;
 uint32_t number_bytes_regions;
@@ -44,10 +42,8 @@ void bsp_main() {
   pat_setup();
 
   INFO("VMCS addresses %X %X\n", vmxon, vmcs0);
-  INFO("_padding_begin_a %X\n", &_padding_begin_a);
-  INFO("_padding_begin_b %X\n", &_padding_begin_b);
-  INFO("_padding_end_a   %X\n", &_padding_end_a);
-  INFO("_padding_end_b   %X\n", &_padding_end_b);
+  INFO("_protected_begin %X\n", &_protected_begin);
+  INFO("_protected_end %X\n", &_protected_end);
 
   gdt_setup_guest_gdt();
   INFO("GUEST GDT DONE\n");
@@ -125,5 +121,4 @@ void vmm_vm_setup_and_launch() {
   vmcs_fill_guest_state_fields();
   INFO("READY TO GO!\n");
   cpu_vmlaunch();
-  INFO("EPIC WIN!\n");
 }

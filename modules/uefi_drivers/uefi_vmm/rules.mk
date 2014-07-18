@@ -27,7 +27,12 @@ FIGS_$(d)				:= $(call SVG_2_PDF, $(call FIND_FIGURES, $(d)/figures))
 FIGS 						+= $(FIGS_$(d))
 $(WEB)					:	 $(FIGS_$(d)) $(WEBS_$(d))
 
-$(TARGET)				:  LD_FLAGS_TARGET	:= 
+$(TARGET)				:  LD_FLAGS_TARGET	:=
+$(TARGET)				:  LD_FLAGS_ALL	:= -nostdlib -T $(d)/efi.ld \
+							-shared -Bsymbolic -L$(EFI_PATH) \
+							$(EFI_CRT_OBJS) -znocombreloc -fPIC \
+							--no-undefined
+
 $(TARGET)				:  LD_OBJECTS	:= $(OBJS_$(d))
 # Runtime driver
 $(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-rtdrv-$(ARCH)

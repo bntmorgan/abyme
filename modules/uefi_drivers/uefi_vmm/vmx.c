@@ -4,6 +4,10 @@
 #include "vmcs.h"
 #include "msr.h"
 
+extern uint64_t vm_RIP;
+extern uint64_t vm_RSP;
+extern uint64_t vm_RBP;
+
 void cpu_enable_vmxe(void) {
   cpu_write_cr4(cpu_read_cr4() | 0x00002000);
 }
@@ -43,45 +47,15 @@ void cpu_vmptrld(uint8_t *region) {
 
 void cpu_vmlaunch(void) {
   /* Set rsp and rip in VMCS here because they depend on the implementation of this function. */
-  uint64_t reg;
-  __asm__ __volatile__(
-      "push %rax ;\n"
-      "push %rbx ;\n"
-      "push %rcx ;\n"
-      "push %rdx ;\n"
-      "push %rsi ;\n"
-      "push %rdi ;\n"
-      "push %r8  ;\n"
-      "push %r9  ;\n"
-      "push %r10 ;\n"
-      "push %r11 ;\n"
-      "push %r12 ;\n"
-      "push %r13 ;\n"
-      "push %r14 ;\n"
-      "push %r15 ;\n"
-  );
-  __asm__ __volatile__("mov %%rsp, %0" : "=a" (reg));
-  cpu_vmwrite(GUEST_RSP, reg);
-  cpu_vmwrite(GUEST_RIP, ((uint64_t) &&vm_entrypoint));
+  cpu_vmwrite(GUEST_RIP, vm_RIP);
+  cpu_vmwrite(GUEST_RSP, vm_RSP);
+  /* Correct rbp */
+  __asm__ __volatile__("mov %0, %%rbp" : : "m" (vm_RBP));
+  /* Launch the vm */
   __asm__ __volatile__("vmlaunch;\n");
-  panic("!#CPU VMLAUNCH [%x]", cpu_vmread(VM_INSTRUCTION_ERROR));
-vm_entrypoint:
-  __asm__ __volatile__(
-      "pop %r15 ;\n"
-      "pop %r14 ;\n"
-      "pop %r13 ;\n"
-      "pop %r12 ;\n"
-      "pop %r11 ;\n"
-      "pop %r10 ;\n"
-      "pop %r9  ;\n"
-      "pop %r8  ;\n"
-      "pop %rdi ;\n"
-      "pop %rsi ;\n"
-      "pop %rdx ;\n"
-      "pop %rcx ;\n"
-      "pop %rbx ;\n"
-      "pop %rax ;\n"
-    );
+
+  /* Should not be executed */
+  panic("!#CPU VMLAUNCH");
 }
 
 void cpu_vmwrite(uint64_t field, uint64_t value) {
