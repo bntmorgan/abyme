@@ -84,12 +84,15 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   // static uint64_t msr_exit = 0;
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
   uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
-  uint8_t mode = vmm_get_cpu_mode(); 
+  uint8_t mode = vmm_get_cpu_mode();
 
 #ifdef _DEBUG_SERVER
-  // if (exit_reason == EXIT_REASON_IO_INSTRUCTION) {
-  // if (exit_reason == EXIT_REASON_VMCALL) {
-  if (exit_reason != EXIT_REASON_CPUID && exit_reason != EXIT_REASON_IO_INSTRUCTION && exit_reason != EXIT_REASON_WRMSR && exit_reason != EXIT_REASON_CR_ACCESS) {
+  if (exit_reason != EXIT_REASON_CPUID
+      && exit_reason != EXIT_REASON_IO_INSTRUCTION
+      && exit_reason != EXIT_REASON_WRMSR
+      && exit_reason != EXIT_REASON_RDMSR
+      && exit_reason != EXIT_REASON_XSETBV
+      && exit_reason != EXIT_REASON_CR_ACCESS) {
     message_vmexit ms = {
       MESSAGE_VMEXIT,
       debug_server_get_core(),
@@ -321,7 +324,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       } else if (n == 3) {
         cr3_count++;
 #ifdef _DEBUG_SERVER
-        debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
+        // désactivation de l'expérience
+        // debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
 #endif
         uint8_t desc[16] = { cpu_vmread(VIRTUAL_PROCESSOR_ID), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         uint64_t un = 1;
