@@ -204,11 +204,18 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         guest_regs.rax = (guest_regs.rax & (0xffffffff00000000)) | (cpu_vmread(GUEST_IA32_EFER) & 0xffffffff);
         guest_regs.rdx = (guest_regs.rdx & (0xffffffff00000000)) | (cpu_vmread(GUEST_IA32_EFER_HIGH) & 0xffffffff);
       } else {
-        vmm_panic(VMM_PANIC_RDMSR, 0, &guest_regs);
+        if (guest_regs.rcx > 0xc0001fff || (guest_regs.rcx > 0x1fff && guest_regs.rcx < 0xc0000000)) {
+          // Tells the vm that the msr doesn't exist
+          uint32_t it_info_field =    (0x1 << 11)     // push error code
+                                    | (0x3 << 8)      // hardware exception
+                                    | 0xd ;           // GP fault
+          cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, it_info_field);
+        } else {
+          __asm__ __volatile__("rdmsr"
+            : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
+            :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));
+        }
       }
-      /*__asm__ __volatile__("rdmsr"
-          : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
-          :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));*/
       break;
     }
     case EXIT_REASON_WRMSR: {
