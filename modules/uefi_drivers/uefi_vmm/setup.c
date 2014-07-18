@@ -80,7 +80,7 @@ void bsp_main() {
 
   // Launch APs initialization chain
   // TODO implement
-  
+
   // Wait for the end of APs initialization chain
   // TODO implement
 
@@ -96,7 +96,7 @@ void vmm_setup() {
   cpu_enable_vmxe();
   cpu_write_cr4(cpu_adjust64(cpu_read_cr4(), MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
   msr_check_feature_control_msr_lock();
-  INFO("VMWON\n");
+  INFO("VMXON\n");
   cpu_vmxon((uint8_t *) vmxon);
   INFO("VMXON DONE\n");
 }

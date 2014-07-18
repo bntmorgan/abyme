@@ -194,8 +194,8 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   debug_server_send(b, size);
 }
 
-void debug_server_handle_vmcs_write(message_vmcs_read *mr) {
-  uint8_t *data = (uint8_t*)mr + sizeof(message_vmcs_read);
+void debug_server_handle_vmcs_write(message_vmcs_write *mr) {
+  uint8_t *data = (uint8_t*)mr + sizeof(message_vmcs_write);
   // Size
   uint8_t s = *((uint8_t*)data);
   data += 1;
@@ -256,7 +256,7 @@ void debug_server_run(struct registers *regs) {
           debug_server_handle_vmcs_read((message_vmcs_read*)mr);
           break;
         case MESSAGE_VMCS_WRITE:
-          debug_server_handle_vmcs_write((message_vmcs_read*)mr);
+          debug_server_handle_vmcs_write((message_vmcs_write*)mr);
           break;
         default: {
           // nothing

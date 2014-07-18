@@ -123,17 +123,17 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         }
         uint8_t direction = exit_qualification & 8;
         uint8_t size = exit_qualification & 7;
-        uint16_t port = (exit_qualification >> 16) & 0xffff; 
-        // out 
+        uint16_t port = (exit_qualification >> 16) & 0xffff;
+        // out
         uint32_t v = guest_regs.rax;
         if (direction == 0) {
           if (pci_no_protect_out(port, v)) {
             if (size == 0) {
-              __asm__ __volatile__("out %%al, %%dx" : : "a"(v), "d"(port)); 
+              __asm__ __volatile__("out %%al, %%dx" : : "a"(v), "d"(port));
             } else if (size == 1) {
-              __asm__ __volatile__("out %%ax, %%dx" : : "a"(v), "d"(port)); 
+              __asm__ __volatile__("out %%ax, %%dx" : : "a"(v), "d"(port));
             } else if (size == 3) {
-              __asm__ __volatile__("out %%eax, %%dx" : : "a"(v), "d"(port)); 
+              __asm__ __volatile__("out %%eax, %%dx" : : "a"(v), "d"(port));
             } else {
               vmm_panic(VMM_PANIC_IO, 1, &guest_regs);
             }
@@ -142,13 +142,13 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         } else {
           if (pci_no_protect_in(port)) {
             if (size == 0) {
-              __asm__ __volatile__("in %%dx, %%al" : "=a"(v) : "d"(port)); 
+              __asm__ __volatile__("in %%dx, %%al" : "=a"(v) : "d"(port));
               guest_regs.rax = (guest_regs.rax & 0xffffffffffffff00) | (v & 0x000000ff);
             } else if (size == 1) {
-              __asm__ __volatile__("in %%dx, %%ax" : "=a"(v) : "d"(port)); 
+              __asm__ __volatile__("in %%dx, %%ax" : "=a"(v) : "d"(port));
               guest_regs.rax = (guest_regs.rax & 0xffffffffffff0000) | (v & 0x0000ffff);
             } else if (size == 3) {
-              __asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port)); 
+              __asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port));
               guest_regs.rax = (guest_regs.rax & 0xffffffff00000000) | (v & 0xffffffff);
             } else {
               vmm_panic(VMM_PANIC_IO, port, &guest_regs);
@@ -367,7 +367,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       cpu_vmwrite(GUEST_RIP, (guest_regs.rip & 0x0000000000000000) | tmp);
       break;
     }
-    default : 
+    default :
       vmm_panic(VMM_PANIC_UNKNOWN_CPU_MODE, 0, &guest_regs);
   }
 }
