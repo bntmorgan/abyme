@@ -120,5 +120,7 @@ void vmm_vm_setup_and_launch() {
   vmcs_fill_vm_exec_control_fields();
   vmcs_fill_guest_state_fields();
   INFO("READY TO GO!\n");
+  debug_server_enable_putc();
+  INFO("Debug infos by ethernet enabled\n");
   cpu_vmlaunch();
 }

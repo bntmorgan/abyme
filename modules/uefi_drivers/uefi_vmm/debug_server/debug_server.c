@@ -8,7 +8,11 @@
 #include "vmcs.h"
 #include "cpu.h"
 #include "debug_server.h"
-  
+
+#define MAX_INFO_SIZE 1024
+
+extern void (*putc)(uint8_t);
+
 protocol_82579LM *eth;
 
 /**
@@ -60,7 +64,7 @@ void debug_server_log_cr3_add(struct registers *regs, uint64_t cr3) {
 void debug_server_init() {
   debug_server_log_cr3_reset();
   EFI_STATUS status;
-  EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID; 
+  EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID;
 
   status = LibLocateProtocol(&guid_82579LM, (void **)&eth);
   if (EFI_ERROR(status)) {
@@ -123,9 +127,9 @@ void debug_server_handle_core_regs_read(message_core_regs_read *mr, struct regis
     debug_server_get_core()
   };
   // Copy segment regs
-  debug_server_get_segment_regs(&m.regs); 
+  debug_server_get_segment_regs(&m.regs);
   // Copy control registers
-  debug_server_get_control_regs(&m.regs); 
+  debug_server_get_control_regs(&m.regs);
   // Copy GPRs rsp, rbp, rsi, rdi and rip
   m.regs.rax = regs->rax;
   m.regs.rbx = regs->rbx;
@@ -162,7 +166,7 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   message_vmcs_data *m = (message_vmcs_data *)&buf[0];
   m->core = debug_server_get_core();
   m->type = MESSAGE_VMCS_DATA;
-  buf = (uint8_t *)buf + sizeof(message_vmcs_data); 
+  buf = (uint8_t *)buf + sizeof(message_vmcs_data);
   // Size
   s = data[0];
   data++;
@@ -272,4 +276,27 @@ void debug_server_send(void *buf, uint32_t len) {
 
 uint32_t debug_server_recv(void *buf, uint32_t len) {
   return eth->recv(buf, len, EFI_82579LM_API_BLOCK);
+}
+
+void debug_server_putc(uint8_t value) {
+  static uint8_t b [MAX_INFO_SIZE + sizeof(message_info)];
+  static message_info *m = (message_info *)b;
+  static uint8_t *buf = (uint8_t *)&b[0] + sizeof(message_info);
+  static uint8_t current_size = 0;
+
+  buf[current_size] = value;
+  current_size++;
+
+  if (value == '\n' || current_size == MAX_INFO_SIZE) {
+    m->type = MESSAGE_INFO;
+    m->core = debug_server_get_core();
+    m->length = current_size;
+    eth->send(b, current_size + sizeof(message_info), EFI_82579LM_API_BLOCK);
+    current_size = 0;
+  }
+}
+
+// change stdio putc pointer to our handler
+void debug_server_enable_putc() {
+  putc = &debug_server_putc;
 }

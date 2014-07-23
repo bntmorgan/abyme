@@ -5,6 +5,8 @@
 //#include "keyboard.h"
 #include "systab.h"
 
+void (*putc)(uint8_t) = &screen_print;
+
 void printk_string(int8_t *string, int8_t minimum_length, int8_t padding) {
   int8_t *ptr = string;
   uint8_t length = 0;
@@ -13,11 +15,11 @@ void printk_string(int8_t *string, int8_t minimum_length, int8_t padding) {
     ptr++;
   }
   while (length < minimum_length) {
-    screen_print(padding);
+    (*putc)(padding);
     length++;
   }
   while (*string) {
-    screen_print((int8_t) *string);
+    (*putc)((int8_t) *string);
     string++;
   }
 }
@@ -33,7 +35,7 @@ void printk(char *format, ...) {
   format = format + 1;
   while (c != 0) {
     if (c != '%') {
-      screen_print(c);
+      (*putc)(c);
     } else {
       uint8_t minimum_length = 0;
       int8_t padding = (int8_t) ' ';
@@ -87,9 +89,9 @@ void printk(char *format, ...) {
         printk_string(string, minimum_length, padding);
       } else if (c == 'c') {
         int32_t character = __builtin_va_arg(values, int32_t);
-        screen_print((uint8_t) character);
+        (*putc)((uint8_t) character);
       } else {
-        screen_print(c);
+        (*putc)(c);
       }
     }
     c = *format;

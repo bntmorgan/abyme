@@ -6,12 +6,14 @@
 void debug_server_init();
 void debug_server_send(void *buf, uint32_t len);
 uint32_t debug_server_recv(void *buf, uint32_t len);
+void debug_server_putc(uint8_t value);
+void debug_server_enable_putc();
 
 enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_MESSAGE,
   MESSAGE_VMEXIT,
   MESSAGE_EXEC_CONTINUE,
-  MESSAGE_EXEC_STEP,
+  MESSAGE_INFO,
   MESSAGE_MEMORY_READ,
   MESSAGE_MEMORY_DATA,
   MESSAGE_MEMORY_WRITE,
@@ -148,6 +150,12 @@ typedef struct _message_log_cr3 {
   uint8_t core;
   uint64_t length;
 } __attribute__((packed)) message_log_cr3;
+
+typedef struct _message_info {
+  uint8_t type;
+  uint8_t core;
+  uint64_t length;
+} __attribute__((packed)) message_info;
 
 static inline void *message_check_type(message *m, uint8_t type) {
   if (m->type == type) {
