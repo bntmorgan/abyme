@@ -337,8 +337,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED: {
-      uint32_t preemption_timer_value = 0xffffff;
-      cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, preemption_timer_value);
+      vmcs_set_vmx_preemption_timer_value(VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
       // Don't increment RIP
       return;
       break;

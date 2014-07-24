@@ -15,6 +15,9 @@
 #include "cpu.h"
 #include "msr.h"
 
+static uint16_t tsc_freq_MHz;
+static uint8_t tsc_divider;
+
 void vmcs_fill_guest_state_fields(void) {
   struct gdt_entry gdt_entry;
   struct idt_ptr idt_ptr;
@@ -94,6 +97,11 @@ void vmcs_fill_guest_state_fields(void) {
   cpu_vmwrite(GUEST_PENDING_DBG_EXCEPTIONS, 0);
   cpu_vmwrite(VMCS_LINK_POINTER, 0xffffffff);
   cpu_vmwrite(VMCS_LINK_POINTER_HIGH, 0xffffffff);
+
+  // Init and compute vmx_preemption_timer_value
+  tsc_freq_MHz = ((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
+  tsc_divider = msr_read(MSR_ADDRESS_IA32_VMX_MISC) & 0x7;
+  vmcs_set_vmx_preemption_timer_value(VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
 }
 
 void vmcs_fill_host_state_fields(void) {
@@ -145,9 +153,8 @@ void vmcs_fill_vm_exec_control_fields(void) {
   uint64_t msr_bitmap_ptr;
   uint64_t eptp;
   uint64_t io_bitmap_ptr;
-  uint32_t pinbased_ctls = 0 /*ACT_VMX_PREEMPT_TIMER*/;
-  
-  cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, 0);
+  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER;
+
   cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
   procbased_ctls = cpu_adjust32(procbased_ctls, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS);
   // XXX ??? why 
@@ -200,7 +207,7 @@ void vmcs_fill_vm_exec_control_fields(void) {
 }
 
 void vmcs_fill_vm_exit_control_fields(void) {
-  uint32_t exit_controls = EXIT_SAVE_IA32_EFER | EXIT_LOAD_IA32_EFER | HOST_ADDR_SPACE_SIZE;
+  uint32_t exit_controls = EXIT_SAVE_IA32_EFER | EXIT_LOAD_IA32_EFER | HOST_ADDR_SPACE_SIZE | SAVE_VMX_PREEMPT_TIMER_VAL;
   cpu_vmwrite(VM_EXIT_CONTROLS, cpu_adjust32(exit_controls, MSR_ADDRESS_IA32_VMX_EXIT_CTLS));
   cpu_vmwrite(VM_EXIT_MSR_STORE_COUNT, 0);
   cpu_vmwrite(VM_EXIT_MSR_LOAD_COUNT, 0);
@@ -252,4 +259,8 @@ void vmcs_dump_vcpu(void)
     print_section("64-bit RO Data Fields", 0x6400, 0x640A, 2);
     print_section("Natural 64-bit Guest-State Fields", 0x6800, 0x6826, 2);
     print_section("Natural 64-bit Host-State Fields", 0x6c00, 0x6c16, 2);
+}
+
+void vmcs_set_vmx_preemption_timer_value(uint64_t time_microsec) {
+  cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, (tsc_freq_MHz * time_microsec) >> tsc_divider);
 }

@@ -1,6 +1,8 @@
 #ifndef __VMM_VMCS_H__
 #define __VMM_VMCS_H__
 
+#define VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC 5*1000000
+
 enum vmcs_field {
   VIRTUAL_PROCESSOR_ID             = 0x00000000,
   POSTED_INT_NOTIF_VECTOR          = 0x00000002,
@@ -245,5 +247,7 @@ void vmcs_fill_vm_exit_control_fields(void);
 void vmcs_fill_vm_entry_control_fields(void);
 
 void vmcs_dump_vcpu(void);
+
+void vmcs_set_vmx_preemption_timer_value(uint64_t time_microsec);
 
 #endif
