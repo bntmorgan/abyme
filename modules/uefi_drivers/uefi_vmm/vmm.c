@@ -346,6 +346,11 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       // Don't increment RIP
       return;
       break;
+    case EXIT_REASON_EPT_VIOLATION: {
+      uint64_t guest_linear_addr = cpu_vmread(GUEST_LINEAR_ADDRESS);
+      INFO("EPT violation, Qualification : %X, addr : %X\n", exit_qualification, guest_linear_addr);
+      break;
+    }
     default: {
 #ifdef _DEBUG_SERVER
       message_vmexit ms = {

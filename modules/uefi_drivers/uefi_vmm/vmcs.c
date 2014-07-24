@@ -157,7 +157,7 @@ void vmcs_fill_vm_exec_control_fields(void) {
 
   cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
   procbased_ctls = cpu_adjust32(procbased_ctls, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS);
-  // XXX ??? why 
+  // XXX ??? why
   procbased_ctls &= ~(/*CR3_LOAD_EXITING |*/ CR3_STORE_EXITING);
   cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
 
@@ -227,7 +227,7 @@ void print_section(char *header, uint32_t start, uint32_t end,
   unsigned long val;
   int code, rc;
   char *fmt[4] = {"0x%04x ", "0x%016x ", "0x%08x ", "0x%016x "};
-  char *err[4] = {"------ ", "------------------ ", 
+  char *err[4] = {"------ ", "------------------ ",
                   "---------- ", "------------------ "};
   /* Find width of the field (encoded in bits 14:13 of address) */
   code = (start>>13)&3;
