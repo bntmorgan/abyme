@@ -224,24 +224,20 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_WRMSR: {
       // Check for variable mtrr msr
       uint64_t msr_base_address = MSR_ADDRESS_IA32_MTRR_PHYSBASE0;
-      uint64_t msr_mask_address = MSR_ADDRESS_IA32_MTRR_PHYSBASE0 + 1;
       uint8_t is_var_mtrr = 0;
-      uint32_t i;
-      // mtrr_cap is a mtrr.c extern
-      for (i = 0; i < mtrr_cap.msr.vcnt; i++) {
-        if (guest_regs.rcx == msr_base_address || guest_regs.rcx == msr_mask_address) {
-          is_var_mtrr = 1;
-        }
-        msr_base_address += 2;
-        msr_mask_address += 2;
-      }
+      uint8_t nb_mtrr_var = mtrr_get_nb_variable_mtrr();
+      uint8_t need_recompute_ept;
       if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
         cpu_vmwrite(GUEST_IA32_EFER, guest_regs.rax & 0xffffffff);
         cpu_vmwrite(GUEST_IA32_EFER_HIGH, guest_regs.rdx & 0xffffffff);
-      } else if (
-          is_var_mtrr ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRRCAP ||
-          guest_regs.rcx == MSR_ADDRESS_A32_MTRR_DEF_TYPE ||
+      } else {
+        if ((guest_regs.rcx >= msr_base_address)
+          &&(guest_regs.rcx < msr_base_address + 2*nb_mtrr_var)) {
+          is_var_mtrr = 1;
+        }
+
+        if (is_var_mtrr ||
+          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_DEF_TYPE ||
           guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX64K_00000 ||
           guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX16K_80000 ||
           guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX16K_A0000 ||
@@ -253,14 +249,18 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
           guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_E8000 ||
           guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_F0000 ||
           guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_F8000 ) {
-        __asm__ __volatile__("wrmsr"
-          : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
-        // Recompute the cache ranges
-        mtrr_create_ranges();
-        // Recompute ept tables
-        ept_create_tables();
-      } else {
-        vmm_panic(VMM_PANIC_WRMSR, 0, &guest_regs);
+
+          __asm__ __volatile__("wrmsr"
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+          // Recompute the cache ranges
+          need_recompute_ept = mtrr_update_ranges();
+          // Recompute ept tables
+          if (need_recompute_ept) {
+            ept_create_tables();
+          }
+        } else {
+          vmm_panic(VMM_PANIC_WRMSR, 0, &guest_regs);
+        }
       }
       break;
     }

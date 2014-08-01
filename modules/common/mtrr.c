@@ -259,3 +259,33 @@ void mtrr_print_ranges(void) {
                                   , memory_range[i].type);
   }
 }
+
+/* Update mtrr ranges and return 1 if we need to recompute ept tables, 0 otherwhise */
+uint8_t mtrr_update_ranges(void) {
+  static struct memory_range backup_ranges[MAX_NB_MTRR_RANGES];
+  static uint8_t backup_nb_ranges=0;
+  uint8_t i;
+
+  // we don't need to backup if MTRRs were disabled
+  if (mtrr_def_type.e) {
+    backup_nb_ranges = nb_memory_range;
+    memcpy(backup_ranges, memory_range, nb_memory_range*sizeof(struct memory_range));
+  }
+
+  mtrr_create_ranges();
+
+  // if MTRRs are disabled we don't need to recompute ept tables because there is only one big range
+  if (mtrr_def_type.e) {
+    if (nb_memory_range != backup_nb_ranges) {
+      for (i=0; i<nb_memory_range; i++) {
+        if ((memory_range[i].range_address_begin != backup_ranges[i].range_address_begin)
+          ||(memory_range[i].range_address_end != backup_ranges[i].range_address_end)
+          ||(memory_range[i].type != backup_ranges[i].type)) {
+          return 1;
+        }
+      }
+    }
+  }
+
+  return 0;
+}
