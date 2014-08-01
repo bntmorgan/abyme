@@ -7,7 +7,7 @@
 #include "addr.h"
 #include "pci.h"
 
-// 
+//
 // Intel® 82579 Gigabit Ethernet PHY Datasheet v2.1
 // 12.0 Intel® 6 Series Express Chipset MAC Programming Interface
 //
@@ -32,7 +32,7 @@
 #define REG_FEXT                        0x002C      // Future Extended Register
 #define REG_FEXTNVM2                    0x0030      // Future Extended2 NVM Register
 #define REG_KUMCTRLSTA                  0x0034      // Kumeran control and status registers
-#define REG_BUSNUM                      0x0038      // Device and bus number 
+#define REG_BUSNUM                      0x0038      // Device and bus number
 #define REG_LTRV                        0x00f8      // Latency Tolerance Reporting Value
 #define REG_LPIC                        0x00fc      // Low Power Idle Control
 #define REG_FCTTV                       0x0170      // Flow Control Transmit Timer Value
@@ -116,7 +116,7 @@
 #define REG_MPRC                        0x407C      // Multicast Packets Received Count RO
 #define REG_GPTC                        0x4080      // Good Packets Transmitted Count RO
 #define REG_GORCL                       0x4088      // Good Octets Received Count Low RO
-#define REG_GORCH                       0x408C      // Good Octets Received Count High RO 
+#define REG_GORCH                       0x408C      // Good Octets Received Count High RO
 #define REG_GOTCL                       0x4090      // Good Octets Transmitted Count Low RO
 #define REG_GOTCH                       0x4094      // Good Octets Transmitted Count High RO
 #define REG_RNBC                        0x40A0      // Receive No Buffers Count RO
@@ -127,7 +127,7 @@
 #define REG_MNGPRC                      0x40B4      // Management Packets Received Count RO
 #define REG_MNGPDC                      0x40B8      // Management Packets Dropped Count RO
 #define REG_MNGPTC                      0x40BC      // Management Packets Transmitted Count RO
-#define REG_TCBPD                       0x40D8      // Tx Circuit Breaker Packets Dropped RO 
+#define REG_TCBPD                       0x40D8      // Tx Circuit Breaker Packets Dropped RO
 #define REG_TORL                        0x40C0      // Total Octets Received Low RO
 #define REG_TORH                        0x40C4      // Total Octets Received High RO
 #define REG_TOTL                        0x40C8      // Total Octets Transmitted RO
@@ -253,7 +253,7 @@ typedef struct _recv_desc
 #define RSTA_IPCS                       (1 << 6)    // IP Checksum Calculated on Packet
 #define RSTA_PIF                        (1 << 7)    // Passed in-exact filter
 
-// 
+//
 // Transmit Descriptor
 //
 
@@ -318,6 +318,8 @@ void eth_print_registers_transmit();
 
 void eth_send(const void *buf, uint16_t len, uint8_t block);
 uint32_t eth_recv(void *buf, uint32_t len, uint8_t block);
+
+void eth_disable_debug(void);
 
 static inline pci_device_addr *eth_get_pci_addr() {
   extern pci_device_addr addr;

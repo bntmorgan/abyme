@@ -12,7 +12,7 @@
 #include "pat.h"
 #include "mtrr.h"
 #include "paging.h"
-  
+
 // PCI device information
 pci_device_info info;
 pci_device_info_ext info_ext;
@@ -34,6 +34,15 @@ uint8_t *bar0;
 // uint8_t tx_bufs[TX_DESC_COUNT * NET_BUF_SIZE];
 uint8_t *rx_bufs;
 uint8_t *tx_bufs;
+
+// stdio putc pointer
+extern void (*putc)(uint8_t);
+
+void put_nothing(uint8_t c) {}
+
+void eth_disable_debug(void){
+  putc = &put_nothing;
+}
 
 void wait(uint64_t time) {
   uint64_t i;
@@ -139,7 +148,7 @@ uint8_t eth_setup() {
     INFO("Failed to allocate tx_bufs or unaligned to 0x10 : 0x%016X\n", (uintptr_t)tx_descs);
     return -1;
   }
-  return 0; 
+  return 0;
 }
 
 uint8_t eth_set_memory_type() {
@@ -199,7 +208,7 @@ uint8_t eth_init() {
   laddr.n[3] = (uint8_t)(laddr_l >> 24);
   laddr.n[4] = (uint8_t)(laddr_h >> 0);
   laddr.n[5] = (uint8_t)(laddr_h >> 8);
-  INFO("MAC addr %02x:%02x:%02x:%02x:%02x:%02x\n", laddr.n[0], 
+  INFO("MAC addr %02x:%02x:%02x:%02x:%02x:%02x\n", laddr.n[0],
       laddr.n[1], laddr.n[2], laddr.n[3], laddr.n[4], laddr.n[5]);
   // cpu_mem_writed(bar0 + REG_CTRL, cpu_mem_readd(bar0 + REG_CTRL) | CTRL_SLU);
   // Clear Multicast Table Array
@@ -310,7 +319,7 @@ uint32_t eth_recv(void *buf, uint32_t len, uint8_t block) {
     cpu_mem_writed(bar0 + REG_RDT, idx);
     idx = (idx + 1) & (RX_DESC_COUNT - 1);
   }
-  return l; 
+  return l;
 }
 
 uint8_t eth_get_device() {

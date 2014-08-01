@@ -23,8 +23,8 @@ protocol_82579LM proto = {
   ETH_MTU
 };
 
-EFI_STATUS vmm_rt_unload (IN EFI_HANDLE image); 
-EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID; 
+EFI_STATUS vmm_rt_unload (IN EFI_HANDLE image);
+EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID;
 
 EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image_handle, systab);
@@ -42,8 +42,8 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   EFI_STATUS status;
   EFI_LOADED_IMAGE *image;
   status = uefi_call_wrapper(BS->HandleProtocol, 4, &image_handle,
-      &LoadedImageProtocol, (void*)&image); 
-  ASSERT (!EFI_ERROR(status)); 
+      &LoadedImageProtocol, (void*)&image);
+  ASSERT (!EFI_ERROR(status));
   image->Unload = vmm_rt_unload;
 
   INFO("Unload handler added %x\n", (uintptr_t)image_handle);
@@ -55,10 +55,12 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   proto.pci_addr.function = pci_addr->function;
   proto.bar0 = (uintptr_t)bar0;
 
-  // Add a protocol so someone can locate us 
+  // Add a protocol so someone can locate us
   status = uefi_call_wrapper(BS->InstallProtocolInterface, 4, &image_handle,
       &guid_82579LM, (EFI_INTERFACE_TYPE)NULL, &proto);
   ASSERT (!EFI_ERROR(status));
+
+  eth_disable_debug();
 
   return status;
 }
