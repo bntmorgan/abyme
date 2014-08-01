@@ -223,8 +223,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     }
     case EXIT_REASON_WRMSR: {
       // Check for variable mtrr msr
-      uint64_t msr_base_address = MSR_ADDRESS_IA32_MTRR_PHYBASE0;
-      uint64_t msr_mask_address = MSR_ADDRESS_IA32_MTRR_PHYBASE0 + 1;
+      uint64_t msr_base_address = MSR_ADDRESS_IA32_MTRR_PHYSBASE0;
+      uint64_t msr_mask_address = MSR_ADDRESS_IA32_MTRR_PHYSBASE0 + 1;
       uint8_t is_var_mtrr = 0;
       uint32_t i;
       // mtrr_cap is a mtrr.c extern

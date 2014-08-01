@@ -28,7 +28,6 @@
 #define MSR_ADDRESS_IA32_MTRR_FIX4K_F0000           0x26e
 #define MSR_ADDRESS_IA32_MTRR_FIX4K_F8000           0x26f
 #define MSR_ADDRESS_IA32_PAT                        0x277
-#define MSR_ADDRESS_IA32_MTRR_DEF_TYPE              0x2ff
 #define MSR_ADDRESS_IA32_VMX_BASIC                  0x480
 #define MSR_ADDRESS_IA32_VMX_PINBASED_CTLS          0x481
 #define MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS         0x482
@@ -46,7 +45,7 @@
 #define MSR_ADDRESS_IA32_VMX_TRUE_ENTRY_CTLS        0x490
 
 #define MSR_ADDRESS_IA32_MTRRCAP                    0x0fe
-#define MSR_ADDRESS_A32_MTRR_DEF_TYPE               0x2ff
+#define MSR_ADDRESS_IA32_MTRR_DEF_TYPE              0x2ff
 #define MSR_ADDRESS_IA32_MTRR_FIX64K_00000          0x250
 #define MSR_ADDRESS_IA32_MTRR_FIX16K_80000          0x258
 #define MSR_ADDRESS_IA32_MTRR_FIX16K_A0000          0x259
@@ -58,7 +57,7 @@
 #define MSR_ADDRESS_IA32_MTRR_FIX4K_E8000           0x26d
 #define MSR_ADDRESS_IA32_MTRR_FIX4K_F0000           0x26e
 #define MSR_ADDRESS_IA32_MTRR_FIX4K_F8000           0x26f
-#define MSR_ADDRESS_IA32_MTRR_PHYBASE0              0x200
+#define MSR_ADDRESS_IA32_MTRR_PHYSBASE0             0x200
 
 uint64_t msr_read(uint64_t msr_address);
 

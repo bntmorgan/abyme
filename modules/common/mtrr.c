@@ -3,70 +3,14 @@
 #include "cpu.h"
 #include "stdio.h"
 #include "mtrr.h"
+#include "include/string.h"
 
-struct msr_mtrr_fixed {
-  struct {
-    uint64_t address;
-    uint64_t value;
-  } msr;
-  /* Computed part of the struct. */
-  uint64_t range_address_begin;
-  uint64_t range_address_end;
-  uint64_t sub_range_size;
-};
-
-struct msr_mtrr_variable {
-  struct {
-    uint64_t address;
-    union {
-      struct {
-        uint64_t type:8;
-        uint64_t reserved_1:4;
-        uint64_t phybase:52;
-      } __attribute__((packed));
-      uint64_t value;
-    } __attribute__((packed));
-  } msr_base;
-  struct {
-    uint64_t address;
-    union {
-      struct {
-        uint64_t reserved_1:11;
-        uint64_t valid:1;
-        uint64_t phymask:52;
-      } __attribute__((packed));
-      uint64_t value;
-    } __attribute__((packed));
-  } msr_mask;
-  /* Computed part of the struct. */
-  uint64_t range_address_begin;
-  uint64_t range_address_end;
-};
-
-struct msr_mtrr_def_type {
-  struct {
-    uint64_t address;
-    union {
-      struct {
-        uint64_t type:8;
-        uint64_t reserved_1:2;
-        uint64_t fe:1;
-        uint64_t e:1;
-        uint64_t reserved_2:52;
-      } __attribute__((packed));
-      uint64_t value;
-    } __attribute__((packed));
-  } msr;
-};
-
-#define MAX_NB_MTRR_VARIABLE	16
-
-struct memory_range memory_range[MAX_NB_MTRR_VARIABLE * 2 + 1];
+struct memory_range memory_range[MAX_NB_MTRR_RANGES];
 uint8_t nb_memory_range;
 
-struct memory_range memory_range_fixed[11];
-
-struct msr_mtrr_variable mtrr_variable[MAX_NB_MTRR_VARIABLE];
+/* MSR MTRR corresponding structures */
+struct msr_mtrrcap mtrr_cap;
+struct msr_mtrr_def_type mtrr_def_type;
 struct msr_mtrr_fixed mtrr_fixed[11] = {
   {.msr= {.address=MSR_ADDRESS_IA32_MTRR_FIX64K_00000}, 0x00000, 0x7ffff, 0x10000},
   {.msr= {.address=MSR_ADDRESS_IA32_MTRR_FIX16K_80000}, 0x80000, 0x9ffff, 0x04000},
@@ -80,182 +24,238 @@ struct msr_mtrr_fixed mtrr_fixed[11] = {
   {.msr= {.address=MSR_ADDRESS_IA32_MTRR_FIX4K_F0000},  0xf0000, 0xf7fff, 0x01000},
   {.msr= {.address=MSR_ADDRESS_IA32_MTRR_FIX4K_F8000},  0xf8000, 0xfffff, 0x01000},
 };
+struct msr_mtrr_variable mtrr_variable[MAX_NB_MTRR_VARIABLE];
 
-uint8_t max_phyaddr;
+/* Store pointers to variables MTRRs sorted by begin_addr */
+struct msr_mtrr_variable* sorted_mtrr_variable[MAX_NB_MTRR_VARIABLE];
+uint8_t nb_enabled_var_mtrr;
 
-struct msr_mtrrcap mtrr_cap;
-struct msr_mtrr_def_type mtrr_def_type;
 
-struct memory_range default_memory_range = {MEMORY_TYPE_UC, 0, 0xffffffffffffffff, NULL};
+static void compute_var_MTRR(uint8_t *k, uint64_t *current_addr, uint8_t begin_index, uint8_t type, uint64_t max_addr);
+static void fill_gap(uint8_t *k, uint64_t *current_addr, uint64_t to, uint8_t type);
 
-uint8_t check_memory_type(uint8_t type) {
-  if ((type != 0) && (type != 1) && (type != 4) && (type != 5) && (type != 6)) {
-    panic("!#MTRR TYPE [%d]", type);
+inline static uint64_t min(uint64_t a, uint64_t b) {
+  return (a<b)?a:b;
+}
+
+/* Compares two variable MTRRs */
+inline static uint8_t is_inf(struct msr_mtrr_variable* a, struct msr_mtrr_variable* b) {
+  return (a->range_address_begin < b->range_address_begin);
+}
+
+/* Return the final type in case of type conflict */
+static uint8_t get_type(uint8_t t1, uint8_t t2) {
+  if (t1 == MEMORY_TYPE_DEFAULT || t2 == MEMORY_TYPE_DEFAULT) {
+    return (t1 == MEMORY_TYPE_DEFAULT)?t2:t1;
+  } else if (t1 == t2) {
+    return t1;
+  } else if (t1 == MEMORY_TYPE_UC || t2 == MEMORY_TYPE_UC) {
+    return MEMORY_TYPE_UC;
+  } else if ( (t1 == MEMORY_TYPE_WB && t2 == MEMORY_TYPE_WT)
+            ||(t1 == MEMORY_TYPE_WT && t2 == MEMORY_TYPE_WB)) {
+    return MEMORY_TYPE_WT;
+  } else {
+    // undefinied behaviour
+    panic("MTRR overlaped memory : Undefined behaviour, t1=%d, t2=%d\n", t1, t2);
+    return -1;
   }
-  return type;
+}
+
+inline static uint8_t real_type(uint8_t type) {
+  if (type == MEMORY_TYPE_DEFAULT) {
+    return mtrr_def_type.type;
+  } else {
+    return type;
+  }
+}
+
+static void check_memory_type(uint8_t type) {
+  if ((type != MEMORY_TYPE_UC) && (type != MEMORY_TYPE_WC) && (type != MEMORY_TYPE_WT)
+      && (type != MEMORY_TYPE_WP) && (type != MEMORY_TYPE_WB)) {
+    panic("!#MTRR TYPE [%d]\n", type);
+  }
 }
 
 uint8_t mtrr_create_ranges(void) {
   uint8_t i;
   uint8_t j;
-  uint8_t k;
+  uint8_t max_phyaddr = cpuid_get_maxphyaddr();
+  uint64_t last_addr = ((uint64_t) 1 << max_phyaddr) - 1;
+
+  /* Check if the processor support MTRRs */
   if (cpuid_are_mtrr_supported() != 1) {
-    return 1;
+    memory_range[0].type=MEMORY_TYPE_UC;
+    memory_range[0].range_address_begin=0;
+    memory_range[0].range_address_end=last_addr;
+    nb_memory_range=1;
+    return MTRR_NOT_SUPPORTED;
   }
-  mtrr_cap.msr.address = MSR_ADDRESS_IA32_MTRRCAP;
-  mtrr_cap.msr.value = msr_read(MSR_ADDRESS_IA32_MTRRCAP);
-  mtrr_def_type.msr.address = MSR_ADDRESS_A32_MTRR_DEF_TYPE;
-  mtrr_def_type.msr.value = msr_read(MSR_ADDRESS_A32_MTRR_DEF_TYPE);
+
+  /* Retrieve MTRR conf registers */
+  mtrr_cap.value = msr_read(MSR_ADDRESS_IA32_MTRRCAP);
+  mtrr_def_type.value = msr_read(MSR_ADDRESS_IA32_MTRR_DEF_TYPE);
+
+  /* If MTRRs are not enabled we can stop here */
+  if (!mtrr_def_type.e) {
+    memory_range[0].type=MEMORY_TYPE_UC;
+    memory_range[0].range_address_begin=0;
+    memory_range[0].range_address_end=last_addr;
+    nb_memory_range=1;
+    return MTRR_DISABLED;
+  }
+
   /* Retrieve fixed MTRRs corresponding to the range 0x000000:0x100000. */
-  for (i = 0; i < 11; i++) {
-    mtrr_fixed[i].msr.value = msr_read(mtrr_fixed[i].msr.address);
+  if (mtrr_cap.fix) {
+    for (i = 0; i < 11; i++) {
+      mtrr_fixed[i].msr.value = msr_read(mtrr_fixed[i].msr.address);
+    }
   }
+
   /* Retrieve variable MTRRs. */
-  if (mtrr_cap.msr.vcnt > MAX_NB_MTRR_VARIABLE) {
-    panic("!#MTRR VCNT [%d]", mtrr_cap.msr.vcnt);
+  if (mtrr_cap.vcnt > MAX_NB_MTRR_VARIABLE) {
+    panic("!#MTRR VCNT [%d]\n", mtrr_cap.vcnt);
   }
-  uint64_t msr_base_address = MSR_ADDRESS_IA32_MTRR_PHYBASE0;
-  uint64_t msr_mask_address = MSR_ADDRESS_IA32_MTRR_PHYBASE0 + 1;
-  max_phyaddr = cpuid_get_maxphyaddr();
-  for (i = 0; i < mtrr_cap.msr.vcnt; i++) {
-    mtrr_variable[i].msr_base.address = msr_base_address;
-    mtrr_variable[i].msr_mask.address = msr_mask_address;
+  uint64_t mask, len;
+  nb_enabled_var_mtrr = 0;
+  for (i = 0; i < mtrr_cap.vcnt; i++) {
+    mtrr_variable[i].msr_base.address = MSR_ADDRESS_IA32_MTRR_PHYSBASE0 + 2*i;
+    mtrr_variable[i].msr_mask.address = MSR_ADDRESS_IA32_MTRR_PHYSBASE0 + 2*i + 1;
     mtrr_variable[i].msr_base.value = msr_read(mtrr_variable[i].msr_base.address);
     mtrr_variable[i].msr_mask.value = msr_read(mtrr_variable[i].msr_mask.address);
     mtrr_variable[i].range_address_begin = ((uint64_t) mtrr_variable[i].msr_base.phybase) << 12;
-    uint64_t mask = ((uint64_t) mtrr_variable[i].msr_mask.phymask) << 12;
-    uint64_t len = (~(mask & 0xfffffffffffff000)) & (((uint64_t) 1 << max_phyaddr) - 1);
+    mask = ((uint64_t) mtrr_variable[i].msr_mask.phymask) << 12;
+    len = (~mask) & last_addr;
     mtrr_variable[i].range_address_end = mtrr_variable[i].range_address_begin + len;
-    msr_base_address += 2;
-    msr_mask_address += 2;
-  }
-  /* Compute for fixed MTRR. */
-  /* k is the index of the range being computed. */
-  /* i and j are indexes used to swap through the fixed MTRR. */
-  k = 0;
-  memory_range[k].type = mtrr_fixed[0].msr.value & 0xff;
-  memory_range_fixed[k].range_address_begin = 0;
-  memory_range_fixed[k].range_address_end = -1;
-  memory_range_fixed[k].next = NULL;
-  for (i = 0; i < 11; i++) {
-    for (j = 0; j < 8; j++) {
-      if (memory_range[k].type == ((mtrr_fixed[i].msr.value >> (j * 8)) & 0xff)) {
-        memory_range_fixed[k].range_address_end += mtrr_fixed[i].sub_range_size;
-      } else {
-        memory_range_fixed[k].next = &memory_range_fixed[k + 1];
-        k++;
-        memory_range[k].type = (mtrr_fixed[i].msr.value >> (j * 8)) & 0xff;
-        memory_range_fixed[k].range_address_begin = memory_range_fixed[k - 1].range_address_end + 1;
-        memory_range_fixed[k].range_address_end = memory_range_fixed[k - 1].range_address_end + mtrr_fixed[i].sub_range_size;
-        memory_range_fixed[k].next = NULL;
+
+    // sort variable MTRRs by their begin address
+    if (mtrr_variable[i].msr_mask.valid) {
+      for (j = nb_enabled_var_mtrr; j > 0 && is_inf(&mtrr_variable[i], sorted_mtrr_variable[j-1]); j--) {
+        sorted_mtrr_variable[j] = sorted_mtrr_variable[j-1];
       }
+      sorted_mtrr_variable[j] = &mtrr_variable[i];
+      nb_enabled_var_mtrr++;
     }
   }
-  /* Compute for variable MTRR. */
-  memory_range[0].type = 0;
-  memory_range[0].range_address_begin = 0x0000000000000000;
-  memory_range[0].range_address_end = 0xffffffffffffffff;
-  memory_range[0].next = NULL;
-  nb_memory_range = 0;
-  /* Split all the memory according to MTRR. */
-  for (i = 0; i < mtrr_cap.msr.vcnt; i++) {
-    if (mtrr_variable[i].msr_mask.valid == 1) {
-      struct memory_range *ptr = &memory_range[0];
-      uint64_t mtrr_address_begin = mtrr_variable[i].range_address_begin;
-      uint64_t mtrr_address_end = mtrr_variable[i].range_address_end;
-      uint64_t mtrr_type = mtrr_variable[i].msr_base.type;
-      while (ptr != NULL && mtrr_address_begin <= mtrr_address_end) {
-        /* MTTR considered is either after the current range or in this range.
-         * It can't be before this range, otherwise we miss this situation in
-         * the previous iteration.
-         */
-        if (mtrr_address_begin == ptr->range_address_begin) {
-          if (mtrr_address_end < ptr->range_address_end) {
-            nb_memory_range = nb_memory_range + 1;
-            memory_range[nb_memory_range].next = ptr->next;
-            memory_range[nb_memory_range].type = ptr->type;
-            memory_range[nb_memory_range].range_address_begin = mtrr_address_end + 1;
-            memory_range[nb_memory_range].range_address_end = ptr->range_address_end;
-            ptr->range_address_end = mtrr_address_end;
-            ptr->next = &memory_range[nb_memory_range];
-          }
-          ptr->type |= (1 << check_memory_type(mtrr_type));
-          mtrr_address_begin = ptr->range_address_end + 1;
-        } else if (mtrr_address_begin <= ptr->range_address_end) {
-          nb_memory_range = nb_memory_range + 1;
-          memory_range[nb_memory_range].next = ptr->next;
-          memory_range[nb_memory_range].type = ptr->type;
-          memory_range[nb_memory_range].range_address_begin = mtrr_address_begin;
-          memory_range[nb_memory_range].range_address_end = ptr->range_address_end;
-          ptr->range_address_end = mtrr_address_begin - 1;
-          ptr->next = &memory_range[nb_memory_range];
+
+  //
+  // Create ranges
+  //
+
+  uint8_t k=0;                  // current position in the memory_range array
+  uint64_t current_addr = 0;    // everything below this address has been processed
+  uint8_t current_type;
+
+  /* First fixed MTRRs */
+  if (mtrr_def_type.fe) {   // First check if fixed MTRR are enabled
+    memory_range[0].range_address_begin = 0;
+    memory_range[0].range_address_end = -1;
+    memory_range[0].type = mtrr_fixed[0].msr.value & 0xff;
+    for (i = 0; i < 11; i++) {
+      for (j = 0; j < 8; j++) {
+        current_type = (mtrr_fixed[i].msr.value >> (j * 8)) & 0xff;
+        if (memory_range[k].type == current_type) {
+          memory_range[k].range_address_end += mtrr_fixed[i].sub_range_size;
+        } else {
+          k++;
+          memory_range[k].range_address_begin = memory_range[k-1].range_address_end + 1;
+          memory_range[k].range_address_end = memory_range[k].range_address_begin + mtrr_fixed[i].sub_range_size - 1;
+          memory_range[k].type = current_type;
         }
-        ptr = ptr->next;
       }
     }
-  }
-  /* Get the type of each range (overwrite type of ranges!). */
-  struct memory_range *ptr = &memory_range[0];
-  while (ptr != NULL) {
-    if (ptr->type == 0x0) {
-      ptr->type = mtrr_def_type.msr.type;
-    } else if ((ptr->type & (1 << MEMORY_TYPE_UC)) != 0x0) {
-      ptr->type = MEMORY_TYPE_UC;
-    } else if (ptr->type == (1 << MEMORY_TYPE_WC)) {
-      ptr->type = MEMORY_TYPE_WC;
-    } else if (ptr->type == (1 << MEMORY_TYPE_WT)) {
-      ptr->type = MEMORY_TYPE_WT;
-    } else if (ptr->type == (1 << MEMORY_TYPE_WP)) {
-      ptr->type = MEMORY_TYPE_WP;
-    } else if (ptr->type == (1 << MEMORY_TYPE_WB)) {
-      ptr->type = MEMORY_TYPE_WB;
-    } else if (ptr->type == ((1 << MEMORY_TYPE_WB) | (1 << MEMORY_TYPE_WT))) {
-      ptr->type = MEMORY_TYPE_WT;
-    } else {
-      panic("#MTRR MT [%d]", ptr->type);
+    current_addr = 0x100000;
+  } else {
+    // init for var MTRRs
+    memory_range[0].range_address_begin = 0;
+    // We have to find out the type of the first range
+    current_type = MEMORY_TYPE_DEFAULT;
+    for (i=0; (i < nb_enabled_var_mtrr) && (sorted_mtrr_variable[i]->range_address_begin == 0); i++) {
+      current_type=get_type(current_type, sorted_mtrr_variable[i]->msr_base.type);
     }
-    ptr = ptr->next;
+    memory_range[0].type = real_type(current_type);
   }
-  /* Merge range if possible. */
-  ptr = &memory_range[0];
-  while (ptr->next != NULL) {
-    if (ptr->type == ptr->next->type) {
-      ptr->range_address_end = ptr->next->range_address_end;
-      ptr->next = ptr->next->next;
-    } else {
-      ptr = ptr->next;
-    }
+
+  /* Then var MTRRs */
+  compute_var_MTRR(&k, &current_addr, 0, MEMORY_TYPE_DEFAULT, last_addr);
+
+  /* We have to close the last range */
+  fill_gap(&k, &current_addr, last_addr+1, MEMORY_TYPE_DEFAULT);
+  memory_range[k].range_address_end = last_addr;
+  nb_memory_range = k+1;
+
+  /* At last we check memory ranges type just in case */
+  for (i=0; i<nb_memory_range; i++) {
+    check_memory_type(memory_range[i].type);
   }
+
   return 0;
 }
 
-uint8_t mtrr_get_nb_variable_mtrr(void) {
-  return mtrr_cap.msr.vcnt;
+/* Compute the variable MTRRs
+ * Parameters:
+ * - k            : current index of the memory_range array
+ * - current_addr : address from which we need to compute the ranges (everything below this address have already been processed)
+ * - begin_index  : begin index of the sorted_mtrr_variable array (for performance purpose, if we set this to 0 it will works too)
+ * - type         : type of the range underneath (the range inside which we are)
+ * - max_addr     : we need to stop processing this step when the range underneath is done
+ */
+static void compute_var_MTRR(uint8_t *k, uint64_t *current_addr, uint8_t begin_index, uint8_t type, uint64_t max_addr) {
+  uint8_t i;                // index of the current mtrr_variable (current range)
+  uint8_t current_type;     // result of the overlap of underneath range and current range
+  uint64_t next_max_addr;   // last address of the overlap between current range and underneath range
+  for (i=begin_index; i < nb_enabled_var_mtrr && sorted_mtrr_variable[i]->range_address_begin < max_addr; i++) {
+    // everything below current_addr have already been processed
+    if(sorted_mtrr_variable[i]->range_address_end < *current_addr) {
+      continue;
+    }
+
+    // We fill the gap between current_addr and the beginning of the current zone
+    fill_gap(k, current_addr, sorted_mtrr_variable[i]->range_address_begin, type);
+
+    current_type = get_type(type, sorted_mtrr_variable[i]->msr_base.type);
+    next_max_addr = min(sorted_mtrr_variable[i]->range_address_end, max_addr);
+    // We look for overlap inside this overlap (overlapception)
+    compute_var_MTRR(k, current_addr, i+1, current_type, next_max_addr);
+
+    // We fill the gap between current_addr the last_addr to process
+    fill_gap(k, current_addr, next_max_addr +1, current_type);
+  }
+}
+
+/* Fill the gap between current_addr and to (exclusive) with the given memory type */
+static void fill_gap(uint8_t *k, uint64_t *current_addr, uint64_t to, uint8_t type) {
+  if (*current_addr < to) {
+    if (memory_range[*k].type != real_type(type)) {
+      // we close the last range if types are differents
+      memory_range[*k].range_address_end = *current_addr - 1;
+      // and then we create a new range
+      (*k)++;
+      memory_range[*k].range_address_begin = *current_addr;
+      memory_range[*k].type = real_type(type);
+    }
+    *current_addr = to;
+  }
+}
+
+inline uint8_t mtrr_get_nb_variable_mtrr(void) {
+  return mtrr_cap.vcnt;
 }
 
 const struct memory_range *mtrr_get_memory_range(uint64_t address) {
-  if ((cpuid_are_mtrr_supported() == 1) && (mtrr_def_type.msr.e == 1)) {
-    struct memory_range *ptr = &memory_range[0];
-    if ((address < 0x100000) && (mtrr_cap.msr.fix == 1) && (mtrr_def_type.msr.fe == 1)) {
-      ptr = &memory_range_fixed[0];
+  uint8_t i;
+  for (i=0; i < nb_memory_range; i++) {
+    if (address < memory_range[i].range_address_end) {
+      return &memory_range[i];
     }
-    while (ptr != NULL && (ptr->range_address_begin > address || ptr->range_address_end < address)) {
-      ptr = ptr->next;
-    }
-    return ptr;
   }
-  return &default_memory_range;
+  return NULL;
 }
 
 void mtrr_print_ranges(void) {
-  struct memory_range *ptr = &memory_range_fixed[0];
-  while (ptr != NULL) {
-    printk("F 0x%016X-0x%016X %d\n", ptr->range_address_begin, ptr->range_address_end, ptr->type);
-    ptr = ptr->next;
-  }
-  ptr = &memory_range[0];
-  while (ptr != NULL) {
-    printk("V 0x%016X-0x%016X %d\n", ptr->range_address_begin, ptr->range_address_end, ptr->type);
-    ptr = ptr->next;
+  uint8_t i;
+  for (i=0; i < nb_memory_range; i++) {
+    printk("0x%016X-0x%016X %d\n" , memory_range[i].range_address_begin
+                                  , memory_range[i].range_address_end
+                                  , memory_range[i].type);
   }
 }

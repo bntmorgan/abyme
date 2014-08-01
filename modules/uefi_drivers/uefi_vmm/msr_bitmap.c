@@ -33,10 +33,10 @@ void msr_bitmap_set_for_mtrr(void) {
   uint64_t i;
   uint64_t count = mtrr_get_nb_variable_mtrr();
   for (i = 0; i < count * 2; i++) {
-    msr_bitmap_set_read_write(MSR_ADDRESS_IA32_MTRR_PHYBASE0 + i);
+    msr_bitmap_set_read_write(MSR_ADDRESS_IA32_MTRR_PHYSBASE0 + i);
   }
   msr_bitmap_set_read_write(MSR_ADDRESS_IA32_MTRRCAP);
-  msr_bitmap_set_read_write(MSR_ADDRESS_A32_MTRR_DEF_TYPE);
+  msr_bitmap_set_read_write(MSR_ADDRESS_IA32_MTRR_DEF_TYPE);
   msr_bitmap_set_read_write(MSR_ADDRESS_IA32_MTRR_FIX64K_00000);
   msr_bitmap_set_read_write(MSR_ADDRESS_IA32_MTRR_FIX16K_80000);
   msr_bitmap_set_read_write(MSR_ADDRESS_IA32_MTRR_FIX16K_A0000);
