@@ -7,16 +7,14 @@
 #include "debug_server/debug_server.h"
 #include "pci.h"
 
-#define MAX_VMM_PD  5  // Image max size : 10Mo
-
 struct ept_tables {
-  uint64_t PML4[512]                    __attribute__((aligned(0x1000)));
-  uint64_t PML40_PDPT[512]              __attribute__((aligned(0x1000)));
-  uint64_t PML40_PDPT_PD[512][512]      __attribute__((aligned(0x1000)));
-  uint64_t PML40_PDPT0_PD0_PT[512]      __attribute__((aligned(0x1000)));
-  uint64_t PD_PT_VMM [MAX_VMM_PD][512]  __attribute__((aligned(0x1000)));
-  uint64_t PT_ETH_MMIO[512]             __attribute__((aligned(0x1000)));
-  uint64_t PT_ETH_BAR0[512]             __attribute__((aligned(0x1000)));
+  uint64_t PML4[512]                __attribute__((aligned(0x1000)));
+  uint64_t PML40_PDPT[512]          __attribute__((aligned(0x1000)));
+  uint64_t PML40_PDPT_PD[512][512]  __attribute__((aligned(0x1000)));
+  uint64_t PML40_PDPT0_PD0_PT[512]  __attribute__((aligned(0x1000)));
+  uint64_t PD_PT_VMM [2][512]       __attribute__((aligned(0x1000)));
+  uint64_t PT_ETH_MMIO[512]         __attribute__((aligned(0x1000)));
+  uint64_t PT_ETH_BAR0[512]         __attribute__((aligned(0x1000)));
 } __attribute__((aligned(8)));
 
 
@@ -90,7 +88,7 @@ void ept_create_tables(void) {
   }
 
   //
-  // Protect VMM pages : we split 2Mo pages corresponding to VMM to 4Ko pages
+  // Protect VMM pages : we split the first and the last 2Mo pages corresponding to VMM memory into 4Ko pages
   //
 
   /* Already aligned on 4Ko (cf efi.ld) */
@@ -98,47 +96,55 @@ void ept_create_tables(void) {
   uint64_t p_end = (uint64_t) &_protected_end;
 
   PDPT_offset = get_PDPT_offset(p_begin);
-  PD_offset = get_PD_offset(p_begin);
+  uint8_t PD_offset_begin = get_PD_offset(p_begin);
+  uint8_t PD_offset_end = get_PD_offset(p_end);
 
   if (PDPT_offset != get_PDPT_offset(p_end)) {
     panic("!#EPT protected_zone doesn't fit in 1 PDPT");
   }
 
-  uint8_t nb_PD_to_break = get_PD_offset(p_end) - PD_offset + 1;
-  if (nb_PD_to_break > MAX_VMM_PD) {
-    panic("!#EPT protected_zone doesn't fit in %d PD pages", MAX_VMM_PD);
-  }
-
-  /* We split nb_PD_to_break PDs after p_begin into 4Ko pages */
   address = p_begin & ~(0x200000 -1);
   memory_range = mtrr_get_memory_range(address);
-  for (i = 0; i < nb_PD_to_break; i++) {
-    ept_tables.PML40_PDPT_PD[PDPT_offset][PD_offset + i] = ((uint64_t) &ept_tables.PD_PT_VMM[i][0]) | 0x7;
+  i=0;
+  for (PD_offset = PD_offset_begin; PD_offset <= PD_offset_end; PD_offset++) {
 
-    for (j = 0; j < 512; j++) {
-      if (address > memory_range->range_address_end) {
+    /* We split the first and the last PDs into 4Ko pages */
+    if ((PD_offset == PD_offset_begin) || (PD_offset == PD_offset_end)) {
+      ept_tables.PML40_PDPT_PD[PDPT_offset][PD_offset] = ((uint64_t) &ept_tables.PD_PT_VMM[i][0]) | 0x7;
+
+      for (j = 0; j < 512; j++) {
+        if (address > memory_range->range_address_end) {
+          memory_range = mtrr_get_memory_range(address);
+        }
+        check_memory_range(memory_range, address, 0x1000);
+
+        ept_tables.PD_PT_VMM[i][j] = (PDPT_offset        << 30)
+                                   | (PD_offset          << 21)
+                                   | (j                  << 12)
+                                   | (memory_range->type << 3)
+                                   | 0x7;
+        /* We protect pages that belongs to vmm addr range */
+        if ((address >= p_begin) && (address < p_end)) {
+          ept_tables.PD_PT_VMM[i][j] &= ~((uint64_t)0x7);
+        }
+
+        address += 0x1000;
+      }
+      i++;
+
+    } else {
+      /* We protect the other PDs pages */
+      if (memory_range->range_address_end < address) {
         memory_range = mtrr_get_memory_range(address);
       }
-      check_memory_range(memory_range, address, 0x1000);
+      check_memory_range(memory_range, address, 0x200000);
 
-      /* We protect pages that belongs to vmm addr range */
-      if ((address >= p_begin) && (address < p_end)) {
-        ept_tables.PD_PT_VMM[i][j] =  (PDPT_offset        << 30)
-                                    | ((PD_offset + i)    << 21)
-                                    | (j                  << 12)
-                                    | (memory_range->type << 3)
-                                    | 0x0;
-      } else {
-        ept_tables.PD_PT_VMM[i][j] =  (PDPT_offset        << 30)
-                                    | ((PD_offset + i)    << 21)
-                                    | (j                  << 12)
-                                    | (memory_range->type << 3)
-                                    | 0x7;
-      }
+      ept_tables.PML40_PDPT_PD[PDPT_offset][PD_offset] &= ~((uint64_t)0x7);
 
-      address += 0x1000;
+      address += 0x200000;
     }
   }
+
 
   //
   // Network card
