@@ -6,6 +6,8 @@ dir	:= $(d)/82579LM
 include	$(dir)/rules.mk
 dir	:= $(d)/uefi_vmm
 include	$(dir)/rules.mk
+dir	:= $(d)/uefi_vmm_supervisor
+include	$(dir)/rules.mk
 dir	:= $(d)/smm
 include	$(dir)/rules.mk
 dir	:= $(d)/uefi_smm

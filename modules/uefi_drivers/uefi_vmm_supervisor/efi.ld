@@ -17,7 +17,7 @@ SECTIONS
 
   .text : ALIGN(0x1000) {
     *crt0-efi-*.o(.text)
-    build/*/uefi_vmm/efi.o(.text)
+    build/*/uefi_vmm_supervisor/efi.o(.text)
 
     /* PADDING */
     FILL(0x90)

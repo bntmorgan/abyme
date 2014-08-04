@@ -8,6 +8,12 @@ echo press any key
 pause
 load efi.efi
 echo Ethernet runtime driver loaded !
+cd \EFI\uefi_drivers\uefi_vmm_supervisor
+echo Loading vmm supervisor
+echo press any key
+pause
+load efi.efi
+echo Vmm supervisor runtime driver loaded !
 cd \EFI\uefi_drivers\uefi_vmm
 echo Loading vmm
 echo press any key
