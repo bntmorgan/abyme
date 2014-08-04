@@ -27,6 +27,7 @@ EFI_LDS 				:= efi.ld
 CC_FLAGS_ALL		:= -Wall -Werror -Werror -O2 -fno-stack-protector \
 		-fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC -O0 \
 		-D_DEBUG_SERVER
+#		-D_NO_PRINTK
 
 ifeq ($(ARCH),x86_64)
 	CC_FLAGS_ALL	+= -DEFI_FUNCTION_WRAPPER
@@ -110,7 +111,7 @@ binary/%.efi: binary/%.elf
 		$(OBJCPY_FLAGS_TARGET) \
 	  $< $@
 		@cp $< $<.toto
-		
+
 	@strip $@
 
 binary/%.elf:

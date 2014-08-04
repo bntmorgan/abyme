@@ -24,6 +24,7 @@ void printk_string(int8_t *string, int8_t minimum_length, int8_t padding) {
   }
 }
 
+#ifndef _NO_PRINTK
 void printk(char *format, ...) {
   __builtin_va_list values;
   __builtin_va_start(values, format);
@@ -99,6 +100,11 @@ void printk(char *format, ...) {
   }
   __builtin_va_end(values);
 }
+#else  /* _NO_PRINTK */
+void printk(char *format, ...) {
+  return;
+}
+#endif /* _NO_PRINTK */
 
 void printk_bin(uint32_t size, char *sep, uint8_t *data) {
   uint32_t i, j;
