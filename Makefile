@@ -25,9 +25,7 @@ EFI_CRT_OBJS 		:= $(EFI_PATH)/crt0-efi-$(ARCH).o
 EFI_LDS 				:= efi.ld
 
 CC_FLAGS_ALL		:= -Wall -Werror -Werror -O2 -fno-stack-protector \
-		-fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC -O0 \
-		-D_DEBUG_SERVER
-#		-D_NO_PRINTK
+		-fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC -O0
 
 ifeq ($(ARCH),x86_64)
 	CC_FLAGS_ALL	+= -DEFI_FUNCTION_WRAPPER
