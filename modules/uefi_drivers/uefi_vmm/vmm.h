@@ -6,6 +6,7 @@
 #include "types.h"
 
 #define VMM_STACK_SIZE 0x400000
+#define NB_EXIT_REASONS 65
 
 extern uint8_t vmm_stack[VMM_STACK_SIZE];
 
@@ -67,6 +68,9 @@ enum vm_exit_reason {
   EXIT_REASON_RDRAND                       = 57,
   EXIT_REASON_INVPCID                      = 58,
   EXIT_REASON_VMFUNC                       = 59,
+  EXIT_REASON_RDSEED                       = 61,
+  EXIT_REASON_XSAVES                       = 63,
+  EXIT_REASON_XRSTORS                      = 64,
 };
 
 struct registers {
@@ -89,6 +93,7 @@ struct registers {
   uint64_t rax;
 } __attribute__((packed));
 
+void vmm_init(void);
 void vmm_vm_exit_handler(void);
 
 #endif

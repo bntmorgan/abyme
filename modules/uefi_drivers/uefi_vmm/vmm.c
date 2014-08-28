@@ -19,6 +19,8 @@
 
 uint8_t vmm_stack[VMM_STACK_SIZE];
 
+static uint8_t send_debug[NB_EXIT_REASONS];
+
 void vmm_print_guest_regs(struct registers *guest_regs) {
   INFO("rax=%X\n", guest_regs->rax);
   INFO("rbx=%X\n", guest_regs->rbx);
@@ -58,6 +60,18 @@ int vmm_get_cpu_mode() {
   } else {
     return MODE_LONG;
   }
+
+void vmm_init(void) {
+  /* Init exit reasons for which we need to send a debug message */
+  memset(&send_debug[0], 1, NB_EXIT_REASONS);
+  /*send_debug[EXIT_REASON_CPUID] = 0;
+  send_debug[EXIT_REASON_IO_INSTRUCTION] = 0;
+  send_debug[EXIT_REASON_WRMSR] = 0;
+  send_debug[EXIT_REASON_RDMSR] = 0;
+  send_debug[EXIT_REASON_XSETBV] = 0;
+  send_debug[EXIT_REASON_CR_ACCESS] = 0;
+  send_debug[EXIT_REASON_INVVPID] = 0;
+  send_debug[EXIT_REASON_VMRESUME] = 0;*/
 }
 
 void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_regs) {
@@ -89,12 +103,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint8_t mode = vmm_get_cpu_mode();
 
 #ifdef _DEBUG_SERVER
-  if (exit_reason != EXIT_REASON_CPUID
-      && exit_reason != EXIT_REASON_IO_INSTRUCTION
-      && exit_reason != EXIT_REASON_WRMSR
-      && exit_reason != EXIT_REASON_RDMSR
-      && exit_reason != EXIT_REASON_XSETBV
-      && exit_reason != EXIT_REASON_CR_ACCESS) {
+  if (send_debug[exit_reason]) {
     message_vmexit ms = {
       MESSAGE_VMEXIT,
       debug_server_get_core(),
