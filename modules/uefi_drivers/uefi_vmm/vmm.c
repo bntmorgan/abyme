@@ -21,19 +21,8 @@ uint8_t vmm_stack[VMM_STACK_SIZE];
 
 static uint8_t send_debug[NB_EXIT_REASONS];
 
-void vmm_print_guest_regs(struct registers *guest_regs) {
-  INFO("rax=%X\n", guest_regs->rax);
-  INFO("rbx=%X\n", guest_regs->rbx);
-  INFO("rcx=%X\n", guest_regs->rcx);
-  INFO("rdx=%X\n", guest_regs->rdx);
-}
-
-void vmm_WAIT(void) {
-  uint64_t key = 0;
-  while (key != 0xd0000) {
-    uefi_call_wrapper(ST->ConIn->ReadKeyStroke, 2, ST->ConIn, &key);
-  }
-}
+static uint64_t io_count = 0;
+static uint64_t cr3_count = 0;
 
 enum CPU_MODE {
   MODE_REAL,
@@ -50,16 +39,10 @@ enum VMM_PANIC {
   VMM_PANIC_XSETBV
 };
 
-int vmm_get_cpu_mode() {
-  uint64_t cr0 = cpu_vmread(GUEST_CR0);
-  uint64_t ia32_efer = cpu_vmread(GUEST_IA32_EFER);
-  if (!(cr0 & (1 << 0))) {
-    return MODE_REAL;
-  } else if (!(ia32_efer & (1 << 10))) {
-    return MODE_PROTECTED;
-  } else {
-    return MODE_LONG;
-  }
+static inline int get_cpu_mode(void);
+static void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_regs);
+static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs);
+static inline uint8_t is_MTRR(uint64_t msr_addr);
 
 void vmm_init(void) {
   /* Init exit reasons for which we need to send a debug message */
@@ -74,33 +57,13 @@ void vmm_init(void) {
   send_debug[EXIT_REASON_VMRESUME] = 0;*/
 }
 
-void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_regs) {
-#ifdef _DEBUG_SERVER
-  message_vmm_panic m = {
-    MESSAGE_VMM_PANIC,
-    debug_server_get_core(),
-    code,
-    extra
-  };
-  debug_server_send(&m, sizeof(m));
-  if (guest_regs) {
-    debug_server_run(guest_regs);
-  } else {
-    while(1);
-  }
-#endif
-}
-
-uint64_t io_count = 0;
-uint64_t cr3_count = 0;
-
 void vmm_handle_vm_exit(struct registers guest_regs) {
   guest_regs.rsp = cpu_vmread(GUEST_RSP);
   guest_regs.rip = cpu_vmread(GUEST_RIP);
-  // static uint64_t msr_exit = 0;
+
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
-  uint32_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
-  uint8_t mode = vmm_get_cpu_mode();
+  uint64_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
+  uint8_t cpu_mode = get_cpu_mode();
 
 #ifdef _DEBUG_SERVER
   if (send_debug[exit_reason]) {
@@ -114,11 +77,22 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   }
 #endif
 
-  uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
+  //
+  // VMX Specific VMexits that we override
+  //
+  if (exit_reason == EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED) {
+    vmcs_set_vmx_preemption_timer_value(VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
+    return;
+  } else if (exit_reason == EXIT_REASON_MONITOR_TRAP_FLAG) {
+    return;
+  }
 
   switch (exit_reason) {
+    //
+    // Things we should emulate/protect
+    //
     case EXIT_REASON_XSETBV: {
-      if (vmm_get_cpu_mode() == MODE_LONG) {
+      if (cpu_mode == MODE_LONG) {
         __asm__ __volatile__("xsetbv" : : "a"(guest_regs.rax), "c"(guest_regs.rcx), "d"(guest_regs.rdx));
       } else {
         vmm_panic(VMM_PANIC_XSETBV, 0, &guest_regs);
@@ -130,14 +104,22 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       // Checking the privileges
       uint8_t cpl = (cpu_vmread(GUEST_CS_AR_BYTES) >> 5) & 3;
       uint8_t iopl = (cpu_vmread(GUEST_RFLAGS) >> 12) & 3;
-      if (vmm_get_cpu_mode() == MODE_REAL || cpl <= iopl) {
+      if (cpu_mode == MODE_REAL || cpl <= iopl) {
         // REP prefixed || String I/O
         if ((exit_qualification & 0x20) || (exit_qualification & 0x10)) {
           vmm_panic(VMM_PANIC_IO, 0, &guest_regs);
         }
         uint8_t direction = exit_qualification & 8;
         uint8_t size = exit_qualification & 7;
+        uint8_t string = exit_qualification & (1<<4);
+        uint8_t rep = exit_qualification & (1<<5);
         uint16_t port = (exit_qualification >> 16) & 0xffff;
+
+        // Unsupported
+        if (rep || string) {
+          vmm_panic(VMM_PANIC_IO, 4, &guest_regs);
+        }
+
         // out
         uint32_t v = guest_regs.rax;
         if (direction == 0) {
@@ -186,8 +168,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_CPUID: {
-      //vmm_print_guest_regs(&guest_regs);
-      if (guest_regs.rax == 0x88888888) {
+      /*if (guest_regs.rax == 0x88888888) {
         guest_regs.rax = 0xC001C001C001C001;
         guest_regs.rbx = io_count;
         guest_regs.rcx = cr3_count;
@@ -201,17 +182,16 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         guest_regs.rbx = *((uint32_t *)gilles);
         guest_regs.rdx = *((uint32_t *)gilles + 1);
         guest_regs.rcx = *((uint32_t *)gilles + 2);
-      } else {
+      } else {*/
         __asm__ __volatile__("cpuid"
             : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
             :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));
-        //vmm_print_guest_regs(&guest_regs);
-      }
+      /*}*/
       break;
     }
     case EXIT_REASON_RDMSR: {
       if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
-        if (mode == MODE_LONG) {
+        if (cpu_mode == MODE_LONG) {
           guest_regs.rdx = 0;
           guest_regs.rax = 0;
         }
@@ -233,38 +213,15 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_WRMSR: {
-      // Check for variable mtrr msr
-      uint64_t msr_base_address = MSR_ADDRESS_IA32_MTRR_PHYSBASE0;
-      uint8_t is_var_mtrr = 0;
-      uint8_t nb_mtrr_var = mtrr_get_nb_variable_mtrr();
-      uint8_t need_recompute_ept;
       if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
         cpu_vmwrite(GUEST_IA32_EFER, guest_regs.rax & 0xffffffff);
         cpu_vmwrite(GUEST_IA32_EFER_HIGH, guest_regs.rdx & 0xffffffff);
       } else {
-        if ((guest_regs.rcx >= msr_base_address)
-          &&(guest_regs.rcx < msr_base_address + 2*nb_mtrr_var)) {
-          is_var_mtrr = 1;
-        }
-
-        if (is_var_mtrr ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_DEF_TYPE ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX64K_00000 ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX16K_80000 ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX16K_A0000 ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_C0000 ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_C8000 ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_D0000 ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_D8000 ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_E0000 ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_E8000 ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_F0000 ||
-          guest_regs.rcx == MSR_ADDRESS_IA32_MTRR_FIX4K_F8000 ) {
-
+        if (is_MTRR(guest_regs.rcx)) {
           __asm__ __volatile__("wrmsr"
             : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
           // Recompute the cache ranges
-          need_recompute_ept = mtrr_update_ranges();
+          uint8_t need_recompute_ept = mtrr_update_ranges();
           // Recompute ept tables
           if (need_recompute_ept) {
             ept_create_tables();
@@ -347,16 +304,9 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       }
       break;
     }
-    case EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED: {
-      vmcs_set_vmx_preemption_timer_value(VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
-      // Don't increment RIP
-      return;
-      break;
-    }
-    case EXIT_REASON_MONITOR_TRAP_FLAG:
-      // Don't increment RIP
-      return;
-      break;
+    //
+    // Debug
+    //
     case EXIT_REASON_EPT_VIOLATION: {
       uint64_t guest_linear_addr = cpu_vmread(GUEST_LINEAR_ADDRESS);
       INFO("EPT violation, Qualification : %X, addr : %X\n", exit_qualification, guest_linear_addr);
@@ -374,30 +324,83 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 #endif
     }
   }
-  switch (mode) {
-    case MODE_REAL: {
-      uint16_t tmp = (uint16_t) guest_regs.rip;
-      tmp = tmp + (uint16_t) exit_instruction_length;
-      cpu_vmwrite(GUEST_RIP, (guest_regs.rip & 0xffffffffffff0000) | tmp);
-      break;
-    }
-    case MODE_PROTECTED: {
-      uint32_t tmp = (uint32_t) guest_regs.rip;
-      tmp = tmp + (uint32_t) exit_instruction_length;
-      cpu_vmwrite(GUEST_RIP, (guest_regs.rip & 0xffffffff00000000) | tmp);
-      break;
-    }
-    case MODE_LONG: {
-      uint64_t tmp = (uint64_t) guest_regs.rip;
-      tmp = tmp + (uint64_t) exit_instruction_length;
-      cpu_vmwrite(GUEST_RIP, (guest_regs.rip & 0x0000000000000000) | tmp);
-      break;
-    }
-    default :
-      vmm_panic(VMM_PANIC_UNKNOWN_CPU_MODE, 0, &guest_regs);
+
+  increment_rip(cpu_mode, &guest_regs);
+}
+
+static inline int get_cpu_mode(void) {
+  uint64_t cr0 = cpu_vmread(GUEST_CR0);
+  uint64_t ia32_efer = cpu_vmread(GUEST_IA32_EFER);
+  if (!(cr0 & (1 << 0))) {
+    INFO("On est en mode réel\n");
+    return MODE_REAL;
+  } else if (!(ia32_efer & (1 << 10))) {
+    INFO("On est en mode protégé\n");
+    return MODE_PROTECTED;
+  } else {
+    return MODE_LONG;
   }
 }
 
-void msr_bitmap_changes(void) {
-  //msr_bitmap_get_ptr();
+static inline uint8_t is_MTRR(uint64_t msr_addr) {
+  return (/* Variable MTRRs */
+          ((msr_addr >= MSR_ADDRESS_IA32_MTRR_PHYSBASE0) &&
+           (msr_addr < MSR_ADDRESS_IA32_MTRR_PHYSBASE0 + 2*mtrr_get_nb_variable_mtrr()))
+        ||/* Fixed MTRRs */
+          (msr_addr == MSR_ADDRESS_IA32_MTRR_DEF_TYPE     ||
+           msr_addr == MSR_ADDRESS_IA32_MTRR_FIX64K_00000 ||
+           msr_addr == MSR_ADDRESS_IA32_MTRR_FIX16K_80000 ||
+           msr_addr == MSR_ADDRESS_IA32_MTRR_FIX16K_A0000 ||
+           msr_addr == MSR_ADDRESS_IA32_MTRR_FIX4K_C0000  ||
+           msr_addr == MSR_ADDRESS_IA32_MTRR_FIX4K_C8000  ||
+           msr_addr == MSR_ADDRESS_IA32_MTRR_FIX4K_D0000  ||
+           msr_addr == MSR_ADDRESS_IA32_MTRR_FIX4K_D8000  ||
+           msr_addr == MSR_ADDRESS_IA32_MTRR_FIX4K_E0000  ||
+           msr_addr == MSR_ADDRESS_IA32_MTRR_FIX4K_E8000  ||
+           msr_addr == MSR_ADDRESS_IA32_MTRR_FIX4K_F0000  ||
+           msr_addr == MSR_ADDRESS_IA32_MTRR_FIX4K_F8000));
+}
+
+static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs) {
+  uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
+
+  switch (cpu_mode) {
+    case MODE_REAL: {
+      uint16_t tmp = (uint16_t) guest_regs->rip;
+      tmp = tmp + (uint16_t) exit_instruction_length;
+      cpu_vmwrite(GUEST_RIP, (guest_regs->rip & 0xffffffffffff0000) | tmp);
+      break;
+    }
+    case MODE_PROTECTED: {
+      uint32_t tmp = (uint32_t) guest_regs->rip;
+      tmp = tmp + (uint32_t) exit_instruction_length;
+      cpu_vmwrite(GUEST_RIP, (guest_regs->rip & 0xffffffff00000000) | tmp);
+      break;
+    }
+    case MODE_LONG: {
+      uint64_t tmp = (uint64_t) guest_regs->rip;
+      tmp = tmp + (uint64_t) exit_instruction_length;
+      cpu_vmwrite(GUEST_RIP, (guest_regs->rip & 0x0000000000000000) | tmp);
+      break;
+    }
+    default :
+      vmm_panic(VMM_PANIC_UNKNOWN_CPU_MODE, 0, guest_regs);
+  }
+}
+
+static void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_regs) {
+#ifdef _DEBUG_SERVER
+  message_vmm_panic m = {
+    MESSAGE_VMM_PANIC,
+    debug_server_get_core(),
+    code,
+    extra
+  };
+  debug_server_send(&m, sizeof(m));
+  if (guest_regs != NULL) {
+    debug_server_run(guest_regs);
+  } else {
+    while(1);
+  }
+#endif
 }
