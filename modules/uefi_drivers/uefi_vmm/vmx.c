@@ -19,7 +19,7 @@ void cpu_vmxon(uint8_t *region) {
       "setae %%cl ;"
     : "=c" (ok) : "D" (&region));
   if (ok == 0x0) {
-    panic("!#CPU VMXON");
+    panic("!#CPU VMXON\n");
   }
 }
 
@@ -30,7 +30,7 @@ void cpu_vmclear(uint8_t *region) {
       "seta %%cl    ;"
     : "=c" (ok) : "D" (&region));
   if (ok == 0x0) {
-    panic("!#CPU VMCLEAR");
+    panic("!#CPU VMCLEAR\n");
   }
 }
 
@@ -41,7 +41,7 @@ void cpu_vmptrld(uint8_t *region) {
       "seta %%cl    ;"
     : "=c" (ok) : "D" (&region));
   if (ok == 0x0) {
-    panic("!#CPU VMPTRLD");
+    panic("!#CPU VMPTRLD\n");
   }
 }
 
@@ -55,7 +55,7 @@ void cpu_vmlaunch(void) {
   __asm__ __volatile__("vmlaunch;\n");
 
   /* Should not be executed */
-  panic("!#CPU VMLAUNCH");
+  panic("!#CPU VMLAUNCH\n");
 }
 
 void cpu_vmwrite(uint64_t field, uint64_t value) {
