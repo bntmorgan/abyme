@@ -15,6 +15,9 @@
 #include "cpu.h"
 #include "msr.h"
 
+uint8_t vmxon[4096] __attribute((aligned(0x1000)));
+uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
+
 static uint16_t tsc_freq_MHz;
 static uint8_t tsc_divider;
 

@@ -27,10 +27,6 @@ extern uint8_t _protected_end;
 
 uint32_t vmcs_revision_identifier;
 uint32_t number_bytes_regions;
-uint8_t vmm_stack[VMM_STACK_SIZE];
-
-uint8_t vmxon[4096] __attribute((aligned(0x1000)));
-uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
 
 void bsp_main() {
 #ifdef _DEBUG_SERVER

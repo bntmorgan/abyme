@@ -17,6 +17,8 @@
 #endif
 #include "mtrr.h"
 
+uint8_t vmm_stack[VMM_STACK_SIZE];
+
 void vmm_print_guest_regs(struct registers *guest_regs) {
   INFO("rax=%X\n", guest_regs->rax);
   INFO("rbx=%X\n", guest_regs->rbx);

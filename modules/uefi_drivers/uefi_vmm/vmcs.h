@@ -3,6 +3,9 @@
 
 #define VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC 5*1000000
 
+extern uint8_t vmxon[4096];
+extern uint8_t vmcs0[4096];
+
 enum vmcs_field {
   VIRTUAL_PROCESSOR_ID             = 0x00000000,
   POSTED_INT_NOTIF_VECTOR          = 0x00000002,
