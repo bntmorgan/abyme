@@ -5,7 +5,7 @@ d               := $(dir)
 TARGET					:= $(call SRC_2_BIN, $(d)/efi.efi)
 TARGETS 				+= $(call SRC_2_BIN, $(TARGET))
 OBJS_$(d)				:= $(call SRC_2_OBJ, \
-										$(d)/efi.o $(d)/vmm.o $(d)/common/efiw.o $(d)/common/screen.o $(d)/common/stdio.o $(d)/common/stdlib.o $(d)/common/debug.o $(d)/common/cpu.o $(d)/common/cpuid.o $(d)/common/msr.o $(d)/vmexit.o $(d)/setup.o $(d)/vmcs.o $(d)/gdt.o $(d)/common/mtrr.o $(d)/common/string.o $(d)/ept.o $(d)/msr_bitmap.o $(d)/common/paging.o $(d)/common/pat.o $(d)/io_bitmap.o $(d)/pci.o $(d)/trampo.o $(d)/smp.o $(d)/vmx.o, $(d)/test.o $(d)/smp.o)
+										$(d)/efi.o $(d)/vmm.o $(d)/common/efiw.o $(d)/common/screen.o $(d)/common/stdio.o $(d)/common/stdlib.o $(d)/common/debug.o $(d)/common/cpu.o $(d)/common/cpuid.o $(d)/common/msr.o $(d)/vmexit.o $(d)/setup.o $(d)/vmcs.o $(d)/gdt.o $(d)/common/mtrr.o $(d)/common/string.o $(d)/ept.o $(d)/msr_bitmap.o $(d)/common/paging.o $(d)/common/pat.o $(d)/io_bitmap.o $(d)/pci.o $(d)/trampo.o $(d)/smp.o $(d)/vmx.o $(d)/nested_vmx.o, $(d)/test.o $(d)/smp.o)
 
 OBJECTS 				+= $(OBJS_$(d))
 

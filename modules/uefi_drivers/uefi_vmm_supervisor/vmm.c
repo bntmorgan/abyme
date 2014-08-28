@@ -16,6 +16,7 @@
 #include "debug_server/debug_server.h"
 #endif
 #include "mtrr.h"
+#include "nested_vmx.h"
 
 uint8_t vmm_stack[VMM_STACK_SIZE];
 
@@ -40,6 +41,7 @@ enum VMM_PANIC {
 };
 
 static inline int get_cpu_mode(void);
+static inline uint8_t* get_instr_param_ptr(struct registers *guest_regs);
 static void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_regs);
 static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs);
 static inline uint8_t is_MTRR(uint64_t msr_addr);
@@ -64,6 +66,15 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
   uint64_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
   uint8_t cpu_mode = get_cpu_mode();
+  uint8_t* instr_param_ptr;
+
+  printk("--- VMexit : %d, state : %d\n", exit_reason, nested_state);
+  printk("RIP before = %016X\n", guest_regs.rip);
+  printk("RSP before = %016X\n", guest_regs.rsp);
+  printk("IDT info field = %016X\n", cpu_vmread(IDT_VECTORING_INFO_FIELD));
+  printk("IDT err code = %016X\n", cpu_vmread(IDT_VECTORING_ERROR_CODE));
+  printk("RFLAGS = %016X\n", cpu_vmread(GUEST_RFLAGS));
+  printk("CS = %016X\n", cpu_vmread(GUEST_CS_SELECTOR));
 
   // check VMX abort
   uint32_t vmx_abort = *(uint32_t*)&vmcs0[1];
@@ -76,7 +87,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   if (send_debug[exit_reason]) {
     message_vmexit ms = {
       MESSAGE_VMEXIT,
-      debug_server_get_core(),
+      //XXXXXXXX debug_server_get_core(),
+      nested_state,
       exit_reason
     };
     debug_server_send(&ms, sizeof(ms));
@@ -94,7 +106,45 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     return;
   }
 
+  if (nested_state == NESTED_GUEST_RUNNING) {
+    // Forward to L2 host
+    nested_forward_exit_infos();
+    nested_copy_host_fields();
+    printk("RIP to host = %016X\n", cpu_vmread(GUEST_RIP));
+    printk("RSP to host = %016X\n", cpu_vmread(GUEST_RSP));
+    return;
+  }
+
   switch (exit_reason) {
+    //
+    // VMX Operations
+    //
+    case EXIT_REASON_VMXON:
+      nested_vmxon();
+      break;
+    case EXIT_REASON_VMCLEAR:
+      instr_param_ptr = get_instr_param_ptr(&guest_regs);
+      nested_vmclear(*(uint8_t**)instr_param_ptr);
+      break;
+    case EXIT_REASON_VMPTRLD:
+      instr_param_ptr = get_instr_param_ptr(&guest_regs);
+      nested_vmptrld(*(uint8_t**)instr_param_ptr);
+      break;
+    case EXIT_REASON_VMLAUNCH:
+    case EXIT_REASON_VMRESUME:
+      // return to L2 guest
+      nested_copy_guest_fields();
+      printk("RIP to guest = %016X\n", cpu_vmread(GUEST_RIP));
+      printk("RSP to guest = %016X\n", cpu_vmread(GUEST_RSP));
+      return;
+      break;
+    case EXIT_REASON_INVVPID: {
+      uint8_t* desc = get_instr_param_ptr(&guest_regs);
+      uint64_t type = ((uint64_t*)&guest_regs)[(cpu_vmread(VMX_INSTRUCTION_INFO) >> 28) & 0xF];
+      //INFO("type=%d\n", type);
+      __asm__ __volatile__("invvpid %0, %1" : : "m"(*desc), "r"(type) );
+      break;
+    }
     //
     // Things we should emulate/protect
     //
@@ -296,6 +346,10 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       INFO("EPT violation, Qualification : %X, addr : %X\n", exit_qualification, guest_linear_addr);
       break;
     }
+    case EXIT_REASON_VMCALL:
+    case EXIT_REASON_TRIPLE_FAULT:
+      vmm_panic(0,0,&guest_regs);
+      break;
     default: {
 #ifdef _DEBUG_SERVER
       message_vmexit ms = {
@@ -341,6 +395,32 @@ static inline uint8_t is_MTRR(uint64_t msr_addr) {
            msr_addr == MSR_ADDRESS_IA32_MTRR_FIX4K_E8000  ||
            msr_addr == MSR_ADDRESS_IA32_MTRR_FIX4K_F0000  ||
            msr_addr == MSR_ADDRESS_IA32_MTRR_FIX4K_F8000));
+}
+
+static inline uint8_t* get_instr_param_ptr(struct registers *guest_regs) {
+  uint64_t addr_ptr = 0;
+  uint8_t i;
+  uint32_t vmx_instr_info = cpu_vmread(VMX_INSTRUCTION_INFO);
+  uint8_t scaling = vmx_instr_info & 0x03;
+  uint8_t index_reg_disabled = (vmx_instr_info >> 22) & 0x01;
+  uint8_t base_reg_disabled = (vmx_instr_info >> 27) & 0x01;
+  uint8_t index_reg = (vmx_instr_info >> 18) & 0x0F;
+  uint8_t base_reg = (vmx_instr_info >> 23) & 0x0F;
+  int64_t instruction_displacement_field = cpu_vmread(EXIT_QUALIFICATION);
+
+  if (!index_reg_disabled) {
+    addr_ptr = ((uint64_t*)guest_regs)[index_reg];
+    for (i = 0; i < scaling; i++) {
+      addr_ptr *= 2;
+    }
+  }
+  if (!base_reg_disabled) {
+    addr_ptr += ((uint64_t*)guest_regs)[base_reg];
+  }
+  addr_ptr += instruction_displacement_field;
+
+  //INFO("param_ptr:%016X\n", (uint64_t*)addr_ptr);
+  return (uint8_t*)addr_ptr;
 }
 
 static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs) {
