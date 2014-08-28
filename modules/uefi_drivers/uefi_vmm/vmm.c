@@ -57,6 +57,16 @@ void vmm_init(void) {
   send_debug[EXIT_REASON_VMRESUME] = 0;*/
 }
 
+__attribute__((sysv_abi)) void vmm_vmresume_failed(uint8_t VMfailInvalid, uint8_t VMfailValid) {
+  if (VMfailInvalid) {
+    panic("#!VMRESUME VMfailInvalid\n");
+  } else if(VMfailValid) {
+    panic("#!VMRESUME VMfailValid, errcode=%d\n", cpu_vmread(VM_INSTRUCTION_ERROR));
+  } else {
+    panic("#!VMRESUME unkown error\n");
+  }
+}
+
 void vmm_handle_vm_exit(struct registers guest_regs) {
   guest_regs.rsp = cpu_vmread(GUEST_RSP);
   guest_regs.rip = cpu_vmread(GUEST_RIP);
@@ -236,29 +246,11 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       uint8_t o = (exit_qualification >> 8) & 0xf;
       uint8_t n = (exit_qualification >> 0) & 0xf;
       uint8_t a = (exit_qualification >> 4) & 0x3;
-      uint8_t offset[16] = {
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->rax),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->rcx),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->rdx),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->rbx),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->rsp),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->rbp),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->rsi),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->rdi),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->r8),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->r9),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->r10),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->r11),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->r12),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->r13),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->r14),
-        (uint8_t) (uint64_t) &(((struct registers *) 0)->r15)
-      };
       // Mov to CRX
       if (a != 0) {
         vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
       }
-      uint64_t value = *((uint64_t *)(((uint8_t *)&guest_regs) + offset[o]));
+      uint64_t value = ((uint64_t*)&guest_regs)[o];
       // printk("Value %016X offset %d\n", value, o);
       if (n == 0) {
         uint64_t previous_cr0 = cpu_vmread(GUEST_CR0);

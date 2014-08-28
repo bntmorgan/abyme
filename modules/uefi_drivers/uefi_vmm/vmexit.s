@@ -5,23 +5,23 @@ vmm_vm_exit_handler:
   /*
    * Save guest general purpose registers.
    */
-  push %rax
-  push %rcx
-  push %rdx
-  push %rbx
-  sub $8, %rsp /* push %rsp */
-  push %rbp
-  push %rsi
-  push %rdi
-  push %r8
-  push %r9
-  push %r10
-  push %r11
-  push %r12
-  push %r13
-  push %r14
+  sub $8, %rsp /* placeholder, will be replaced by rip */
   push %r15
-  pushq $0x0 /* Will contain rip */
+  push %r14
+  push %r13
+  push %r12
+  push %r11
+  push %r10
+  push %r9
+  push %r8
+  push %rdi
+  push %rsi
+  push %rbp
+  sub $8, %rsp /* placeholder, will be replaced by rsp */
+  push %rbx
+  push %rdx
+  push %rcx
+  push %rax
 
   /*
    * Call our VM-Exit handler.
@@ -32,26 +32,34 @@ vmm_vm_exit_handler:
   /*
    * Restore guest general-purpose registers, possibly modified by our handler.
    */
-  pop %r15 /* Pop rip */
-  pop %r15
-  pop %r14
-  pop %r13
-  pop %r12
-  pop %r11
-  pop %r10
-  pop %r9
-  pop %r8
-  pop %rdi
-  pop %rsi
-  pop %rbp
-  add $8, %rsp /* pop %rsp */
-  pop %rbx
-  pop %rdx
-  pop %rcx
   pop %rax
+  pop %rcx
+  pop %rdx
+  pop %rbx
+  add $8, %rsp /* pop %rsp */
+  pop %rbp
+  pop %rsi
+  pop %rdi
+  pop %r8
+  pop %r9
+  pop %r10
+  pop %r11
+  pop %r12
+  pop %r13
+  pop %r14
+  pop %r15
+  add $8, %rsp /* pop %rip */
 
   /*
    * Resume guest execution.
-   * TODO: error checking.
    */
   vmresume
+
+  /* Check errors */
+  seta %al    /* VMfailInvalid */
+  seta %dl    /* VMfailValid */
+
+  /* sysv_abi calling convention */
+  mov %eax, %edi
+  mov %edx, %esi
+  call vmm_vmresume_failed
