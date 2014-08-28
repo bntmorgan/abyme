@@ -250,18 +250,21 @@ void print_section(char *header, uint32_t start, uint32_t end,
 
 void vmcs_dump_vcpu(void)
 {
-    print_section("16-bit Guest-State Fields", 0x800, 0x80e, 2);
-    print_section("16-bit Host-State Fields", 0xc00, 0xc0c, 2);
-    print_section("64-bit Control Fields", 0x2000, 0x2013, 1);
-    print_section("64-bit Guest-State Fields", 0x2800, 0x2803, 1);
-    print_section("32-bit Control Fields", 0x4000, 0x401c, 2);
-    print_section("32-bit RO Data Fields", 0x4400, 0x440e, 2);
-    print_section("32-bit Guest-State Fields", 0x4800, 0x482a, 2);
-    print_section("32-bit Host-State Fields", 0x4c00, 0x4c00, 2);
-    print_section("Natural 64-bit Control Fields", 0x6000, 0x600e, 2);
-    print_section("64-bit RO Data Fields", 0x6400, 0x640A, 2);
-    print_section("Natural 64-bit Guest-State Fields", 0x6800, 0x6826, 2);
-    print_section("Natural 64-bit Host-State Fields", 0x6c00, 0x6c16, 2);
+  print_section("16-bit Control Fields", 0x000, 0x004, 2);
+  print_section("16-bit Guest-State Fields", 0x800, 0x810, 2);
+  print_section("16-bit Host-State Fields", 0xc00, 0xc0c, 2);
+  print_section("64-bit Control Fields", 0x2000, 0x202d, 1);
+  print_section("64-bit RO Data Fields", 0x2400, 0x2401, 1);
+  print_section("64-bit Guest-State Fields", 0x2800, 0x2811, 1);
+  print_section("64-bit Host-State Fields", 0x2c00, 0x2c05, 1);
+  print_section("32-bit Control Fields", 0x4000, 0x4022, 2);
+  print_section("32-bit RO Data Fields", 0x4400, 0x440e, 2);
+  print_section("32-bit Guest-State Fields", 0x4800, 0x482e, 2);
+  print_section("32-bit Host-State Fields", 0x4c00, 0x4c00, 2);
+  print_section("Natural 64-bit Control Fields", 0x6000, 0x600e, 2);
+  print_section("Natural RO Data Fields", 0x6400, 0x640a, 2);
+  print_section("Natural 64-bit Guest-State Fields", 0x6800, 0x6826, 2);
+  print_section("Natural 64-bit Host-State Fields", 0x6c00, 0x6c16, 2);
 }
 
 void vmcs_set_vmx_preemption_timer_value(uint64_t time_microsec) {
