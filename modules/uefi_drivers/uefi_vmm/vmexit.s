@@ -56,8 +56,8 @@ vmm_vm_exit_handler:
   vmresume
 
   /* Check errors */
-  seta %al    /* VMfailInvalid */
-  seta %dl    /* VMfailValid */
+  setc %al    /* VMfailInvalid : CF = 1 */
+  setz %dl    /* VMfailValid : ZF = 1 */
 
   /* sysv_abi calling convention */
   mov %eax, %edi
