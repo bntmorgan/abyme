@@ -4,12 +4,25 @@
 #include "vmcs.h"
 #include "vmx.h"
 #include "stdio.h"
+#include "string.h"
 #include "debug.h"
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
 
+
 uint8_t nested_state = NESTED_DISABLED;
+uint8_t guest_vmcs[4096] __attribute((aligned(0x1000)));
+
+static uint64_t fields_values[NB_VMCS_FIELDS];
+#define READ_VMCS_FIELDS(fields) \
+  read_vmcs_fields(fields, fields_values, sizeof(fields)/sizeof(uint64_t))
+#define WRITE_VMCS_FIELDS(fields) \
+  write_vmcs_fields(fields, fields_values, sizeof(fields)/sizeof(uint64_t))
+
+static inline void load_shadow_vmcs(void);
+static inline void read_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields);
+static inline void write_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields);
 
 void nested_vmxon(void) {
   // set guest carry flag to 0
@@ -35,87 +48,90 @@ void nested_vmptrld(uint8_t *shadow_vmcs) {
   cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
 }
 
-/*
- * copy shadow vmcs guest fields to our vmcs
- * nested_state -> NESTED_GUEST_RUNNING
- */
-void nested_copy_guest_fields(void) {
-  static uint64_t guest_fields_encoding[] = { NESTED_GUEST_FIELDS };
-  static uint64_t guest_fields_value[sizeof(guest_fields_encoding)/sizeof(uint64_t)] = { 0 };
-  int i;
+void nested_vmlaunch(void) {
+  static uint64_t ctrl_host_fields[] = { NESTED_CTRL_FIELDS, NESTED_HOST_FIELDS };
+  static uint64_t guest_fields[] = { NESTED_GUEST_FIELDS, VIRTUAL_PROCESSOR_ID };
+  uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
 
-  nested_load_shadow_vmcs();
+  // Initialisation
+  memset((uint8_t *) guest_vmcs, 0, 0x1000);
+  *(uint32_t*)guest_vmcs = *(uint32_t*)vmcs0;
+  cpu_vmclear(guest_vmcs);
 
-  for(i=0; i < sizeof(guest_fields_encoding)/sizeof(uint64_t); i++) {
-    guest_fields_value[i]=cpu_vmread(guest_fields_encoding[i]);
-  }
+  // recopie des ctrl_fields + host fields de vmcs0 à guest_vmcs
+  READ_VMCS_FIELDS(ctrl_host_fields);
+  cpu_vmptrld(guest_vmcs);
+  WRITE_VMCS_FIELDS(ctrl_host_fields);
 
-  cpu_vmptrld(vmcs0);
-  for(i=0; i < sizeof(guest_fields_encoding)/sizeof(uint64_t); i++) {
-    cpu_vmwrite(guest_fields_encoding[i], guest_fields_value[i]);
-  }
+  // recopie des guest fields de shadow_vmcs vers guest_vmcs
+  load_shadow_vmcs();
+  READ_VMCS_FIELDS(guest_fields);
+  cpu_vmptrld(guest_vmcs);
+  WRITE_VMCS_FIELDS(guest_fields);
+
+  // modifications supplémentaires
+  cpu_vmwrite(VMCS_LINK_POINTER, 0xffffffff);
+  cpu_vmwrite(VMCS_LINK_POINTER_HIGH, 0xffffffff);
+  cpu_vmwrite(SECONDARY_VM_EXEC_CONTROL, cpu_vmread(SECONDARY_VM_EXEC_CONTROL) & ~(uint64_t)VMCS_SHADOWING);
+  cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, preempt_timer_value);
 
   nested_state = NESTED_GUEST_RUNNING;
+  cpu_vmlaunch();
 }
 
-/*
- * copy shadow vmcs host fields to our vmcs in guest fields
- * nested_state -> NESTED_HOST_RUNNING
- */
-void nested_copy_host_fields(void) {
-  static uint64_t host_fields_encoding[] = { NESTED_HOST_FIELDS };
-  static uint64_t host_fields_encoding_dest[] = { NESTED_HOST_FIELDS_DEST };
-  static uint64_t host_fields_value[sizeof(host_fields_encoding)/sizeof(uint64_t)] = { 0 };
-  int i;
+void nested_load_host() {
+  static uint64_t rodata_guest_fields[] = { NESTED_READ_ONLY_DATA_FIELDS, NESTED_GUEST_FIELDS, /* XXX */ VM_ENTRY_CONTROLS, VM_ENTRY_INTR_INFO_FIELD, CR0_READ_SHADOW, CR4_READ_SHADOW };
+  static uint64_t host_fields[] = { NESTED_HOST_FIELDS }; // regarder si le RSP et le RIP ne suffisent pas
+  static uint64_t host_fields_dest[] = { NESTED_HOST_FIELDS_DEST };
+  uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
 
-  nested_load_shadow_vmcs();
+  READ_VMCS_FIELDS(rodata_guest_fields);
+  load_shadow_vmcs();
+  WRITE_VMCS_FIELDS(rodata_guest_fields);
 
-  for(i=0; i < sizeof(host_fields_encoding)/sizeof(uint64_t); i++) {
-    host_fields_value[i]=cpu_vmread(host_fields_encoding[i]);
-  }
-
+  READ_VMCS_FIELDS(host_fields);
   cpu_vmptrld(vmcs0);
-  for(i=0; i < sizeof(host_fields_encoding)/sizeof(uint64_t); i++) {
-    cpu_vmwrite(host_fields_encoding_dest[i], host_fields_value[i]);
-  }
+  WRITE_VMCS_FIELDS(host_fields_dest);
 
-  /* Then we need to update guest fields
-   * that are not stored into shadow vmcs host fields */
-
-  //XXX host L2 is always in IA32e mode
-  cpu_vmwrite(VM_ENTRY_CONTROLS, cpu_vmread(VM_ENTRY_CONTROLS) | IA32E_MODE_GUEST);
-  // We reinitialize RFLAGS (note : bit9 (IF) is desactivated in order to not be interrupted in Host L2)
-  cpu_vmwrite(GUEST_RFLAGS, (uint64_t)(1 << 21)  // enable cpuid support
-                          | (uint64_t)(1 << 1)); // reserved 1
+  cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, preempt_timer_value);
 
   nested_state = NESTED_HOST_RUNNING;
 }
 
-/*
- * retrieve all information updated by the vmexit and forward them to the shadow vmcs
- */
-void nested_forward_exit_infos(void) {
-  static uint64_t exit_infos_encoding[] = { NESTED_READ_ONLY_DATA_FIELDS, NESTED_GUEST_FIELDS };
-  static uint64_t exit_infos_values[sizeof(exit_infos_encoding)/sizeof(uint64_t)] = { 0 };
+void nested_load_guest() {
+  static uint64_t guest_fields[] = { NESTED_GUEST_FIELDS, /* XXX */ VM_ENTRY_CONTROLS, VM_ENTRY_INTR_INFO_FIELD, CR0_READ_SHADOW, CR4_READ_SHADOW };
+  uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
+
+  load_shadow_vmcs();
+  READ_VMCS_FIELDS(guest_fields);
+  cpu_vmptrld(guest_vmcs);
+  WRITE_VMCS_FIELDS(guest_fields);
+
+  cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, preempt_timer_value);
+
+  nested_state = NESTED_GUEST_RUNNING;
+}
+
+static inline void read_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields) {
   int i;
-
-  for(i=0; i < sizeof(exit_infos_encoding)/sizeof(uint64_t); i++) {
-    exit_infos_values[i]=cpu_vmread(exit_infos_encoding[i]);
+  for (i = 0; i < nb_fields ; i++) {
+    values[i] = cpu_vmread(fields[i]);
   }
+}
 
-  nested_load_shadow_vmcs();
-  for(i=0; i < sizeof(exit_infos_encoding)/sizeof(uint64_t); i++) {
-    cpu_vmwrite(exit_infos_encoding[i], exit_infos_values[i]);
+static inline void write_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields) {
+  int i;
+  for (i = 0; i < nb_fields ; i++) {
+    cpu_vmwrite(fields[i], values[i]);
   }
-
-  cpu_vmptrld(vmcs0);
 }
 
 /*
  * Load the shadow vmcs as the current vmcs
  */
-inline void nested_load_shadow_vmcs(void) {
+static inline void load_shadow_vmcs(void) {
   // on charge la vmcs du guest
+  cpu_vmptrld(vmcs0);   // à voir si necessaire
   uint8_t *vmcs_shadow = (uint8_t*)((cpu_vmread(VMCS_LINK_POINTER_HIGH) << 32) | cpu_vmread(VMCS_LINK_POINTER));
   if ((uint64_t)vmcs_shadow == (uint64_t)-1) {
     panic("VMCS_LINK_POINTER is not initialized !\n");

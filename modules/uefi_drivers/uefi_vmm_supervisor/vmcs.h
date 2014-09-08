@@ -2,6 +2,7 @@
 #define __VMM_VMCS_H__
 
 #define VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC 5*1000000
+#define NB_VMCS_FIELDS 185
 
 extern uint8_t vmxon[4096];
 extern uint8_t vmcs0[4096];

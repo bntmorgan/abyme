@@ -68,16 +68,10 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint8_t cpu_mode = get_cpu_mode();
   uint8_t* instr_param_ptr;
 
-  printk("--- VMexit : %d, state : %d\n", exit_reason, nested_state);
-  printk("RIP before = %016X\n", guest_regs.rip);
-  printk("RSP before = %016X\n", guest_regs.rsp);
-  printk("IDT info field = %016X\n", cpu_vmread(IDT_VECTORING_INFO_FIELD));
-  printk("IDT err code = %016X\n", cpu_vmread(IDT_VECTORING_ERROR_CODE));
-  printk("RFLAGS = %016X\n", cpu_vmread(GUEST_RFLAGS));
-  printk("CS = %016X\n", cpu_vmread(GUEST_CS_SELECTOR));
-
   // check VMX abort
-  uint32_t vmx_abort = *(uint32_t*)&vmcs0[1];
+  uint32_t vmx_abort = (nested_state == NESTED_GUEST_RUNNING)
+                        ? *(uint32_t*)&vmcs0[1]
+                        : *(uint32_t*)&guest_vmcs[1];
   if (vmx_abort) {
     printk("VMX abort detected : %d\n", vmx_abort);
     vmm_panic(0,0,&guest_regs);
@@ -108,10 +102,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 
   if (nested_state == NESTED_GUEST_RUNNING) {
     // Forward to L2 host
-    nested_forward_exit_infos();
-    nested_copy_host_fields();
-    printk("RIP to host = %016X\n", cpu_vmread(GUEST_RIP));
-    printk("RSP to host = %016X\n", cpu_vmread(GUEST_RSP));
+    nested_load_host();
     return;
   }
 
@@ -131,17 +122,16 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       nested_vmptrld(*(uint8_t**)instr_param_ptr);
       break;
     case EXIT_REASON_VMLAUNCH:
+      nested_vmlaunch();
+      break;
     case EXIT_REASON_VMRESUME:
       // return to L2 guest
-      nested_copy_guest_fields();
-      printk("RIP to guest = %016X\n", cpu_vmread(GUEST_RIP));
-      printk("RSP to guest = %016X\n", cpu_vmread(GUEST_RSP));
+      nested_load_guest();
       return;
       break;
     case EXIT_REASON_INVVPID: {
       uint8_t* desc = get_instr_param_ptr(&guest_regs);
       uint64_t type = ((uint64_t*)&guest_regs)[(cpu_vmread(VMX_INSTRUCTION_INFO) >> 28) & 0xF];
-      //INFO("type=%d\n", type);
       __asm__ __volatile__("invvpid %0, %1" : : "m"(*desc), "r"(type) );
       break;
     }
@@ -347,6 +337,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_VMCALL:
+      printk("rax = %016X\n",guest_regs.rax);
     case EXIT_REASON_TRIPLE_FAULT:
       vmm_panic(0,0,&guest_regs);
       break;

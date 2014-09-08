@@ -71,8 +71,7 @@
           GUEST_RFLAGS, \
           GUEST_PENDING_DBG_EXCEPTIONS, \
           GUEST_SYSENTER_ESP, \
-          GUEST_SYSENTER_EIP, \
-          VM_ENTRY_CONTROLS //XXX : pour le guest_ia32_mode
+          GUEST_SYSENTER_EIP
 
 #define NESTED_HOST_FIELDS \
           HOST_ES_SELECTOR, \
@@ -148,6 +147,83 @@
           IO_RIP, \
           GUEST_LINEAR_ADDRESS
 
+#define NESTED_CTRL_FIELDS \
+          VIRTUAL_PROCESSOR_ID, \
+          POSTED_INT_NOTIF_VECTOR, \
+          EPTP_INDEX, \
+          IO_BITMAP_A, \
+          IO_BITMAP_A_HIGH, \
+          IO_BITMAP_B, \
+          IO_BITMAP_B_HIGH, \
+          MSR_BITMAP, \
+          MSR_BITMAP_HIGH, \
+          VM_EXIT_MSR_STORE_ADDR, \
+          VM_EXIT_MSR_STORE_ADDR_HIGH, \
+          VM_EXIT_MSR_LOAD_ADDR, \
+          VM_EXIT_MSR_LOAD_ADDR_HIGH, \
+          VM_ENTRY_MSR_LOAD_ADDR, \
+          VM_ENTRY_MSR_LOAD_ADDR_HIGH, \
+          EXECUTIVE_VMCS_POINTER, \
+          EXECUTIVE_VMCS_POINTER_HIGH, \
+          TSC_OFFSET, \
+          TSC_OFFSET_HIGH, \
+          VIRTUAL_APIC_PAGE_ADDR, \
+          VIRTUAL_APIC_PAGE_ADDR_HIGH, \
+          APIC_ACCESS_ADDR, \
+          APIC_ACCESS_ADDR_HIGH, \
+          POSTED_INTR_DESC_ADDR, \
+          POSTED_INTR_DESC_ADDR_HIGH, \
+          VM_FUNCTION_CONTROLS, \
+          VM_FUNCTION_CONTROLS_HIGH, \
+          EPT_POINTER, \
+          EPT_POINTER_HIGH, \
+          EOI_EXIT_BITMAP_0, \
+          EOI_EXIT_BITMAP_0_HIGH, \
+          EOI_EXIT_BITMAP_1, \
+          EOI_EXIT_BITMAP_1_HIGH, \
+          EOI_EXIT_BITMAP_2, \
+          EOI_EXIT_BITMAP_2_HIGH, \
+          EOI_EXIT_BITMAP_3, \
+          EOI_EXIT_BITMAP_3_HIGH, \
+          EPTP_LIST_ADDR, \
+          EPTP_LIST_ADDR_HIGH, \
+          VMREAD_BITMAP_ADDR, \
+          VMREAD_BITMAP_ADDR_HIGH, \
+          VMWRITE_BITMAP_ADDR, \
+          VMWRITE_BITMAP_ADDR_HIGH, \
+          VIRT_EXCEP_INFO_ADDR, \
+          VIRT_EXCEP_INFO_ADDR_HIGH, \
+          XSS_EXITING_BITMAP, \
+          XSS_EXITING_BITMAP_HIGH, \
+          PIN_BASED_VM_EXEC_CONTROL, \
+          CPU_BASED_VM_EXEC_CONTROL, \
+          EXCEPTION_BITMAP, \
+          PAGE_FAULT_ERROR_CODE_MASK, \
+          PAGE_FAULT_ERROR_CODE_MATCH, \
+          CR3_TARGET_COUNT, \
+          VM_EXIT_CONTROLS, \
+          VM_EXIT_MSR_STORE_COUNT, \
+          VM_EXIT_MSR_LOAD_COUNT, \
+          VM_ENTRY_CONTROLS, \
+          VM_ENTRY_MSR_LOAD_COUNT, \
+          VM_ENTRY_INTR_INFO_FIELD, \
+          VM_ENTRY_EXCEPTION_ERROR_CODE, \
+          VM_ENTRY_INSTRUCTION_LEN, \
+          TPR_THRESHOLD, \
+          SECONDARY_VM_EXEC_CONTROL, \
+          PLE_GAP, \
+          PLE_WINDOW, \
+          CR0_GUEST_HOST_MASK, \
+          CR4_GUEST_HOST_MASK, \
+          CR0_READ_SHADOW, \
+          CR4_READ_SHADOW, \
+          CR3_TARGET_VALUE0, \
+          CR3_TARGET_VALUE1, \
+          CR3_TARGET_VALUE2, \
+          CR3_TARGET_VALUE3
+
+
+extern uint8_t guest_vmcs[4096];
 
 enum NESTED_STATE {
   NESTED_DISABLED,
@@ -163,12 +239,10 @@ void nested_vmclear(uint8_t *shadow_vmcs);
 
 void nested_vmptrld(uint8_t *shadow_vmcs);
 
-inline void nested_load_shadow_vmcs(void);
+void nested_vmlaunch(void);
 
-void nested_copy_guest_fields(void);
+void nested_load_guest();
 
-void nested_copy_host_fields(void);
-
-void nested_forward_exit_infos(void);
+void nested_load_host();
 
 #endif
