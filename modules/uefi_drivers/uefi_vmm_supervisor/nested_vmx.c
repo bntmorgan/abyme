@@ -24,13 +24,27 @@ static inline void load_shadow_vmcs(void);
 static inline void read_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields);
 static inline void write_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields);
 
-void nested_vmxon(void) {
+void nested_vmxon(uint8_t *shadow_vmcs) {
+  if (nested_state != NESTED_DISABLED) {
+    panic("#!NESTED_VMXON not disabled\n");
+  }
   // set guest carry flag to 0
   cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x1);
-  // TODO : check if vmcs addr is aligned on 4Ko and check rev identifier ...
+
+  // check if vmcs addr is aligned on 4Ko and check rev identifier
+  if (((uint64_t)shadow_vmcs & 0xfff) != 0){
+    panic("#!NESTED_VMXON addr is not 4k aligned\n");
+  } else if (*(uint32_t*)shadow_vmcs != *(uint32_t*)vmcs0) {
+    panic("#!NESTED_VMXON rev identifier is not valid\n");
+  }
+
+  nested_state = NESTED_HOST_RUNNING;
 }
 
 void nested_vmclear(uint8_t *shadow_vmcs) {
+  if (nested_state != NESTED_HOST_RUNNING) {
+    panic("#!NESTED_VMCLEAR host not running\n");
+  }
   cpu_vmclear(shadow_vmcs);
   // we set the vmcs shadow bit
   *((uint64_t*)shadow_vmcs) |= ((uint64_t)1 << 31);
@@ -39,6 +53,9 @@ void nested_vmclear(uint8_t *shadow_vmcs) {
 }
 
 void nested_vmptrld(uint8_t *shadow_vmcs) {
+  if (nested_state != NESTED_HOST_RUNNING) {
+    panic("#!NESTED_VMPTRLD host not running\n");
+  }
   // set the vmcs shadowing bit
   cpu_vmwrite(SECONDARY_VM_EXEC_CONTROL, cpu_vmread(SECONDARY_VM_EXEC_CONTROL) | VMCS_SHADOWING);
   // write the new @ to VMCS link pointer
@@ -49,6 +66,9 @@ void nested_vmptrld(uint8_t *shadow_vmcs) {
 }
 
 void nested_vmlaunch(void) {
+  if (nested_state != NESTED_HOST_RUNNING) {
+    panic("#!NESTED_VMLAUNCH host not running\n");
+  }
   static uint64_t ctrl_host_fields[] = { NESTED_CTRL_FIELDS, NESTED_HOST_FIELDS };
   static uint64_t guest_fields[] = { NESTED_GUEST_FIELDS, VIRTUAL_PROCESSOR_ID };
   uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
@@ -79,7 +99,7 @@ void nested_vmlaunch(void) {
   cpu_vmlaunch();
 }
 
-void nested_load_host() {
+void nested_load_host(void) {
   static uint64_t rodata_guest_fields[] = { NESTED_READ_ONLY_DATA_FIELDS, NESTED_GUEST_FIELDS, /* XXX */ VM_ENTRY_CONTROLS, VM_ENTRY_INTR_INFO_FIELD, CR0_READ_SHADOW, CR4_READ_SHADOW };
   static uint64_t host_fields[] = { NESTED_HOST_FIELDS }; // regarder si le RSP et le RIP ne suffisent pas
   static uint64_t host_fields_dest[] = { NESTED_HOST_FIELDS_DEST };
@@ -98,7 +118,7 @@ void nested_load_host() {
   nested_state = NESTED_HOST_RUNNING;
 }
 
-void nested_load_guest() {
+void nested_load_guest(void) {
   static uint64_t guest_fields[] = { NESTED_GUEST_FIELDS, /* XXX */ VM_ENTRY_CONTROLS, VM_ENTRY_INTR_INFO_FIELD, CR0_READ_SHADOW, CR4_READ_SHADOW };
   uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
 

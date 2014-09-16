@@ -69,7 +69,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint8_t* instr_param_ptr;
 
   // check VMX abort
-  uint32_t vmx_abort = (nested_state == NESTED_GUEST_RUNNING)
+  uint32_t vmx_abort = (nested_state != NESTED_GUEST_RUNNING)
                         ? *(uint32_t*)&vmcs0[1]
                         : *(uint32_t*)&guest_vmcs[1];
   if (vmx_abort) {
@@ -111,7 +111,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     // VMX Operations
     //
     case EXIT_REASON_VMXON:
-      nested_vmxon();
+      instr_param_ptr = get_instr_param_ptr(&guest_regs);
+      nested_vmxon(*(uint8_t**)instr_param_ptr);
       break;
     case EXIT_REASON_VMCLEAR:
       instr_param_ptr = get_instr_param_ptr(&guest_regs);
