@@ -236,45 +236,24 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_CR_ACCESS: {
-      uint8_t o = (exit_qualification >> 8) & 0xf;
-      uint8_t n = (exit_qualification >> 0) & 0xf;
-      uint8_t a = (exit_qualification >> 4) & 0x3;
-      // Mov to CRX
-      if (a != 0) {
+      uint8_t cr_num      = (exit_qualification >> 0) & 0xf;
+      uint8_t access_type = (exit_qualification >> 4) & 0x3;
+      uint8_t reg_num     = (exit_qualification >> 8) & 0xf;
+
+      if (access_type != 0) {
+        INFO("Unsupported : access type != mov to CR\n");
         vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
       }
-      uint64_t value = ((uint64_t*)&guest_regs)[o];
-      // printk("Value %016X offset %d\n", value, o);
-      if (n == 0) {
-        uint64_t previous_cr0 = cpu_vmread(GUEST_CR0);
-        uint64_t value_IA32_EFER = cpu_vmread(GUEST_IA32_EFER);
-        uint64_t vm_entry_controls = cpu_vmread(VM_ENTRY_CONTROLS);
-        // Guest is attempting entering into long mode by activating
-        // paging, we need to write IA32_EFER.LMA to one !
-        if (((previous_cr0 >> 31) & 1) == 0 && ((value >> 31) & 1) && ((value_IA32_EFER >> 8) & 1)) {
-          // We still are in long mode but without paging ???
-          if ((value_IA32_EFER >> 10) & 1) {
-            vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
-          }
-          // Write LMA
-          cpu_vmwrite(GUEST_IA32_EFER, value_IA32_EFER | (1 << 10));
-          cpu_vmwrite(VM_ENTRY_CONTROLS, vm_entry_controls | (1 << 9));
-        } else if (((previous_cr0 >> 31) & 1) != ((value >> 31) & 1)) {
-          cpu_vmwrite(GUEST_IA32_EFER, value_IA32_EFER & ~(1 << 10));
-          cpu_vmwrite(VM_ENTRY_CONTROLS, vm_entry_controls & ~(1 << 9));
-        }
-        // printk("CR0 %016X, SHAD CR0 %016X\n", cpu_vmread(GUEST_CR0), cpu_vmread(CR0_READ_SHADOW));
-        // cpu_vmwrite(GUEST_CR0, cpu_adjust64(value, MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1));
-        // cpu_vmwrite(GUEST_CR0, (value | 0x20));
-        cpu_vmwrite(GUEST_CR0, (value & ((msr_read(MSR_ADDRESS_VMX_CR0_FIXED1)) | (0xe0000001))) | (msr_read(MSR_ADDRESS_VMX_CR0_FIXED0)  & ~(0xe0000001)));
+
+      uint64_t value = ((uint64_t*)&guest_regs)[reg_num];
+
+      if (cr_num == 0) {
         cpu_vmwrite(CR0_READ_SHADOW, value);
-        // printk("CR0 %016X, SHAD CR0 %016X\n", cpu_vmread(GUEST_CR0), cpu_vmread(CR0_READ_SHADOW));
-      } else if (n == 4) {
-        // printk("CR4 %016X, SHAD CR4 %016X\n", cpu_vmread(GUEST_CR4), cpu_vmread(CR4_READ_SHADOW));
-        cpu_vmwrite(GUEST_CR4, cpu_adjust64(value, MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
+        return;
+      } else if (cr_num == 4) {
         cpu_vmwrite(CR4_READ_SHADOW, value);
-        // printk("CR4 %016X, SHAD CR4 %016X\n", cpu_vmread(GUEST_CR4), cpu_vmread(CR4_READ_SHADOW));
-      } else if (n == 3) {
+        return;
+      } else if (cr_num == 3) {
         cr3_count++;
 #ifdef _DEBUG_SERVER
         // désactivation de l'expérience
