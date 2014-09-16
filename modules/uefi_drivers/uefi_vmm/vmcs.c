@@ -159,9 +159,14 @@ void vmcs_fill_vm_exec_control_fields(void) {
   uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER;
 
   cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
+
   procbased_ctls = cpu_adjust32(procbased_ctls, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS);
-  // XXX ??? why
-  procbased_ctls &= ~(/*CR3_LOAD_EXITING |*/ CR3_STORE_EXITING);
+  if (((msr_read(MSR_ADDRESS_IA32_VMX_BASIC) >> 55) & 1)                       // extra capabilities enabled
+  && (((msr_read(MSR_ADDRESS_IA32_VMX_TRUE_PROCBASED_CTLS) >> 15) & 3)) == 0){ // CR3_LOAD_EXITING & CR3_STORE_EXITING can be disabled
+    procbased_ctls &= ~(/*CR3_LOAD_EXITING |*/ CR3_STORE_EXITING);
+  } else {
+    panic("#!PROCBASED_CTLS CR3_LOAD_EXITING or CR3_STORE_EXITING couldn't be disabled\n");
+  }
   cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, procbased_ctls);
 
   cpu_vmwrite(SECONDARY_VM_EXEC_CONTROL, cpu_adjust32(procbased_ctls_2, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2));
@@ -180,18 +185,11 @@ void vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(TSC_OFFSET, 0);
   cpu_vmwrite(TSC_OFFSET_HIGH, 0);
 
-  cpu_vmwrite(CR0_GUEST_HOST_MASK, (msr_read(MSR_ADDRESS_VMX_CR0_FIXED0) | (~msr_read(MSR_ADDRESS_VMX_CR0_FIXED1))) & ~(0xe0000001));
-  //cpu_vmwrite(CR0_GUEST_HOST_MASK, cpu_adjust64(0, MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1));
+  // As we are using UNRESTRICTED_GUEST procbased_ctrl, the guest can itself modify CR0.PE and CR0.PG, see doc INTEL vol 3C chap 23.8
+  cpu_vmwrite(CR0_GUEST_HOST_MASK, (msr_read(MSR_ADDRESS_VMX_CR0_FIXED0) | (~msr_read(MSR_ADDRESS_VMX_CR0_FIXED1))) & ~(0x80000001));
   cpu_vmwrite(CR0_READ_SHADOW, cpu_read_cr0());
   cpu_vmwrite(CR4_GUEST_HOST_MASK, msr_read(MSR_ADDRESS_VMX_CR4_FIXED0) | ~msr_read(MSR_ADDRESS_VMX_CR4_FIXED1));
-  //cpu_vmwrite(CR4_GUEST_HOST_MASK, cpu_adjust64(0, MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
   cpu_vmwrite(CR4_READ_SHADOW, cpu_read_cr4());
-  /*cpu_vmwrite(CR0_GUEST_HOST_MASK, 0x20);
-  cpu_vmwrite(CR0_READ_SHADOW, 0);
-
-  cpu_vmwrite(CR4_GUEST_HOST_MASK, 0x2000);
-  cpu_vmwrite(CR4_READ_SHADOW, 0);
-  */
 
   cpu_vmwrite(CR3_TARGET_COUNT, 0);
   cpu_vmwrite(CR3_TARGET_VALUE0, 0);

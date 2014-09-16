@@ -204,18 +204,16 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         }
         guest_regs.rax = (guest_regs.rax & (0xffffffff00000000)) | (cpu_vmread(GUEST_IA32_EFER) & 0xffffffff);
         guest_regs.rdx = (guest_regs.rdx & (0xffffffff00000000)) | (cpu_vmread(GUEST_IA32_EFER_HIGH) & 0xffffffff);
+      } else if (guest_regs.rcx > 0xc0001fff || (guest_regs.rcx > 0x1fff && guest_regs.rcx < 0xc0000000)) {
+        // Tells the vm that the msr doesn't exist
+        uint32_t it_info_field =    (0x1 << 11)     // push error code
+                                  | (0x3 << 8)      // hardware exception
+                                  | 0xd ;           // GP fault
+        cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, it_info_field);
       } else {
-        if (guest_regs.rcx > 0xc0001fff || (guest_regs.rcx > 0x1fff && guest_regs.rcx < 0xc0000000)) {
-          // Tells the vm that the msr doesn't exist
-          uint32_t it_info_field =    (0x1 << 11)     // push error code
-                                    | (0x3 << 8)      // hardware exception
-                                    | 0xd ;           // GP fault
-          cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, it_info_field);
-        } else {
-          __asm__ __volatile__("rdmsr"
-            : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
-            :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));
-        }
+        __asm__ __volatile__("rdmsr"
+          : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
+          :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));
       }
       break;
     }
@@ -223,8 +221,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
         cpu_vmwrite(GUEST_IA32_EFER, guest_regs.rax & 0xffffffff);
         cpu_vmwrite(GUEST_IA32_EFER_HIGH, guest_regs.rdx & 0xffffffff);
-      } else {
-        if (is_MTRR(guest_regs.rcx)) {
+      } else if (is_MTRR(guest_regs.rcx)) {
           __asm__ __volatile__("wrmsr"
             : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
           // Recompute the cache ranges
@@ -233,9 +230,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
           if (need_recompute_ept) {
             ept_create_tables();
           }
-        } else {
-          vmm_panic(VMM_PANIC_WRMSR, 0, &guest_regs);
-        }
+      } else {
+        vmm_panic(VMM_PANIC_WRMSR, 0, &guest_regs);
       }
       break;
     }
@@ -284,10 +280,10 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         // désactivation de l'expérience
         // debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
 #endif
-        uint8_t desc[16] = { cpu_vmread(VIRTUAL_PROCESSOR_ID), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-        uint64_t invvpid_type = 3; // see 28.3.3.3
-        __asm__ __volatile__("invvpid %1, %%rax" : : "a"(invvpid_type), "m"(*desc) : "memory");
         cpu_vmwrite(GUEST_CR3, value);
+        // We need to invalidate TLBs, see doc INTEL vol 3C chap 28.3.3.3
+        uint8_t invvpid_desc[16] = { cpu_vmread(VIRTUAL_PROCESSOR_ID) };
+        __asm__ __volatile__("invvpid %1, %0" : : "r"((uint64_t)3), "m"(*invvpid_desc));
       } else {
         vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);
       }

@@ -84,9 +84,7 @@ void bsp_main() {
 void vmm_setup() {
   vmm_init();
   vmm_create_vmxon_and_vmcs_regions();
-  cpu_enable_ne();
   cpu_write_cr0(cpu_adjust64(cpu_read_cr0(), MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1));
-  cpu_enable_vmxe();
   cpu_write_cr4(cpu_adjust64(cpu_read_cr4(), MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
   msr_check_feature_control_msr_lock();
   INFO("VMXON\n");
