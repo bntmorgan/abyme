@@ -117,10 +117,6 @@ uint64_t cpu_read_flags(void) {
   return flags;
 }
 
-uint64_t cpu_adjust64(uint64_t value, uint32_t msr_fixed0, uint32_t msr_fixed1) {
-  return (value & msr_read(msr_fixed1)) | msr_read(msr_fixed0);
-}
-
 void cpu_stop(void) {
   __asm__ __volatile__("cli");
   __asm__ __volatile__("hlt");

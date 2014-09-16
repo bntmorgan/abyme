@@ -78,6 +78,10 @@ uint32_t cpu_adjust32(uint32_t value, uint32_t msr_address) {
   return value;
 }
 
+uint64_t cpu_adjust64(uint64_t value, uint32_t msr_fixed0, uint32_t msr_fixed1) {
+  return (value & msr_read(msr_fixed1)) | msr_read(msr_fixed0);
+}
+
 uint8_t cpu_vmread_safe(unsigned long field, unsigned long *value)
 {
   uint8_t okay;
