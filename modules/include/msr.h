@@ -28,6 +28,7 @@
 #define MSR_ADDRESS_IA32_MTRR_FIX4K_F0000           0x26e
 #define MSR_ADDRESS_IA32_MTRR_FIX4K_F8000           0x26f
 #define MSR_ADDRESS_IA32_PAT                        0x277
+#define MSR_ADDRESS_IA32_PERF_GLOBAL_CTRL           0x38f
 #define MSR_ADDRESS_IA32_VMX_BASIC                  0x480
 #define MSR_ADDRESS_IA32_VMX_PINBASED_CTLS          0x481
 #define MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS         0x482

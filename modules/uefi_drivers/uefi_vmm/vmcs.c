@@ -101,6 +101,9 @@ void vmcs_fill_guest_state_fields(void) {
   cpu_vmwrite(VMCS_LINK_POINTER, 0xffffffff);
   cpu_vmwrite(VMCS_LINK_POINTER_HIGH, 0xffffffff);
 
+  cpu_vmwrite(GUEST_IA32_PERF_GLOBAL_CTRL, msr_read(MSR_ADDRESS_IA32_PERF_GLOBAL_CTRL) & 0xffffffff);
+  cpu_vmwrite(GUEST_IA32_PERF_GLOBAL_CTRL_HIGH, msr_read(MSR_ADDRESS_IA32_PERF_GLOBAL_CTRL) >> 32);
+
   // Init and compute vmx_preemption_timer_value
   tsc_freq_MHz = ((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
   tsc_divider = msr_read(MSR_ADDRESS_IA32_VMX_MISC) & 0x7;
@@ -148,6 +151,9 @@ void vmcs_fill_host_state_fields(void) {
   cpu_vmwrite(HOST_IA32_SYSENTER_EIP, msr_read(MSR_ADDRESS_IA32_SYSENTER_EIP));
   cpu_vmwrite(HOST_IA32_EFER, msr_read(MSR_ADDRESS_IA32_EFER) & 0xffffffff),
   cpu_vmwrite(HOST_IA32_EFER_HIGH, (msr_read(MSR_ADDRESS_IA32_EFER) >> 32) & 0xffffffff);
+
+  cpu_vmwrite(HOST_IA32_PERF_GLOBAL_CTRL, 0);
+  cpu_vmwrite(HOST_IA32_PERF_GLOBAL_CTRL_HIGH, 0);
 }
 
 void vmcs_fill_vm_exec_control_fields(void) {
@@ -208,14 +214,15 @@ void vmcs_fill_vm_exec_control_fields(void) {
 }
 
 void vmcs_fill_vm_exit_control_fields(void) {
-  uint32_t exit_controls = EXIT_SAVE_IA32_EFER | EXIT_LOAD_IA32_EFER | HOST_ADDR_SPACE_SIZE | SAVE_VMX_PREEMPT_TIMER_VAL;
+  uint32_t exit_controls = EXIT_SAVE_IA32_EFER | EXIT_LOAD_IA32_EFER | EXIT_LOAD_IA32_PERF_GLOBAL_CTRL
+                         | HOST_ADDR_SPACE_SIZE | SAVE_VMX_PREEMPT_TIMER_VAL;
   cpu_vmwrite(VM_EXIT_CONTROLS, cpu_adjust32(exit_controls, MSR_ADDRESS_IA32_VMX_EXIT_CTLS));
   cpu_vmwrite(VM_EXIT_MSR_STORE_COUNT, 0);
   cpu_vmwrite(VM_EXIT_MSR_LOAD_COUNT, 0);
 }
 
 void vmcs_fill_vm_entry_control_fields(void) {
-  uint32_t entry_controls = ENTRY_LOAD_IA32_EFER | IA32E_MODE_GUEST;
+  uint32_t entry_controls = ENTRY_LOAD_IA32_EFER | ENTRY_LOAD_IA32_PERF_GLOBAL_CTRL | IA32E_MODE_GUEST;
   cpu_vmwrite(VM_ENTRY_CONTROLS, cpu_adjust32(entry_controls, MSR_ADDRESS_IA32_VMX_ENTRY_CTLS));
   cpu_vmwrite(VM_ENTRY_MSR_LOAD_COUNT, 0);
   cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, 0);

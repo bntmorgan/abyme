@@ -189,11 +189,31 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         guest_regs.rbx = *((uint32_t *)gilles);
         guest_regs.rdx = *((uint32_t *)gilles + 1);
         guest_regs.rcx = *((uint32_t *)gilles + 2);
-      } else {*/
+      } else*/ if (guest_regs.rax == 0x5) {
+        // On intel platform, mwait is used instead of halt for cpu idle
+        // and mwait instruction is able to change processor c-state.
+        // However VMX-preemption timer doesn't work when cpu is in c-state > 2
+        // so we need to disable support for theses c-states.
+        // One more thing, mwait c-states don't match real (ACPI) c-states.
+        // For "nehalem" cpu and onwards ("haswell" included) the mappings are :
+        //    mwait (c-state).(sub-c-state)   ->    acpi c-state
+        //          C0.0                      ->    C0
+        //          C1.0                      ->    C1
+        //          C1.1                      ->    C1E
+        //          C2.0                      ->    C3
+        //                    ...
+        // references :
+        //  - doc INTEL vol 3B chap 14.6 (mwait extensions for power management)
+        //  - linux kernel 3.12 sources : drivers/idle/intel_idle.c (mappings)
         __asm__ __volatile__("cpuid"
             : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
             :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));
-      /*}*/
+        guest_regs.rdx &= 0xff;
+      } else {
+        __asm__ __volatile__("cpuid"
+            : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
+            :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));
+      }
       break;
     }
     case EXIT_REASON_RDMSR: {
