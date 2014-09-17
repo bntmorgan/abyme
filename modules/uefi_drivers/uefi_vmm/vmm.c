@@ -47,14 +47,14 @@ static inline uint8_t is_MTRR(uint64_t msr_addr);
 void vmm_init(void) {
   /* Init exit reasons for which we need to send a debug message */
   memset(&send_debug[0], 1, NB_EXIT_REASONS);
-  /*send_debug[EXIT_REASON_CPUID] = 0;
+  send_debug[EXIT_REASON_CPUID] = 0;
   send_debug[EXIT_REASON_IO_INSTRUCTION] = 0;
   send_debug[EXIT_REASON_WRMSR] = 0;
   send_debug[EXIT_REASON_RDMSR] = 0;
   send_debug[EXIT_REASON_XSETBV] = 0;
   send_debug[EXIT_REASON_CR_ACCESS] = 0;
   send_debug[EXIT_REASON_INVVPID] = 0;
-  send_debug[EXIT_REASON_VMRESUME] = 0;*/
+  send_debug[EXIT_REASON_VMRESUME] = 0;
 }
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
@@ -64,6 +64,13 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
   uint64_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
   uint8_t cpu_mode = get_cpu_mode();
+
+  // check VMX abort
+  uint32_t vmx_abort = *(uint32_t*)&vmcs0[1];
+  if (vmx_abort) {
+    printk("VMX abort detected : %d\n", vmx_abort);
+    vmm_panic(0,0,&guest_regs);
+  }
 
 #ifdef _DEBUG_SERVER
   if (send_debug[exit_reason]) {
