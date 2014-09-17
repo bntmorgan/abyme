@@ -62,4 +62,4 @@ vmm_vm_exit_handler:
   /* sysv_abi calling convention */
   mov %eax, %edi
   mov %edx, %esi
-  call vmm_vmresume_failed
+  call vmx_transition_display_error

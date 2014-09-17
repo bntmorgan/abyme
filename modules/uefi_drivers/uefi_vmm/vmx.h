@@ -24,4 +24,7 @@ uint32_t cpu_adjust32(uint32_t value, uint32_t msr);
 
 uint64_t cpu_adjust64(uint64_t value, uint32_t msr_fixed0, uint32_t msr_fixed1);
 
+/* We fix the calling conventions to sysv_abi */
+void vmx_transition_display_error(uint8_t VMfailInvalid, uint8_t VMfailValid) __attribute__((sysv_abi));
+
 #endif//__VMX_H__

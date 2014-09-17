@@ -52,10 +52,13 @@ void cpu_vmlaunch(void) {
   /* Correct rbp */
   __asm__ __volatile__("mov %0, %%rbp" : : "m" (vm_RBP));
   /* Launch the vm */
-  __asm__ __volatile__("vmlaunch;\n");
-
-  /* Should not be executed */
-  panic("!#CPU VMLAUNCH\n");
+  __asm__ __volatile__("vmlaunch;"
+                       /* everything after should not be executed */
+                       "setc %al;"
+                       "setz %dl;"
+                       "mov %eax, %edi;"
+                       "mov %edx, %esi;"
+                       "call vmx_transition_display_error");
 }
 
 void cpu_vmwrite(uint64_t field, uint64_t value) {
@@ -85,4 +88,14 @@ uint8_t cpu_vmread_safe(unsigned long field, unsigned long *value)
                  : "=qm" (okay), "=rm" (*value)
                  : "r" (field));
   return okay;
+}
+
+__attribute__((sysv_abi)) void vmx_transition_display_error(uint8_t VMfailInvalid, uint8_t VMfailValid) {
+  if (VMfailInvalid) {
+    panic("#!VMX Transition VMfailInvalid\n");
+  } else if(VMfailValid) {
+    panic("#!VMX Transition VMfailValid, errcode=%d\n", cpu_vmread(VM_INSTRUCTION_ERROR));
+  } else {
+    panic("#!VMX Transition unkown error\n");
+  }
 }

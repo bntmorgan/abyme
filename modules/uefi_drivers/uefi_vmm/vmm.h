@@ -96,7 +96,4 @@ struct registers {
 void vmm_init(void);
 void vmm_vm_exit_handler(void);
 
-/* We fix the calling conventions to sysv_abi (cf vmexit.s) */
-void vmm_vmresume_failed(uint8_t VMfailInvalid, uint8_t VMfailValid) __attribute__((sysv_abi));
-
 #endif

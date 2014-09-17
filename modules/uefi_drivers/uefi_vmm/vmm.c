@@ -57,16 +57,6 @@ void vmm_init(void) {
   send_debug[EXIT_REASON_VMRESUME] = 0;*/
 }
 
-__attribute__((sysv_abi)) void vmm_vmresume_failed(uint8_t VMfailInvalid, uint8_t VMfailValid) {
-  if (VMfailInvalid) {
-    panic("#!VMRESUME VMfailInvalid\n");
-  } else if(VMfailValid) {
-    panic("#!VMRESUME VMfailValid, errcode=%d\n", cpu_vmread(VM_INSTRUCTION_ERROR));
-  } else {
-    panic("#!VMRESUME unkown error\n");
-  }
-}
-
 void vmm_handle_vm_exit(struct registers guest_regs) {
   guest_regs.rsp = cpu_vmread(GUEST_RSP);
   guest_regs.rip = cpu_vmread(GUEST_RIP);
