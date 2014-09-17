@@ -31,7 +31,7 @@ void vmcs_fill_guest_state_fields(void) {
   cpu_vmwrite(GUEST_CR3, cpu_read_cr3());
   cpu_vmwrite(GUEST_CR4, cpu_adjust64(cpu_read_cr4(), MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
   cpu_vmwrite(GUEST_DR7, cpu_read_dr7());
-  cpu_vmwrite(GUEST_RFLAGS, cpu_read_flags());
+  cpu_vmwrite(GUEST_RFLAGS, (1 << 1));
 
   sel = cpu_read_cs();
   gdt_get_guest_entry(sel, &gdt_entry);

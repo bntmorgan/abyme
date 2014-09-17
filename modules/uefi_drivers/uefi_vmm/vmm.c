@@ -285,8 +285,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         // debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
 #endif
         uint8_t desc[16] = { cpu_vmread(VIRTUAL_PROCESSOR_ID), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-        uint64_t un = 1;
-        __asm__ __volatile__("invvpid %1, %%rax" : : "a"(un), "m"(*desc) : "memory");
+        uint64_t invvpid_type = 3; // see 28.3.3.3
+        __asm__ __volatile__("invvpid %1, %%rax" : : "a"(invvpid_type), "m"(*desc) : "memory");
         cpu_vmwrite(GUEST_CR3, value);
       } else {
         vmm_panic(VMM_PANIC_CR_ACCESS, 0, &guest_regs);

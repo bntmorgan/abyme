@@ -22,6 +22,9 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
       (sizeof(struct paging_ia32e) % 0x1000 != 0 ));
   INFO("Pointer allocated 0x%016X\n", (uintptr_t)&paging_ia32e);
 
+  // desactivate interruptions
+  __asm__ __volatile__("cli");
+
   INFO("VMM driver startup\n");
   INFO("main at %X\n", efi_main);
 
