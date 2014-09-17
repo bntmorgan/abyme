@@ -175,21 +175,21 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_CPUID: {
-      /*if (guest_regs.rax == 0x88888888) {
+      if (guest_regs.rax == 0x88888888) {
         guest_regs.rax = 0xC001C001C001C001;
         guest_regs.rbx = io_count;
         guest_regs.rcx = cr3_count;
       } else if (guest_regs.rax == 0x99999999) {
         vmm_panic(VMM_PANIC_RDMSR, 1234, &guest_regs);
-      } else if (guest_regs.rax == 0x0) {
+      /*} else if (guest_regs.rax == 0x0) {
         __asm__ __volatile__("cpuid"
             : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
             :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));
         char *gilles = "30000%MAKINA";
         guest_regs.rbx = *((uint32_t *)gilles);
         guest_regs.rdx = *((uint32_t *)gilles + 1);
-        guest_regs.rcx = *((uint32_t *)gilles + 2);
-      } else*/ if (guest_regs.rax == 0x5) {
+        guest_regs.rcx = *((uint32_t *)gilles + 2);*/
+      } else if (guest_regs.rax == 0x5) {
         // On intel platform, mwait is used instead of halt for cpu idle
         // and mwait instruction is able to change processor c-state.
         // However VMX-preemption timer doesn't work when cpu is in c-state > 2
@@ -316,10 +316,8 @@ static inline int get_cpu_mode(void) {
   uint64_t cr0 = cpu_vmread(GUEST_CR0);
   uint64_t ia32_efer = cpu_vmread(GUEST_IA32_EFER);
   if (!(cr0 & (1 << 0))) {
-    INFO("On est en mode réel\n");
     return MODE_REAL;
   } else if (!(ia32_efer & (1 << 10))) {
-    INFO("On est en mode protégé\n");
     return MODE_PROTECTED;
   } else {
     return MODE_LONG;
