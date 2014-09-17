@@ -212,7 +212,7 @@ void vmcs_fill_vm_exec_control_fields(void) {
   eptp = ept_get_eptp();
   cpu_vmwrite(EPT_POINTER, eptp & 0xffffffff);
   cpu_vmwrite(EPT_POINTER_HIGH, (eptp >> 32) & 0xffffffff);
-  cpu_vmwrite(VIRTUAL_PROCESSOR_ID, 0xff);
+  cpu_vmwrite(VIRTUAL_PROCESSOR_ID, 0x1);
 
   cpu_vmwrite(VMREAD_BITMAP_ADDR, (uint64_t)&vmread_bitmap & 0xffffffff);
   cpu_vmwrite(VMREAD_BITMAP_ADDR_HIGH, ((uint64_t)&vmread_bitmap >> 32) & 0xffffffff);
