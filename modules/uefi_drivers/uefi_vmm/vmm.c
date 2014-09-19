@@ -66,7 +66,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint8_t cpu_mode = get_cpu_mode();
 
   // check VMX abort
-  uint32_t vmx_abort = *(uint32_t*)&vmcs0[1];
+  uint32_t vmx_abort = ((uint32_t*)vmcs0)[1];
   if (vmx_abort) {
     printk("VMX abort detected : %d\n", vmx_abort);
     vmm_panic(0,0,&guest_regs);
