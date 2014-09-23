@@ -6,6 +6,7 @@
 #include "mtrr.h"
 #include "debug_server/debug_server.h"
 #include "pci.h"
+#include "cpuid.h"
 
 struct ept_tables {
   uint64_t PML4[512]                __attribute__((aligned(0x1000)));
@@ -72,7 +73,15 @@ void ept_create_tables(void) {
   }
 
   /* Map the remaining memory with 2Mo. */
-  for (i = 0; i < 512; i++) {
+  uint8_t max_phyaddr = cpuid_get_maxphyaddr();
+  uint16_t max_pdpt;
+  if (max_phyaddr > 38) {
+    // It is more than one entry of PML4
+    max_pdpt = 512;
+  } else {
+    max_pdpt = 1 << (max_phyaddr - 30);
+  }
+  for (i = 0; i < max_pdpt; i++) {
     ept_tables.PML40_PDPT[i] = ((uint64_t) &ept_tables.PML40_PDPT_PD[i][0]) | 0x7;
 
     for (j = (i==0)? 1 : 0 ; j < 512; j++) {
@@ -100,7 +109,7 @@ void ept_create_tables(void) {
   uint8_t PD_offset_end = get_PD_offset(p_end);
 
   if (PDPT_offset != get_PDPT_offset(p_end)) {
-    panic("!#EPT protected_zone doesn't fit in 1 PDPT");
+    panic("!#EPT protected_zone doesn't fit in 1 PDPT\n");
   }
 
   address = p_begin & ~(0x200000 -1);
@@ -258,11 +267,11 @@ inline static uint16_t get_PT_offset(uint64_t addr)
 inline static void check_memory_range(const struct memory_range *memory_range,
                                       uint64_t address, uint64_t page_size) {
   if (memory_range == NULL) {
-    panic("!#EPT MR4KB [NULL]");
+    panic("!#EPT MR4KB [NULL], address=%016X, page_size=%016X\n", address, page_size);
   }
   if (address + page_size-1 > memory_range->range_address_end) {
-    panic("!#EPT MR4KB [?%x<%X<0x%X:%d]", memory_range->range_address_begin
-                                        , address, memory_range->range_address_end
-                                        , memory_range->type);
+    panic("!#EPT MR4KB [?%x<%X<0x%X:%d]\n", memory_range->range_address_begin
+                                          , address, memory_range->range_address_end
+                                          , memory_range->type);
   }
 }
