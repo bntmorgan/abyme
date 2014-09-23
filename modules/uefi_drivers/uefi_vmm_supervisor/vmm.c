@@ -41,7 +41,7 @@ enum VMM_PANIC {
 };
 
 static inline int get_cpu_mode(void);
-static inline uint8_t* get_instr_param_ptr(struct registers *guest_regs);
+static inline void* get_instr_param_ptr(struct registers *guest_regs);
 static void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_regs);
 static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs);
 static inline uint8_t is_MTRR(uint64_t msr_addr);
@@ -66,7 +66,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
   uint64_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
   uint8_t cpu_mode = get_cpu_mode();
-  uint8_t* instr_param_ptr;
+  uint8_t** instr_param_ptr;
 
   // check VMX abort
   uint32_t vmx_abort = (nested_state != NESTED_GUEST_RUNNING)
@@ -112,15 +112,15 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     //
     case EXIT_REASON_VMXON:
       instr_param_ptr = get_instr_param_ptr(&guest_regs);
-      nested_vmxon(*(uint8_t**)instr_param_ptr);
+      nested_vmxon(*instr_param_ptr);
       break;
     case EXIT_REASON_VMCLEAR:
       instr_param_ptr = get_instr_param_ptr(&guest_regs);
-      nested_vmclear(*(uint8_t**)instr_param_ptr);
+      nested_vmclear(*instr_param_ptr);
       break;
     case EXIT_REASON_VMPTRLD:
       instr_param_ptr = get_instr_param_ptr(&guest_regs);
-      nested_vmptrld(*(uint8_t**)instr_param_ptr);
+      nested_vmptrld(*instr_param_ptr);
       break;
     case EXIT_REASON_VMLAUNCH:
       nested_vmlaunch();
@@ -389,7 +389,7 @@ static inline uint8_t is_MTRR(uint64_t msr_addr) {
            msr_addr == MSR_ADDRESS_IA32_MTRR_FIX4K_F8000));
 }
 
-static inline uint8_t* get_instr_param_ptr(struct registers *guest_regs) {
+static inline void* get_instr_param_ptr(struct registers *guest_regs) {
   uint64_t addr_ptr = 0;
   uint8_t i;
   uint32_t vmx_instr_info = cpu_vmread(VMX_INSTRUCTION_INFO);
@@ -411,8 +411,7 @@ static inline uint8_t* get_instr_param_ptr(struct registers *guest_regs) {
   }
   addr_ptr += instruction_displacement_field;
 
-  //INFO("param_ptr:%016X\n", (uint64_t*)addr_ptr);
-  return (uint8_t*)addr_ptr;
+  return (void*)addr_ptr;
 }
 
 static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs) {
