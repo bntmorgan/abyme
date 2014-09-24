@@ -233,7 +233,7 @@ enum NESTED_STATE {
 
 extern uint8_t nested_state;
 
-void nested_vmxon(uint8_t *shadow_vmcs);
+void nested_vmxon(uint8_t *vmxon_guest);
 
 void nested_vmclear(uint8_t *shadow_vmcs);
 
