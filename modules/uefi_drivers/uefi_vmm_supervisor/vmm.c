@@ -57,6 +57,8 @@ void vmm_init(void) {
   send_debug[EXIT_REASON_CR_ACCESS] = 0;
   send_debug[EXIT_REASON_INVVPID] = 0;
   send_debug[EXIT_REASON_VMRESUME] = 0;
+  send_debug[EXIT_REASON_VMREAD] = 0;
+  send_debug[EXIT_REASON_VMWRITE] = 0;
 }
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
@@ -134,6 +136,26 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       uint8_t* desc = get_instr_param_ptr(&guest_regs);
       uint64_t type = ((uint64_t*)&guest_regs)[(cpu_vmread(VMX_INSTRUCTION_INFO) >> 28) & 0xF];
       __asm__ __volatile__("invvpid %0, %1" : : "m"(*desc), "r"(type) );
+      break;
+    }
+    case EXIT_REASON_VMREAD:
+    case EXIT_REASON_VMWRITE: {
+      uint8_t operand_in_register = (cpu_vmread(VMX_INSTRUCTION_INFO) >> 10) & 0x1;
+      uint64_t field = ((uint64_t*)&guest_regs)[(cpu_vmread(VMX_INSTRUCTION_INFO) >> 28) & 0xF];
+      uint64_t* value_ptr = NULL;
+
+      if (operand_in_register) {
+        value_ptr = &((uint64_t*)&guest_regs)[(cpu_vmread(VMX_INSTRUCTION_INFO) >> 3) & 0xF];
+      } else {
+        value_ptr = get_instr_param_ptr(&guest_regs);
+      }
+
+      if (exit_reason == EXIT_REASON_VMREAD) {
+        *value_ptr = nested_vmread(field);
+      } else {
+        nested_vmwrite(field, *value_ptr);
+      }
+
       break;
     }
     //

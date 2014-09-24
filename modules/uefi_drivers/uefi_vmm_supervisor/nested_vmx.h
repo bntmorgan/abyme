@@ -11,8 +11,8 @@
           GUEST_LDTR_SELECTOR, \
           GUEST_TR_SELECTOR, \
           GUEST_INTERRUPT_STATUS, \
-          /*VMCS_LINK_POINTER,*/ \
-          /*VMCS_LINK_POINTER_HIGH,*/ \
+          VMCS_LINK_POINTER, \
+          VMCS_LINK_POINTER_HIGH, \
           GUEST_IA32_DEBUGCTL, \
           GUEST_IA32_DEBUGCTL_HIGH, \
           GUEST_IA32_PAT, \
@@ -240,6 +240,10 @@ void nested_vmclear(uint8_t *shadow_vmcs);
 void nested_vmptrld(uint8_t *shadow_vmcs);
 
 void nested_vmlaunch(void);
+
+uint64_t nested_vmread(uint64_t field);
+
+void nested_vmwrite(uint64_t field, uint64_t value);
 
 void nested_load_guest(void);
 

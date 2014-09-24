@@ -17,8 +17,6 @@
 
 uint8_t vmxon[4096] __attribute((aligned(0x1000)));
 uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
-uint8_t vmread_bitmap [4096] __attribute__((aligned(0x1000))) = {0};
-uint8_t vmwrite_bitmap[4096] __attribute__((aligned(0x1000))) = {0};
 
 static uint16_t tsc_freq_MHz;
 static uint8_t tsc_divider;
@@ -213,11 +211,6 @@ void vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(EPT_POINTER, eptp & 0xffffffff);
   cpu_vmwrite(EPT_POINTER_HIGH, (eptp >> 32) & 0xffffffff);
   cpu_vmwrite(VIRTUAL_PROCESSOR_ID, 0x1);
-
-  cpu_vmwrite(VMREAD_BITMAP_ADDR, (uint64_t)&vmread_bitmap & 0xffffffff);
-  cpu_vmwrite(VMREAD_BITMAP_ADDR_HIGH, ((uint64_t)&vmread_bitmap >> 32) & 0xffffffff);
-  cpu_vmwrite(VMWRITE_BITMAP_ADDR, (uint64_t)&vmwrite_bitmap & 0xffffffff);
-  cpu_vmwrite(VMWRITE_BITMAP_ADDR_HIGH, ((uint64_t)&vmwrite_bitmap >> 32) & 0xffffffff);
 }
 
 void vmcs_fill_vm_exit_control_fields(void) {
