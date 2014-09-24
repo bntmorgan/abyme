@@ -77,7 +77,13 @@ void nested_vmlaunch(void) {
 uint64_t nested_vmread(uint64_t field) {
   uint64_t value;
 
-  cpu_vmptrld(shadow_vmcs_ptr);
+  // Reading ro_data fields is done in guest_vmcs instead of shadow_vmcs
+  if (((field >> 10) & 0x3) == 0x1) { // ro_data fields
+    cpu_vmptrld(guest_vmcs);
+  } else {
+    cpu_vmptrld(shadow_vmcs_ptr);
+  }
+
   value = cpu_vmread(field);
 
   cpu_vmptrld(vmcs0);
@@ -111,15 +117,15 @@ void nested_vmwrite(uint64_t field, uint64_t value) {
 }
 
 void nested_load_host(void) {
-  static uint64_t rodata_guest_fields[] = { NESTED_READ_ONLY_DATA_FIELDS, NESTED_GUEST_FIELDS, VM_ENTRY_CONTROLS /* For IA32E_MODE_GUEST */ };
+  static uint64_t guest_fields[] = { NESTED_GUEST_FIELDS, VM_ENTRY_CONTROLS /* For IA32E_MODE_GUEST */ };
   static uint64_t host_fields[] = { NESTED_HOST_FIELDS };
   static uint64_t host_fields_dest[] = { NESTED_HOST_FIELDS_DEST };
   uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
 
   // copy all fields updated by vm_exit from guest_vmcs to shadow_vmcs
-  READ_VMCS_FIELDS(rodata_guest_fields);
+  READ_VMCS_FIELDS(guest_fields);
   cpu_vmptrld(shadow_vmcs_ptr);
-  WRITE_VMCS_FIELDS(rodata_guest_fields);
+  WRITE_VMCS_FIELDS(guest_fields);
 
   // restore host fields from shadow_vmcs to vmcs0
   READ_VMCS_FIELDS(host_fields);
