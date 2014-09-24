@@ -306,7 +306,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       debug_server_send(&ms, sizeof(ms));
       debug_server_run(&guest_regs);
 #else
-      __asm__ __volatile__("vmcall" : : "a"(0xbadc0de));
+      __asm__ __volatile__("vmcall" : : "a"(0xbadc0de), "b"(exit_reason));
 #endif
     }
   }
@@ -387,6 +387,6 @@ static void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_reg
     while(1);
   }
 #else
-  __asm__ __volatile__("vmcall" : : "a"(0xdeadc0de));
+  __asm__ __volatile__("vmcall" : : "a"(0xdeadc0de), "b"(code), "c"(extra));
 #endif
 }
