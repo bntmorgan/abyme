@@ -1,28 +1,9 @@
 echo changing terminal mode
 mode 100 31
 echo Startup !
-fs0:
-cd \EFI\uefi_drivers\82579LM
-echo Loading ethernet driver
-echo press any key
-pause
-load efi.efi
-echo Ethernet runtime driver loaded !
-cd \EFI\uefi_drivers\uefi_vmm_supervisor
-echo Loading vmm supervisor
-echo press any key
-pause
-load efi.efi
-echo Vmm supervisor runtime driver loaded !
-cd \EFI\uefi_drivers\uefi_vmm
-echo Loading vmm
-echo press any key
-pause
-load efi.efi
-echo Vmm runtime driver loaded !
-fs0:
-cd \EFI\grub
+fs1:
+l2.nsh
+# l1_l2_eric.nsh
 echo Launching grub
 echo press any key
-pause
-grubx64.efi
+fs0:\EFI\arch_grub\grubx64.efi
