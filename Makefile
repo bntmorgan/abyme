@@ -149,7 +149,7 @@ usb: all
 	umount /dev/sdb1 || true
 	sudo mount /dev/sdb1 /mnt
 	sudo cp -r binary/* /mnt/EFI
-	sudo cp sources/uefi_shell_scripts/startup.nsh /mnt
+	sudo cp sources/uefi_shell_scripts/*.nsh /mnt
 	sudo umount /mnt
 
 qemu: launch
