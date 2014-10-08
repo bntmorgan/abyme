@@ -2,6 +2,8 @@ sp 		:= $(sp).x
 dirstack_$(sp)	:= $(d)
 d		:= $(dir)
 
+dir	:= $(d)/cmos
+include	$(dir)/rules.mk
 dir	:= $(d)/flash
 include	$(dir)/rules.mk
 dir	:= $(d)/82579LM
