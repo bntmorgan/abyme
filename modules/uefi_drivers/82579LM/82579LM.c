@@ -104,9 +104,9 @@ uint8_t eth_reset() {
 }
 
 // See 11.0 Initialization and Reset Operation
-uint8_t eth_setup() {
+int eth_setup() {
   // Get device info, bus address and function
-  if (eth_get_device() == -1) {
+  if (eth_get_device()) {
     INFO("LOLZ owned no ethernet controller found\n");
     return -1;
   }
@@ -179,7 +179,7 @@ uint8_t eth_set_memory_type() {
   return 0;
 }
 
-uint8_t eth_init() {
+int eth_init() {
   // uint32_t extcnf_ctrl;
   /*if (eth_set_memory_type()) {
     return -1;
@@ -322,7 +322,7 @@ uint32_t eth_recv(void *buf, uint32_t len, uint8_t block) {
   return l;
 }
 
-uint8_t eth_get_device() {
+int eth_get_device() {
   return pci_get_device(ETH_VENDOR_ID, ETH_DEVICE_ID, &addr);
 }
 

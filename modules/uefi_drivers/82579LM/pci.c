@@ -151,7 +151,7 @@ void pci_print_device_info_ext(pci_device_info_ext *info) {
   Print(L"info->devctrl %04x\n", info->devctrl); // pci_readw
 }
 
-uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_addr *addr) {
+int pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_addr *addr) {
   uint8_t ok = 0;
   uint16_t bus;
   uint8_t dev;

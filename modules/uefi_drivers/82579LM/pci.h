@@ -144,7 +144,7 @@ typedef struct _pci_bar {
   uint32_t flags;
 } pci_bar;
 
-uint8_t pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_addr *addr);
+int pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_addr *addr);
 void pci_print_device_info_ext(pci_device_info_ext *info);
 void pci_get_device_info_ext(pci_device_info_ext *info, uint32_t id);
 void pci_print_device_info(pci_device_info *info);

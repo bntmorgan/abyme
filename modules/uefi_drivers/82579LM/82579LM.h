@@ -307,9 +307,9 @@ typedef struct _eth_header {
     uint16_t type;
 } __attribute__((packed)) eth_header;
 
-uint8_t eth_get_device();
-uint8_t eth_setup();
-uint8_t eth_init();
+int eth_get_device();
+int eth_setup();
+int eth_init();
 void eth_print_registers();
 void eth_print_registers_general();
 void eth_print_registers_interrupt();
