@@ -30,6 +30,11 @@ static inline void _stdio_stop(void) {
 #define ERROR(...)  PRINTK(1, "<ERROR> ",  __VA_ARGS__)
 #define ACTION(...) PRINTK(0, "<ACTION> ", __VA_ARGS__)
 #define INFO(...)   PRINTK(0, "<INFO> ",   __VA_ARGS__)
+#ifdef _DEBUG
+#define DBG(...)  PRINTK(0, "<DEBUG> ",   __VA_ARGS__)
+#else
+#define DBG(...)
+#endif
 
 void printk_string(int8_t *string, int8_t minimum_length, int8_t padding);
 
