@@ -20,6 +20,7 @@
 #include "debug_server/debug_server.h"
 #endif
 #include "smp.h"
+#include "env.h"
 
 //extern char __text;
 extern uint8_t _protected_begin;
@@ -32,6 +33,10 @@ void bsp_main() {
 #ifdef _DEBUG_SERVER
   debug_server_init();
 #endif
+
+  // Setup DSN experiment
+  env_setup();
+
   INFO("CPUID SETUP\n");
   cpuid_setup();
   INFO("PAT SETUP\n");

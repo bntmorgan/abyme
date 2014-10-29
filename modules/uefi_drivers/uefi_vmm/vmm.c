@@ -17,6 +17,9 @@
 #endif
 #include "mtrr.h"
 
+#include "env.h"
+#include "env_md5.h"
+
 uint8_t vmm_stack[VMM_STACK_SIZE];
 
 static uint8_t send_debug[NB_EXIT_REASONS];
@@ -55,6 +58,18 @@ void vmm_init(void) {
   send_debug[EXIT_REASON_CR_ACCESS] = 0;
   send_debug[EXIT_REASON_INVVPID] = 0;
   send_debug[EXIT_REASON_VMRESUME] = 0;
+
+  // Setup DSN experiment
+  env_command md5 = {
+    &env_md5_init,
+    &env_md5_call,
+    &env_md5_execute
+  };
+  env_add_command(&md5);
+
+  // Init DSN experiment commands
+  INFO("Initializing every env commands\n");
+  env_init();
 }
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
@@ -88,6 +103,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   // VMX Specific VMexits that we override
   //
   if (exit_reason == EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED) {
+    // Env f() execution
+    env_execute();
     vmcs_set_vmx_preemption_timer_value(VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
     return;
   } else if (exit_reason == EXIT_REASON_MONITOR_TRAP_FLAG) {
@@ -98,6 +115,12 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     //
     // Things we should emulate/protect
     //
+    case EXIT_REASON_VMCALL: {
+      if (guest_regs.rax == ENV_ID) {
+        env_call(&guest_regs); 
+      }
+      break;
+    }
     case EXIT_REASON_XSETBV: {
       if (cpu_mode == MODE_LONG) {
         __asm__ __volatile__("xsetbv" : : "a"(guest_regs.rax), "c"(guest_regs.rcx), "d"(guest_regs.rdx));
