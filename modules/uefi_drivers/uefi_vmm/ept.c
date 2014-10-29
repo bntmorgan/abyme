@@ -5,6 +5,7 @@
 
 #include "mtrr.h"
 #include "debug_server/debug_server.h"
+#include "env.h"
 #include "pci.h"
 #include "cpuid.h"
 
@@ -16,6 +17,8 @@ struct ept_tables {
   uint64_t PD_PT_VMM [2][512]       __attribute__((aligned(0x1000)));
   uint64_t PT_ETH_MMIO[512]         __attribute__((aligned(0x1000)));
   uint64_t PT_ETH_BAR0[512]         __attribute__((aligned(0x1000)));
+  uint64_t PT_ERIC_MMIO[512]         __attribute__((aligned(0x1000)));
+  uint64_t PT_ERIC_BAR0[512]         __attribute__((aligned(0x1000)));
 } __attribute__((aligned(8)));
 
 
@@ -154,12 +157,7 @@ void ept_create_tables(void) {
     }
   }
 
-
-  //
-  // Network card
-  // MMIO pci space protection
-  //
-#ifdef _DEBUG_SERVER
+  uint64_t base_addr;
   uint64_t PT_offset;
   uint8_t MMCONFIG_length;
   uint16_t MMCONFIG_mask;
@@ -186,10 +184,16 @@ void ept_create_tables(void) {
   /* MMCONFIG : bit 38:28-26 of PCIEXBAR (offset 60) -> 14:4-2 of PCIEXBAR + 3 */
   uint16_t MMCONFIG = pci_readw(0,0x63) & MMCONFIG_mask;
 
-  uint64_t base_addr =  ((uint64_t)MMCONFIG << 16)
-                        + PCI_MAKE_MMCONFIG(eth->pci_addr.bus,
-                                      eth->pci_addr.device,
-                                      eth->pci_addr.function);
+  //
+  // Network card
+  // MMIO pci space protection
+  //
+#ifdef _DEBUG_SERVER
+
+  base_addr =  ((uint64_t)MMCONFIG << 16)
+    + PCI_MAKE_MMCONFIG(eth->pci_addr.bus,
+        eth->pci_addr.device,
+        eth->pci_addr.function);
 
   PDPT_offset = get_PDPT_offset(base_addr);
   PD_offset = get_PD_offset(base_addr);
@@ -243,7 +247,69 @@ void ept_create_tables(void) {
 
 #endif
 
+  //
+  // ERIC FPGA protection
+  // XXX Why linux doesn't boot with this ...
+  // Page overlap ??
+#if 0
+  base_addr =  ((uint64_t)MMCONFIG << 16)
+    + PCI_MAKE_MMCONFIG(eric->pci_addr.bus,
+        eric->pci_addr.device,
+        eric->pci_addr.function);
+
+  PDPT_offset = get_PDPT_offset(base_addr);
+  PD_offset = get_PD_offset(base_addr);
+  PT_offset = get_PT_offset(base_addr);
+
+  /* Map memory associated to eth MMIO configuration with 4ko pages */
+  ept_tables.PML40_PDPT_PD[PDPT_offset][PD_offset] = ((uint64_t) &ept_tables.PT_ERIC_MMIO[0]) | 0x7;
+
+  address = base_addr & ~(0x200000 -1);
+  memory_range = mtrr_get_memory_range(address);
+  for (i = 0; i < 512; i++) {
+    if (address > memory_range->range_address_end) {
+      memory_range = mtrr_get_memory_range(address);
+    }
+    check_memory_range(memory_range, address, 0x1000);
+
+    ept_tables.PT_ERIC_MMIO[i] = (PDPT_offset << 30) | (PD_offset << 21) | (i << 12) | (memory_range->type << 3) | 0x7;
+
+    address += 0x1000;
+  }
+  /* We hide the first 4Ko of MMIO address with trap_pci redirection */
+  ept_tables.PT_ERIC_MMIO[PT_offset] = ((uint64_t) &trap_pci[0]) | (memory_range->type << 3) | 0x7;
+
+
+  //
+  // ERIC FGPA
+  // bar0 space protection
+  //
+  base_addr = eric->bar0;
+  PDPT_offset = get_PDPT_offset(base_addr);
+  PD_offset = get_PD_offset(base_addr);
+  PT_offset = get_PT_offset(base_addr);
+
+  /* Map memory associated to eth bar0 configuration with 4ko pages */
+  ept_tables.PML40_PDPT_PD[PDPT_offset][PD_offset] = ((uint64_t) &ept_tables.PT_ERIC_BAR0[0]) | 0x7;
+
+  address = base_addr & ~(0x200000 - 1);
+  memory_range = mtrr_get_memory_range(address);
+  for (i = 0; i < 512; i++) {
+    if (address > memory_range->range_address_end) {
+      memory_range = mtrr_get_memory_range(address);
+    }
+    check_memory_range(memory_range, address, 0x1000);
+
+    ept_tables.PT_ERIC_BAR0[i] = (PDPT_offset << 30) | (PD_offset << 21) | (i << 12) | (memory_range->type << 3) | 0x7;
+
+    address += 0x1000;
+  }
+  /* We hide the first 4Ko of Bar0 address with trap_bar redirection */
+  ept_tables.PT_ERIC_BAR0[PT_offset] = ((uint64_t) &trap_bar[0]) | (memory_range->type << 3) | 0x7;
+
+#endif
 }
+
 
 uint64_t ept_get_eptp(void) {
   return ((uint64_t) &ept_tables.PML4[0]) | (3 << 3) | (0x6 << 0);
