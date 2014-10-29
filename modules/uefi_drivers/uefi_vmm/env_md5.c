@@ -1,0 +1,113 @@
+#include "env.h"
+#include "env_md5.h"
+#include "stdint.h"
+#include "string.h"
+#include "stdio.h"
+#include "md5.h"
+#include "walk.h"
+#include "vmx.h"
+#include "vmcs.h"
+
+#define MAX_PAGES 128
+
+static uintptr_t start;
+static uintptr_t end;
+static uint8_t initialized = 0;
+static uint64_t cr3;
+static unsigned int idx = 0;
+
+typedef struct _page {
+  uint64_t a;
+  uint64_t s;
+} page;
+
+static page pages[MAX_PAGES];
+
+md5_byte_t last_digest[16];
+
+uint8_t env_md5_init(void) {
+  INFO("Env md5 init\n");
+  return 0;
+}
+
+uint8_t env_md5_call(struct registers *guest_regs) {
+  uint64_t lcurrent, pcurrent, size;
+  int ret;
+  idx = 0;
+  cr3 = cpu_vmread(GUEST_CR3);
+  start = guest_regs->rbx;
+  end = guest_regs->rcx;
+
+  INFO("start = 0x%016X, end = 0x%016X%, 0x%016X octets..\n", start, end, end -
+      start);
+
+  //
+  // Walk all the pages
+  //
+  lcurrent = start;
+
+  // Walk the first page
+  ret = walk_long(cr3, lcurrent, &pcurrent, &size);
+  if (ret) {
+    INFO("ERROR walking 0x%016X : %d\n", lcurrent, ret);
+    return ENV_ERROR;
+  }
+  pages[idx].a = pcurrent;
+  pages[idx].s = size;
+  idx++;
+  INFO("Linear 0x%016X, physical : 0x%016X, size 0x%016X\n", lcurrent, pcurrent,
+      size);
+  while (!walk_is_in_page(lcurrent, end, size)) {
+    // Compute the next page
+    lcurrent = size + (lcurrent & (~((uint64_t)size - 1)));
+    // Walk the next page
+    ret = walk_long(cr3, lcurrent, &pcurrent, &size);
+    if (ret) {
+      INFO("ERROR walking 0x%016X : %d\n", lcurrent, ret);
+      return ENV_ERROR;
+    }
+    pages[idx].a = pcurrent;
+    pages[idx].s = size;
+    idx++;
+    INFO("Linear 0x%016X, physical : 0x%016X, size 0x%016X\n", lcurrent,
+        pcurrent, size);
+  }
+  INFO("Walked %d pages\n", idx);
+
+  initialized = 1;
+  return ENV_OK;
+}
+
+uint8_t env_md5_execute(void) {
+  md5_state_t state;
+  md5_byte_t digest[16];
+  int i;
+
+  if (!initialized) {
+    return ENV_ERROR;
+  }
+
+  // Init md5
+  md5_init(&state);
+
+  for (i = 0; i < idx - 1; i++) {
+    // Compute md5 on current page
+    md5_append(&state, (const md5_byte_t *)pages[i].a, pages[i].s -
+        (pages[i].a & ((uint64_t)pages[i].s - 1)));
+  }
+  // Compute md5 on the last page
+  md5_append(&state, (const md5_byte_t *)pages[i].a, (end &
+        ((uint64_t)pages[i].s - 1)) + 1);
+  md5_finish(&state, digest);
+
+  // End md5
+  int di;
+  printk("MD5 (space) = ");
+  for (di = 0; di < 16; ++di)
+    printk("%02x", digest[di]);
+  printk("\n");
+
+  // Copy the new md5 as the new current
+  memcpy(&last_digest[0], &digest[0], sizeof(last_digest));
+  return ENV_OK;
+}
