@@ -6,6 +6,10 @@ dir	:= $(d)/cmos
 include	$(dir)/rules.mk
 dir	:= $(d)/flash
 include	$(dir)/rules.mk
+dir	:= $(d)/pcie_root_port
+include	$(dir)/rules.mk
+dir	:= $(d)/eric
+include	$(dir)/rules.mk
 dir	:= $(d)/82579LM
 include	$(dir)/rules.mk
 dir	:= $(d)/uefi_vmm
