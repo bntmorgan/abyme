@@ -39,9 +39,68 @@
    */
 
 #include "md5.h"
-#include "walk.h"
 #include "string.h"
 #include "stdio.h"
+
+#ifdef TEST2
+#include <string.h>
+#include <stdint.h>
+
+#define MAX_PAGES 128
+
+typedef struct _page {
+  uint64_t a;
+  uint64_t s;
+} page;
+
+static page pages[MAX_PAGES];
+
+#define TEST_PAGES 10
+
+int main (int argc, char *argv[]) {
+  uint32_t i;
+  uint8_t test_pages[TEST_PAGES][0x1000] __attribute__((aligned(0x1000)));
+
+  char template[] = "/tmp/yolo_XXXXXX";
+
+  int fd = mkstemp(&template[0]);
+  FILE *f = fdopen(fd, "w");
+
+  printf("%s\n", template);
+  
+  // Init
+  for (i = 0; i < TEST_PAGES; i++) {
+    memset(&test_pages[i][0], (uint8_t)'0' + i, 0x1000);
+    pages[i].s = 0x1000;
+    pages[i].a = (uint64_t)(uintptr_t)&test_pages[i][0];
+  }
+
+  // Bitflips
+  test_pages[2][0x230] = 0x0;
+
+  // Write after bitflips
+  for (i = 0; i < TEST_PAGES; i++) {
+    fwrite(&test_pages[i], 0x1000, 0x1, f);
+  }
+
+  md5_state_t state;
+  md5_init(&state);
+  for (i = 0; i < TEST_PAGES; ++i) {
+    md5_append(&state, (const md5_byte_t *)pages[i].a, pages[i].s -
+        (pages[i].a & ((uint64_t)pages[i].s - 1)));
+  }
+  md5_byte_t digest[16];
+  md5_finish(&state, digest);
+  int di;
+  for (di = 0; di < 16; ++di)
+    printf("%02x", digest[di]);
+  printf("\n");
+
+  fclose(f);
+
+  return 0;
+}
+#endif
 
 #ifdef TEST
 /*
@@ -64,15 +123,14 @@ main()
   };
   int i;
 
+  md5_state_t state;
+  md5_init(&state);
   for (i = 0; i < 7; ++i) {
-    md5_state_t state;
     md5_byte_t digest[16];
     int di;
 
-    md5_init(&state);
     md5_append(&state, (const md5_byte_t *)test[i], strlen(test[i]));
     md5_finish(&state, digest);
-    printf("MD5 (\"%s\") = ", test[i]);
     for (di = 0; di < 16; ++di)
       printf("%02x", digest[di]);
     printf("\n");
@@ -323,6 +381,7 @@ md5_append(md5_state_t *pms, const md5_byte_t *data, int nbytes)
   const md5_byte_t *p = data;
   int left = nbytes;
   int offset = (pms->count[0] >> 3) & 63;
+
   md5_word_t nbits = (md5_word_t)(nbytes << 3);
 
   if (nbytes <= 0)
