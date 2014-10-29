@@ -3,6 +3,7 @@
 
 #include "vmm.h"
 #include "stdint.h"
+#include "efi/efi_eric.h"
 
 #define ENV_LIMIT 16
 
@@ -22,8 +23,11 @@ typedef struct _env_command {
 
 uint8_t env_add_command(env_command *command);
 void env_execute(void);
+void env_setup(void);
 void env_init(void);
 void env_call(struct registers *guest_regs);
+
+extern protocol_eric *eric;
 
 #endif//__ENV_H__
 
