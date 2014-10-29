@@ -1,6 +1,7 @@
 CC						:= gcc
 OBJDUMP				:= objdump
 PYTHON				:= python3
+USB						:= /dev/sdb1
 
 INCLUDE_DIR			:= sources/include
 
@@ -147,7 +148,7 @@ info:
 
 usb: all
 	umount /dev/sdb1 || true
-	sudo mount /dev/sdb1 /mnt
+	sudo mount $(USB) /mnt
 	sudo cp -r binary/* /mnt/EFI
 	sudo cp sources/uefi_shell_scripts/*.nsh /mnt
 	sudo umount /mnt
