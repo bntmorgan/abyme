@@ -9,6 +9,7 @@
 static uint8_t flash_ok = 0; 
 static uint32_t bios_base, bios_limit, rcrb;
 static uint32_t *buf;
+static uint8_t cache_valid = 0, cache_addr;
 
 int flash_init(protocol_flash *proto) {
   uint8_t ret;
@@ -120,29 +121,40 @@ int flash_init(protocol_flash *proto) {
   return FLASH_OK;
 }
 
-uint8_t flash_readd(uint32_t addr, uint32_t *buf) {
-  static uint32_t d[FLASH_READ_SIZE / 4], cache_addr;
-  static uint8_t cache_valid = 0;
+void flash_cache_invalidate(void) {
+  cache_valid = 0;
+  cache_addr = 0;
+}
 
+int flash_readd(uint32_t addr, uint32_t *buf) {
+  static uint32_t d[FLASH_READ_SIZE / 4];
+
+  // 64 byte blocks
   uint32_t o = addr & 0x3f, b = addr & ~(uint32_t)0x3f;
   uint8_t ret;
 
   // Cache hit !
   if (cache_valid && b == cache_addr) {
-    *buf = d[o / 4]; 
+    // Nothing to do
   // Not in cache, we need to read the block
   } else {
+    // XXX dirty ?
+    uint16_t hsfs = *(uint16_t *)(uintptr_t)(rcrb | 0x3804);
+    *(uint16_t *)(uintptr_t)(rcrb | 0x3804) = hsfs;
     ret = flash_read_block(b, FLASH_READ_SIZE, &d[0]);
     if (ret) {
       cache_valid = 0;
       return ret;
     }
     cache_valid = 1;
+    cache_addr = addr;
   }
+  // In every cases
+  *buf = d[o / 4]; 
   return FLASH_OK;
 }
 
-uint8_t flash_read_block(uint32_t addr, uint32_t size, uint32_t *buf) {
+int flash_read_block(uint32_t addr, uint32_t size, uint32_t *buf) {
   uint8_t wait, loop_limit;
   uint32_t faddr, hsfc, hsfs, data_from, data, i;
 

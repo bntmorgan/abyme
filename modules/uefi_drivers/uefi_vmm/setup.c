@@ -35,7 +35,9 @@ void bsp_main() {
 #endif
 
   // Setup DSN experiment
+#ifdef _ENV
   env_setup();
+#endif//_ENV
 
   INFO("CPUID SETUP\n");
   cpuid_setup();

@@ -24,11 +24,12 @@ uint64_t log_cr3_index;
 void debug_server_log_cr3_flush(struct registers *regs) {
   // INFO("Flush\n");
   int i;
-  uint8_t b[sizeof(message_log_cr3) + DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t)];
-  message_log_cr3 *m = (message_log_cr3 *)&b[0];
-  uint8_t *data = b + sizeof(message_log_cr3);
-  m->type = MESSAGE_LOG_CR3;
+  uint8_t b[sizeof(message_user_defined) + DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t)];
+  message_user_defined *m = (message_user_defined *)&b[0];
+  uint8_t *data = b + sizeof(message_user_defined);
+  m->type = MESSAGE_USER_DEFINED;
   m->core = debug_server_get_core();
+  m->user_type = USER_DEFINED_LOG_CR3;
   m->length = DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t);
   for (i = 0; i < DEBUG_SERVER_CR3_SIZE / DEBUG_SERVER_CR3_PER_MESSAGE; i++) {
     // Copy DEBUG_SERVER_CR3_PER_MESSAGE cr3

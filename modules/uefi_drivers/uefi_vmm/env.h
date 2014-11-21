@@ -13,13 +13,20 @@ enum ENV_ERROR {
   ENV_NO_SPACE
 };
 
-typedef struct _env_command {
-  uint8_t (*init) (void);
-  uint8_t (*call) (struct registers *guest_regs);
-  uint8_t (*execute) (void);
-} env_command;
+enum ENV_VMCALL_IDS {
+  ENV_VMCALL_LIST,
+  ENV_VMCALL_CALL,
+  ENV_VMCALL_ENABLE,
+  ENV_VMCALL_DISABLE,
+  ENV_VMCALL_ERIC_BAR0_WRITE
+};
 
-#define ENV_ID 0x1
+typedef struct _env_command {
+  int (*init) (void);
+  int (*call) (struct registers *guest_regs);
+  int (*execute) (void);
+  const char *name;
+} env_command;
 
 uint8_t env_add_command(env_command *command);
 void env_execute(void);

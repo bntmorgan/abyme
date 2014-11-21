@@ -7,6 +7,7 @@
 #include "walk.h"
 #include "vmx.h"
 #include "vmcs.h"
+#include "debug_server/debug_server.h"
 
 #define MAX_PAGES 128
 
@@ -25,18 +26,32 @@ static page pages[MAX_PAGES];
 
 md5_byte_t last_digest[16];
 
-uint8_t env_md5_init(void) {
-  INFO("Env md5 init\n");
-  return 0;
+void env_md5_send(md5_byte_t *digest) {
+  uint8_t b[sizeof(message_user_defined) + 16];
+  message_user_defined *m = (message_user_defined *)&b[0];
+  uint8_t *data = b + sizeof(message_user_defined);
+  m->type = MESSAGE_USER_DEFINED;
+  m->core = debug_server_get_core();
+  m->user_type = USER_DEFINED_LOG_MD5;
+  m->length = 16;
+  // Copy MD5
+  memcpy(&data[0], &digest[0], 16);
+  // Send it !
+  debug_server_send(b, sizeof(b));
 }
 
-uint8_t env_md5_call(struct registers *guest_regs) {
+int env_md5_init(void) {
+  INFO("Env md5 init\n");
+  return ENV_OK;
+}
+
+int env_md5_walk(struct registers *guest_regs) {
   uint64_t lcurrent, pcurrent, size;
   int ret;
   idx = 0;
   cr3 = cpu_vmread(GUEST_CR3);
-  start = guest_regs->rbx;
-  end = guest_regs->rcx;
+  start = guest_regs->rsi;
+  end = guest_regs->rdi;
 
   INFO("start = 0x%016X, end = 0x%016X%, 0x%016X octets..\n", start, end, end -
       start);
@@ -78,7 +93,38 @@ uint8_t env_md5_call(struct registers *guest_regs) {
   return ENV_OK;
 }
 
-uint8_t env_md5_execute(void) {
+/**
+ * Change protected space data to demonstrate the effect of DMA attack
+ */
+#define ENV_MD5_MAGIC 0xcafebabedeadc0de
+int env_md5_flip(uint8_t f) {
+  static uint64_t data;
+  if (!f) {
+    if (*(uint64_t *)pages[0].a == ENV_MD5_MAGIC) {
+      *(uint64_t *)pages[0].a = data;
+    }
+  } else {
+    if (*(uint64_t *)pages[0].a != ENV_MD5_MAGIC) {
+      data = *(uint64_t *)pages[0].a;
+      *(uint64_t *)pages[0].a = ENV_MD5_MAGIC;
+    }
+  }
+  return ENV_OK;
+}
+
+int env_md5_call(struct registers *guest_regs) {
+  switch (guest_regs->rdx) {
+    case ENV_MD5_VMCALL_ADDR:
+      return env_md5_walk(guest_regs);
+    case ENV_MD5_VMCALL_FLIP:
+      return env_md5_flip(1);
+    case ENV_MD5_VMCALL_UNFLIP:
+      return env_md5_flip(0);
+  }
+  return ENV_ERROR;
+}
+
+int env_md5_execute(void) {
   md5_state_t state;
   md5_byte_t digest[16];
   int i;
@@ -106,6 +152,9 @@ uint8_t env_md5_execute(void) {
   for (di = 0; di < 16; ++di)
     printk("%02x", digest[di]);
   printk("\n");
+
+  // Send the md5 to the debug client
+  env_md5_send(&digest[0]);
 
   // Copy the new md5 as the new current
   memcpy(&last_digest[0], &digest[0], sizeof(last_digest));

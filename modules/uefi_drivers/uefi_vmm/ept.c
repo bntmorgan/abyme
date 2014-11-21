@@ -157,6 +157,7 @@ void ept_create_tables(void) {
     }
   }
 
+#ifdef _DEBUG_SERVER
   uint64_t base_addr;
   uint64_t PT_offset;
   uint8_t MMCONFIG_length;
@@ -188,7 +189,6 @@ void ept_create_tables(void) {
   // Network card
   // MMIO pci space protection
   //
-#ifdef _DEBUG_SERVER
 
   base_addr =  ((uint64_t)MMCONFIG << 16)
     + PCI_MAKE_MMCONFIG(eth->pci_addr.bus,

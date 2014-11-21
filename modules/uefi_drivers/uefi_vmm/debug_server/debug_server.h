@@ -25,7 +25,12 @@ enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_VMCS_DATA,
   MESSAGE_VMM_PANIC,
   MESSAGE_VMCS_WRITE,
-  MESSAGE_LOG_CR3
+  MESSAGE_USER_DEFINED
+};
+
+enum DEBUG_SERVER_USER_DEFINED_TYPES {
+  USER_DEFINED_LOG_CR3,
+  USER_DEFINED_LOG_MD5
 };
 
 //
@@ -145,11 +150,12 @@ typedef struct _message_vmcs_write {
   uint8_t core;
 } __attribute__((packed)) message_vmcs_write;
 
-typedef struct _message_log_cr3 {
+typedef struct _message_user_defined {
   uint8_t type;
   uint8_t core;
+  uint16_t user_type;
   uint64_t length;
-} __attribute__((packed)) message_log_cr3;
+} __attribute__((packed)) message_user_defined;
 
 typedef struct _message_info {
   uint8_t type;

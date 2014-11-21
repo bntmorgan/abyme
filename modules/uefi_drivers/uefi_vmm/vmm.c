@@ -17,8 +17,11 @@
 #endif
 #include "mtrr.h"
 
+#ifdef _ENV
 #include "env.h"
 #include "env_md5.h"
+#include "env_flash.h"
+#endif//_ENV
 
 uint8_t vmm_stack[VMM_STACK_SIZE];
 
@@ -59,17 +62,11 @@ void vmm_init(void) {
   send_debug[EXIT_REASON_INVVPID] = 0;
   send_debug[EXIT_REASON_VMRESUME] = 0;
 
-  // Setup DSN experiment
-  env_command md5 = {
-    &env_md5_init,
-    &env_md5_call,
-    &env_md5_execute
-  };
-  env_add_command(&md5);
-
+#ifdef _ENV
   // Init DSN experiment commands
   INFO("Initializing every env commands\n");
   env_init();
+#endif//_ENV
 }
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
@@ -104,7 +101,9 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   //
   if (exit_reason == EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED) {
     // Env f() execution
+#ifdef _ENV
     env_execute();
+#endif//_ENV
     vmcs_set_vmx_preemption_timer_value(VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
     return;
   } else if (exit_reason == EXIT_REASON_MONITOR_TRAP_FLAG) {
@@ -116,9 +115,11 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     // Things we should emulate/protect
     //
     case EXIT_REASON_VMCALL: {
-      if (guest_regs.rax == ENV_ID) {
+#ifdef _ENV
+      if (guest_regs.rax == VMM_VMCALL_ENV) {
         env_call(&guest_regs); 
       }
+#endif//_ENV
       break;
     }
     case EXIT_REASON_XSETBV: {
@@ -300,7 +301,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         cr3_count++;
 #ifdef _DEBUG_SERVER
         // désactivation de l'expérience
-        // debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
+        debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
 #endif
         cpu_vmwrite(GUEST_CR3, value);
         // We need to invalidate TLBs, see doc INTEL vol 3C chap 28.3.3.3

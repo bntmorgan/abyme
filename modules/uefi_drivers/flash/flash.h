@@ -23,7 +23,8 @@ enum bbs_type {
 #define FLASH_READ_SIZE 64
 
 int flash_init(protocol_flash *proto);
-uint8_t flash_read_block(uint32_t addr, uint32_t size, uint32_t *buf);
-uint8_t flash_readd(uint32_t addr, uint32_t *buf);
+int flash_read_block(uint32_t addr, uint32_t size, uint32_t *buf);
+int flash_readd(uint32_t addr, uint32_t *buf);
+void flash_cache_invalidate(void);
 
 #endif//__FLASH_H__

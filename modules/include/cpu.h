@@ -46,6 +46,8 @@ void cpu_stop(void);
 
 uint64_t cpu_read_flags(void);
 
+uint64_t cpu_read_tsc(void);
+
 inline void cpu_outportb(uint32_t port, uint8_t value);
 
 inline void cpu_outportw(uint32_t port, uint16_t value);

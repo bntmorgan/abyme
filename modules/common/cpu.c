@@ -196,3 +196,9 @@ inline void cpu_mem_writeq(void *p, uint64_t data) {
 inline uint64_t cpu_mem_readq(void *p) {
   return *(volatile uint64_t *)(p);
 }
+
+uint64_t cpu_read_tsc(void) {
+  uint32_t tscl, tsch;
+  __asm__ __volatile__("rdtsc" : "=d"(tsch), "=a"(tscl));  
+  return ((uint64_t)tsch) << 32 | tscl;
+}

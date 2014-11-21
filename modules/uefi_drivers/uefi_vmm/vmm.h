@@ -8,6 +8,11 @@
 #define VMM_STACK_SIZE 0x400000
 #define NB_EXIT_REASONS 65
 
+enum VMM_VMCALL_IDS {
+  VMM_VMCALL_NOPE,
+  VMM_VMCALL_ENV
+};
+
 extern uint8_t vmm_stack[VMM_STACK_SIZE];
 
 enum vm_exit_reason {

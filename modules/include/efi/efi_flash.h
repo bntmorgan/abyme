@@ -9,8 +9,9 @@
 typedef struct _protocol_flash {
   unsigned char *init_flash;
   unsigned int bios_base;
-  unsigned int  bios_limit;
-  unsigned char (*readd) (unsigned int addr, unsigned int  *buf);
+  unsigned int bios_limit;
+  int (*readd) (unsigned int addr, unsigned int *buf);
+  void (*cache_invalidate) (void);
 } protocol_flash;
 
 #endif

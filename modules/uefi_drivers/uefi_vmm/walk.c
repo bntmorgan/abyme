@@ -15,7 +15,7 @@ uint8_t walk_is_in_page(uint64_t l, uint64_t p, uint64_t size) {
   }
 }
 
-uint64_t walk_long(uint64_t cr3, uint64_t linear, uint64_t *physical, uint64_t
+int walk_long(uint64_t cr3, uint64_t linear, uint64_t *physical, uint64_t
     *size) {
   DBG("linear : 0x%016X\n", linear);
   DBG("cr3 : 0x%016X\n", cr3);

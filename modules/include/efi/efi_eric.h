@@ -12,10 +12,11 @@ typedef struct _protocol_eric {
     uint8_t device;
     uint8_t function;
   } pci_addr;
-  uint64_t bar0;
-  uint64_t bar1;
-  uint64_t bar2;
-  uint64_t rom;
+  // Caution dw MMIO access only !
+  uint32_t *bar0;
+  uint32_t *bar1;
+  uint32_t *bar2;
+  uint32_t *rom;
 } protocol_eric;
 
 #endif

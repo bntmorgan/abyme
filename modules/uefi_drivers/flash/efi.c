@@ -21,7 +21,8 @@ protocol_flash proto = {
   0,
   0,
   0,
-  flash_readd
+  flash_readd,
+  flash_cache_invalidate
 };
 
 EFI_GUID guid = EFI_PROTOCOL_FLASH_GUID;
