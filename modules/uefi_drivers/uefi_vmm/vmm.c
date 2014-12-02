@@ -30,6 +30,8 @@ static uint8_t send_debug[NB_EXIT_REASONS];
 static uint64_t io_count = 0;
 static uint64_t cr3_count = 0;
 
+static uint64_t period = VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC;
+
 enum CPU_MODE {
   MODE_REAL,
   MODE_PROTECTED,
@@ -49,6 +51,10 @@ static inline int get_cpu_mode(void);
 static void vmm_panic(uint64_t code, uint64_t extra, struct registers *guest_regs);
 static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs);
 static inline uint8_t is_MTRR(uint64_t msr_addr);
+
+void vmm_set_period(uint64_t p) {
+  period = p;
+}
 
 void vmm_init(void) {
   /* Init exit reasons for which we need to send a debug message */
@@ -104,7 +110,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 #ifdef _ENV
     env_execute();
 #endif//_ENV
-    vmcs_set_vmx_preemption_timer_value(VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
+    vmcs_set_vmx_preemption_timer_value(period);
     return;
   } else if (exit_reason == EXIT_REASON_MONITOR_TRAP_FLAG) {
     return;
@@ -118,6 +124,9 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 #ifdef _ENV
       if (guest_regs.rax == VMM_VMCALL_ENV) {
         env_call(&guest_regs); 
+      } else if (guest_regs.rax == VMM_VMCALL_PERIOD) {
+        INFO("New VMX period : %d\n", guest_regs.rbx);
+        vmm_set_period(guest_regs.rbx);
       }
 #endif//_ENV
       break;

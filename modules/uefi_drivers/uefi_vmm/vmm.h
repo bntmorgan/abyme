@@ -10,7 +10,8 @@
 
 enum VMM_VMCALL_IDS {
   VMM_VMCALL_NOPE,
-  VMM_VMCALL_ENV
+  VMM_VMCALL_ENV,
+  VMM_VMCALL_PERIOD
 };
 
 extern uint8_t vmm_stack[VMM_STACK_SIZE];
@@ -100,5 +101,6 @@ struct registers {
 
 void vmm_init(void);
 void vmm_vm_exit_handler(void);
+void vmm_set_period(uint64_t p);
 
 #endif
