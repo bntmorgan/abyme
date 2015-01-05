@@ -91,7 +91,6 @@ psources/%temoin:
 
 # Copy rule
 psources: $(call MOD_2_SRC, $(SOURCES))
-	@echo $^
 
 build/%.o: psources/%.s
 	@echo "  [CC]    $< -> $@"
@@ -146,13 +145,20 @@ info:
 	@echo Sources [$(SOURCES)]
 	@echo Figures [$(FIGS)]
 
-usb: all
-	umount /dev/sdb1 || true
-	sudo mount $(USB) /mnt
-	sudo cp -r binary/* /mnt/EFI
+usb: mount $(patsubst binary/%, /mnt/EFI/%, $(TARGETS)) shell umount
+
+shell:
 	sudo cp psources/shell_scripts/*.nsh /mnt
 
+mount:
+	sudo mount $(USB) /mnt
+
+umount:
 	sudo umount /mnt
+
+/mnt/EFI/%.efi: binary/%.efi
+	@echo "  [CP]    $^ -> $@"
+	@sudo cp $< $@
 
 qemu: launch
 
