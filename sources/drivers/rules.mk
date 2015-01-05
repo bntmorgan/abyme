@@ -12,15 +12,15 @@ dir	:= $(d)/eric
 include	$(dir)/rules.mk
 dir	:= $(d)/82579LM
 include	$(dir)/rules.mk
-dir	:= $(d)/uefi_vmm
+dir	:= $(d)/vmm
 include	$(dir)/rules.mk
-dir	:= $(d)/uefi_vmm_supervisor
+dir	:= $(d)/vmm_supervisor
+include	$(dir)/rules.mk
+dir	:= $(d)/vmm_rec
 include	$(dir)/rules.mk
 dir	:= $(d)/smm
 include	$(dir)/rules.mk
-dir	:= $(d)/uefi_smm
-include	$(dir)/rules.mk
-# dir	:= $(d)/uefi_smm_handler
+# dir	:= $(d)/smm_handler
 # include	$(dir)/rules.mk
 
 d		:= $(dirstack_$(sp))

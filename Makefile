@@ -3,7 +3,7 @@ OBJDUMP				:= objdump
 PYTHON				:= python3
 USB						:= /dev/sdb1
 
-INCLUDE_DIR			:= sources/include
+INCLUDE_DIR			:= psources/include
 
 ARCH := $(shell uname -m | sed s,i[3456789]86,ia32,)
 
@@ -36,19 +36,19 @@ LD_FLAGS_ALL		:= -nostdlib -T $(EFI_LDS) -shared -Bsymbolic -L$(EFI_PATH) \
 		$(EFI_CRT_OBJS) -znocombreloc -fPIC --no-undefined
 
 define SRC_2_OBJ
-  $(foreach src,$(1),$(patsubst modules/%,build/%,$(src)))
+  $(foreach src,$(1),$(patsubst sources/%,build/%,$(src)))
 endef
 
 define SRC_2_BIN
-  $(foreach src,$(1),$(patsubst modules/%,binary/%,$(src)))
+  $(foreach src,$(1),$(patsubst sources/%,binary/%,$(src)))
 endef
 
 define MOD_2_SRC
-  $(foreach src,$(1),$(patsubst modules/%,sources/%,$(src)))
+  $(foreach src,$(1),$(patsubst sources/%,psources/%,$(src)))
 endef
 
 define SVG_2_PDF
-  $(foreach src,$(1),$(patsubst modules/%.svg,sources/%.pdf,$(src)))
+  $(foreach src,$(1),$(patsubst sources/%.svg,psources/%.pdf,$(src)))
 endef
 
 define FIND
@@ -70,11 +70,10 @@ WEBS		:=
 FIGS 		:=
 SOURCES :=
 
-dir	:= modules
-target_dir := sources
+dir	:= sources
 include	$(dir)/rules.mk
 
-sources/%temoin:
+psources/%temoin:
 	@for w in $^; do \
 		filename=`basename $$w`; \
 		if [ "$${filename%.*}" = "root" ]; then \
@@ -91,14 +90,15 @@ sources/%temoin:
 	done
 
 # Copy rule
-sources: $(call MOD_2_SRC, $(SOURCES))
+psources: $(call MOD_2_SRC, $(SOURCES))
+	@echo $^
 
-build/%.o: sources/%.s
+build/%.o: psources/%.s
 	@echo "  [CC]    $< -> $@"
 	@mkdir -p $(dir $@)
 	@$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_TARGET) -o $@ -c $<
 
-build/%.o: sources/%.c
+build/%.o: psources/%.c
 	@echo "  [CC]    $< -> $@"
 	@mkdir -p $(dir $@)
 	@$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_TARGET) -o $@ -c $<
@@ -123,20 +123,20 @@ tests/%:
 	@mkdir -p $(dir $@)
 	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_TARGET) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
 
-sources/%.pdf: modules/%.svg
+psources/%.pdf: sources/%.svg
 	@mkdir -p $(dir $@)
 	@echo "  [IS]    $^ -> $@"
 	@inkscape $< --export-pdf="$@"
 
-sources/%: modules/%
+psources/%: sources/%
 	@mkdir -p $(dir $@)
 	@cp -r --force $^ $@
 	@echo "  [CP]    $^ -> $@"
 
-targets: sources $(WEBS) $(patsubst sources/%, binary/%, $(TARGETS))
+targets: psources $(WEBS) $(patsubst sources/%, binary/%, $(TARGETS))
 
 clean:
-	@rm -fr sources
+	@rm -fr psources
 	@rm -f $(TARGETS) $(OBJECTS)
 
 info:
@@ -150,7 +150,8 @@ usb: all
 	umount /dev/sdb1 || true
 	sudo mount $(USB) /mnt
 	sudo cp -r binary/* /mnt/EFI
-	sudo cp sources/uefi_shell_scripts/*.nsh /mnt
+	sudo cp psources/shell_scripts/*.nsh /mnt
+
 	sudo umount /mnt
 
 qemu: launch

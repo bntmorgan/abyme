@@ -4,14 +4,14 @@ d		:= $(dir)
 
 SOURCES_$(d)		:= $(call FIND, $(d)/common)
 SOURCES					+= $(SOURCES_$(d))
-SOURCES_$(d)		:= $(call FIND, $(d)/uefi_shell_scripts)
+SOURCES_$(d)		:= $(call FIND, $(d)/shell_scripts)
 SOURCES					+= $(SOURCES_$(d))
 SOURCES_$(d)		:= $(call FIND, $(d)/include)
 SOURCES					+= $(SOURCES_$(d))
 
-dir	:= $(d)/uefi_drivers
+dir	:= $(d)/drivers
 include	$(dir)/rules.mk
-dir	:= $(d)/uefi_applications
+dir	:= $(d)/applications
 include	$(dir)/rules.mk
 
 d		:= $(dirstack_$(sp))
