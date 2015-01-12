@@ -208,7 +208,12 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_CPUID: {
-      if (guest_regs.rax == 0x88888888) {
+      if (guest_regs.rax == 0x77777777) {
+        guest_regs.rbx =
+          (uint64_t)'l' << 0 | (uint64_t)'1' << 8 | (uint64_t)'i' << 16 |
+          (uint64_t)'s' << 24 | (uint64_t)'h' << 32 | (uint64_t)'e' << 40 |
+          (uint64_t)'r' << 48 | (uint64_t)'e' << 56;
+      } else if (guest_regs.rax == 0x88888888) {
         guest_regs.rax = 0xC001C001C001C001;
         guest_regs.rbx = io_count;
         guest_regs.rcx = cr3_count;
@@ -309,8 +314,10 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       } else if (cr_num == 3) {
         cr3_count++;
 #ifdef _DEBUG_SERVER
+#ifdef _LOG_CR3
         // désactivation de l'expérience
         debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
+#endif
 #endif
         cpu_vmwrite(GUEST_CR3, value);
         // We need to invalidate TLBs, see doc INTEL vol 3C chap 28.3.3.3
@@ -326,7 +333,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     //
     case EXIT_REASON_EPT_VIOLATION: {
       uint64_t guest_linear_addr = cpu_vmread(GUEST_LINEAR_ADDRESS);
-      INFO("EPT violation, Qualification : %X, addr : %X\n", exit_qualification, guest_linear_addr);
+      INFO("EPT violation, Qualification : 0x%X, addr : 0x%X\n", exit_qualification, guest_linear_addr);
       break;
     }
     default: {

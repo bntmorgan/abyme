@@ -20,7 +20,7 @@ dir	:= $(d)/debug_server
 include	$(dir)/rules.mk
 
 $(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d)/include_challenge -I$(d) \
-	-D_DEBUG_SERVER -U_NO_PRINTK -D_LOG_CR3 -D_ENV -DARCH_IS_BIG_ENDIAN=0 -U_DEBUG
+	-U_DEBUG_SERVER -D_NO_PRINTK -U_LOG_CR3 -U_ENV -DARCH_IS_BIG_ENDIAN=0 -U_DEBUG
 
 # Old Style C files
 SOURCES_$(d)		:= $(call FIND, $(d))
