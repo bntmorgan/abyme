@@ -108,8 +108,6 @@ binary/%.efi: binary/%.elf
 		-j .rela -j .reloc -j .padding_end \
 		$(OBJCPY_FLAGS_TARGET) \
 	  $< $@
-		@cp $< $<.toto
-
 	@strip $@
 
 binary/%.elf:
@@ -145,7 +143,7 @@ info:
 	@echo Sources [$(SOURCES)]
 	@echo Figures [$(FIGS)]
 
-usb: mount $(patsubst binary/%, /mnt/EFI/%, $(TARGETS)) shell umount
+usb: all mount $(patsubst binary/%, /mnt/EFI/%, $(TARGETS)) shell umount
 
 shell:
 	sudo cp psources/shell_scripts/*.nsh /mnt
