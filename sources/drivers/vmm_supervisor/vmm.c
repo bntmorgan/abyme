@@ -238,7 +238,16 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_CPUID: {
-      if (guest_regs.rax == 0x88888888) {
+      if (guest_regs.rax == 0x77777777) {
+        guest_regs.rbx =
+          (uint64_t)'l' << 0 | (uint64_t)'1' << 8 | (uint64_t)'i' << 16 |
+          (uint64_t)'s' << 24 | (uint64_t)'h' << 32 | (uint64_t)'e' << 40 |
+          (uint64_t)'r' << 48 | (uint64_t)'e' << 56;
+        guest_regs.rcx =
+          (uint64_t)'l' << 0 | (uint64_t)'0' << 8 | (uint64_t)'i' << 16 |
+          (uint64_t)'s' << 24 | (uint64_t)'h' << 32 | (uint64_t)'e' << 40 |
+          (uint64_t)'r' << 48 | (uint64_t)'e' << 56;
+      } else if (guest_regs.rax == 0x88888888) {
         guest_regs.rax = 0xC001C001C001C001;
         guest_regs.rbx = io_count;
         guest_regs.rcx = cr3_count;
