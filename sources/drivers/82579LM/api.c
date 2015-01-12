@@ -8,6 +8,25 @@
 #include "debug.h"
 #include "stdio.h"
 
+EFI_HANDLE ih;
+EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID;
+
+//
+// Protocol structure definition
+//
+protocol_82579LM proto = {
+  send,
+  recv,
+  uninstall,
+  .pci_addr = {
+    0,
+    0,
+    0
+  },
+  0,
+  ETH_MTU
+};
+
 static inline uint16_t htons(uint16_t data) {
   return ((data >> 8) & 0xff) | ((data << 8) & 0xff00);
 }
@@ -80,4 +99,10 @@ uint32_t recv(void *buf, uint32_t len, uint8_t flags) {
   }
   memcpy(buf, frame + sizeof(eth_header), l);
   return l;
+}
+
+// Used by the first hypervisor owning the network card
+int uninstall(void) {
+  return uefi_call_wrapper(BS->UninstallProtocolInterface, 3, ih,
+      &guid_82579LM, &proto);
 }

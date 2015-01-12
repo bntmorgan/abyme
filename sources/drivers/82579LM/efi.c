@@ -8,23 +8,7 @@
 #include "efi/efi_82579LM.h"
 #include "stdio.h"
 
-//
-// Protocol structure definition
-//
-protocol_82579LM proto = {
-  send,
-  recv,
-  .pci_addr = {
-    0,
-    0,
-    0
-  },
-  0,
-  ETH_MTU
-};
-
 EFI_STATUS vmm_rt_unload (IN EFI_HANDLE image);
-EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID;
 
 EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image_handle, systab);
@@ -36,7 +20,6 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
     INFO("Error while initializing\n");
     return EFI_NOT_FOUND;
   }
-  // test_send();
 
   // Add an unload handler
   EFI_STATUS status;
@@ -59,6 +42,9 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   status = uefi_call_wrapper(BS->InstallProtocolInterface, 4, &image_handle,
       &guid_82579LM, (EFI_INTERFACE_TYPE)NULL, &proto);
   ASSERT (!EFI_ERROR(status));
+
+  // Copy the image handle for protocol uninstallation
+  ih = image_handle;
 
   eth_disable_debug();
 
