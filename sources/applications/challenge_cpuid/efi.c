@@ -8,7 +8,7 @@ static uint16_t tsc_freq_MHz;
 static uint8_t tsc_divider;
 
 uint64_t env_tsc_to_micro(uint64_t t) {
-  return (t << tsc_divider) / tsc_freq_MHz;
+  return t / tsc_freq_MHz;
 }
 
 // CPUID  O - f
@@ -17,7 +17,7 @@ void challenge_start(void) {
   uint64_t rax, rbx, rcx, rdx;
   uint32_t i, j;
   uint64_t xor[4];
-  for (j = 0; j < 100; j++) {
+  for (j = 0; j < 0x100; j++) {
     // init
     xor[0] = 0, xor[1] = 0, xor[2] = 0, xor[3] = 0;
     // 0 to f
