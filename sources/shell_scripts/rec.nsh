@@ -16,6 +16,12 @@ echo press any key
 pause
 load efi.efi
 echo Recursive vmm runtime driver again loaded !
+cd \EFI\drivers\vmm_rec
+echo Loading recursive vmm
+echo press any key
+pause
+load efi.efi
+echo Recursive vmm runtime driver again again loaded !
 # cd \
 # echo Loading recursive vmm
 # echo press any key

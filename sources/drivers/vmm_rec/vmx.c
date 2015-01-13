@@ -35,13 +35,16 @@ void cpu_vmclear(uint8_t *region) {
 }
 
 void cpu_vmptrld(uint8_t *region) {
-  uint8_t ok = 0;
+  uint16_t ok = 0;
   __asm__ __volatile__(
       "vmptrld (%1) ;"
-      "seta %%cl    ;"
+      "setc %%cl    ;"
+      "setz %%ch    ;"
     : "=c" (ok) : "D" (&region));
-  if (ok == 0x0) {
-    panic("!#CPU VMPTRLD\n");
+  if (ok != 0x0) {
+    // panic("!#CPU VMPTRLD\n");
+    INFO("REGION 0x%016X\n", region);
+    vmx_transition_display_error((ok >> 8) & 0xff, (ok >> 0) & 0xff);
   }
 }
 

@@ -1,6 +1,16 @@
 #ifndef __NESTED_VMX_H__
 #define __NESTED_VMX_H__
 
+#include "vmm.h"
+
+#define NESTED_COPY_FROM_SHADOW \
+          NESTED_GUEST_FIELDS, \
+          VM_ENTRY_CONTROLS, \
+          VM_ENTRY_INTR_INFO_FIELD, \
+          CR0_READ_SHADOW, \
+          CR4_READ_SHADOW, \
+          VIRTUAL_PROCESSOR_ID
+
 #define NESTED_GUEST_FIELDS \
           GUEST_ES_SELECTOR, \
           GUEST_CS_SELECTOR, \
@@ -239,7 +249,7 @@ void nested_vmclear(uint8_t *shadow_vmcs);
 
 void nested_vmptrld(uint8_t *shadow_vmcs);
 
-void nested_vmlaunch(void);
+void nested_vmlaunch(struct registers *guest_regs);
 
 uint64_t nested_vmread(uint64_t field);
 

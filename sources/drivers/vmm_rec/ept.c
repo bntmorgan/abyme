@@ -245,7 +245,9 @@ void ept_create_tables(void) {
     // ept_perm(base_addr, 1, 0x7);
     INFO("MMIO NIC config space(@0x%016X)\n", base_addr);
 
-    ept_remap(base_addr, (uint64_t)&trap_pci[0], 0x7);
+    // XXX For the moment the VMs can use the network card with the UEFI driver
+    // for debug purpose
+    // ept_remap(base_addr, (uint64_t)&trap_pci[0], 0x7);
     ept_remap(eth->bar0, (uint64_t)&trap_bar[0], 0x7);
   }
 #endif

@@ -39,6 +39,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
   // do not write anything after this line,
   // this is where the vm begin his exectution
 vm_entrypoint:
+  __asm__ __volatile__("vmcall");
 
   return EFI_SUCCESS;
 }

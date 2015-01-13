@@ -48,6 +48,15 @@ static inline uint8_t is_MTRR(uint64_t msr_addr);
 void vmm_init(void) { }
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
+
+//   if (nested_state == NESTED_GUEST_RUNNING) {
+//     INFO("Guest running\n");
+//   } else if (nested_state == NESTED_HOST_RUNNING) {
+//     INFO("Host running\n");
+//   } else {
+//     INFO("Not nested\n");
+//   }
+
   guest_regs.rsp = cpu_vmread(GUEST_RSP);
   guest_regs.rip = cpu_vmread(GUEST_RIP);
 
@@ -104,7 +113,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       nested_vmptrld(*instr_param_ptr);
       break;
     case EXIT_REASON_VMLAUNCH:
-      nested_vmlaunch();
+      nested_vmlaunch(&guest_regs);
       break;
     case EXIT_REASON_VMRESUME:
       // return to L2 guest
@@ -351,6 +360,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     }
     case EXIT_REASON_VMCALL:
       printk("rax = %016X\n",guest_regs.rax);
+      break;
     case EXIT_REASON_TRIPLE_FAULT:
       vmm_panic(nested_state, 0,0,&guest_regs);
       break;
@@ -363,7 +373,10 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     }
   }
 
-  increment_rip(cpu_mode, &guest_regs);
+  // A nested launch can be a vm resume...
+  // if (exit_reason != EXIT_REASON_VMLAUNCH) {
+    increment_rip(cpu_mode, &guest_regs);
+  // }
 }
 
 static inline int get_cpu_mode(void) {

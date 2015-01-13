@@ -1,5 +1,6 @@
 #include <efi.h>
 #include <efilib.h>
+#include "vmm.h"
 #include "nested_vmx.h"
 #include "vmcs.h"
 #include "vmx.h"
@@ -54,11 +55,50 @@ void nested_vmclear(uint8_t *shadow_vmcs) {
 
 void nested_vmptrld(uint8_t *shadow_vmcs) {
   shadow_vmcs_ptr = shadow_vmcs;
+  if (shadow_vmcs == 0x0) {
+    ERROR("Shadow VMCS pointer is null\n");
+  }
   // set guest carry and zero flag to 0
   cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
 }
 
-void nested_vmlaunch(void) {
+void nested_shadow_to_guest(void) {
+  static uint64_t guest_fields[] = { NESTED_COPY_FROM_SHADOW };
+  cpu_vmptrld(shadow_vmcs_ptr);
+  READ_VMCS_FIELDS(guest_fields);
+  cpu_vmptrld(guest_vmcs);
+  WRITE_VMCS_FIELDS(guest_fields);
+}
+
+void nested_cpu_vmresume(struct registers *guest_regs) {
+  /* Correct rbp */
+  __asm__ __volatile__("mov %0, %%rbp" : : "m" (guest_regs->rbp));
+  /* Launch the vm */
+  __asm__ __volatile__("vmresume;"
+                       /* everything after should not be executed */
+                       "setc %al;"
+                       "setz %dl;"
+                       "mov %eax, %edi;"
+                       "mov %edx, %esi;"
+                       "call vmx_transition_display_error");
+}
+
+void nested_cpu_vmlaunch(struct registers *guest_regs) {
+  /* Correct rbp */
+  __asm__ __volatile__("mov %0, %%rbp" : : "m" (guest_regs->rbp));
+  /* Launch the vm */
+  __asm__ __volatile__("vmlaunch;"
+                       /* everything after should not be executed */
+                       "setc %al;"
+                       "setz %dl;"
+                       "mov %eax, %edi;"
+                       "mov %edx, %esi;"
+                       "call vmx_transition_display_error");
+}
+
+void nested_vmlaunch(struct registers *guest_regs) {
+  static uint8_t guest_launched = 0;
+
   static uint64_t ctrl_host_fields[] = { NESTED_CTRL_FIELDS, NESTED_HOST_FIELDS };
   uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
 
@@ -67,11 +107,19 @@ void nested_vmlaunch(void) {
   cpu_vmptrld(guest_vmcs);
   WRITE_VMCS_FIELDS(ctrl_host_fields);
 
+  nested_shadow_to_guest();
+
   // update vmx preemption timer
   cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, preempt_timer_value);
 
   nested_state = NESTED_GUEST_RUNNING;
-  cpu_vmlaunch();
+
+  if (!guest_launched) {
+    guest_launched = 1;
+    nested_cpu_vmlaunch(guest_regs);
+  } else {
+    nested_cpu_vmresume(guest_regs);
+  }
 }
 
 uint64_t nested_vmread(uint64_t field) {
@@ -98,17 +146,17 @@ void nested_vmwrite(uint64_t field, uint64_t value) {
   cpu_vmptrld(shadow_vmcs_ptr);
   cpu_vmwrite(field, value);
 
-  // We forward the modification in guest_vmcs if needed
-  if ( (((field >> 10) & 0x3) == 0x2)     // all guest fields
-    || ( (((field >> 10) & 0x3) == 0x0)   // several ctrl fields
-      && ( (field == VM_ENTRY_CONTROLS)
-        || (field == VM_ENTRY_INTR_INFO_FIELD)
-        || (field == CR0_READ_SHADOW)
-        || (field == CR4_READ_SHADOW)
-        || (field == VIRTUAL_PROCESSOR_ID)))) {
-    cpu_vmptrld(guest_vmcs);
-    cpu_vmwrite(field, value);
-  }
+//   // We forward the modification in guest_vmcs if needed
+//   if ( (((field >> 10) & 0x3) == 0x2)     // all guest fields
+//     || ( (((field >> 10) & 0x3) == 0x0)   // several ctrl fields
+//       && ( (field == VM_ENTRY_CONTROLS)
+//         || (field == VM_ENTRY_INTR_INFO_FIELD)
+//         || (field == CR0_READ_SHADOW)
+//         || (field == CR4_READ_SHADOW)
+//         || (field == VIRTUAL_PROCESSOR_ID)))) {
+//     cpu_vmptrld(guest_vmcs);
+//     cpu_vmwrite(field, value);
+//   }
 
   cpu_vmptrld(vmcs0);
 
@@ -141,7 +189,7 @@ void nested_load_host(void) {
 void nested_load_guest(void) {
   uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
 
-  cpu_vmptrld(guest_vmcs);
+  nested_shadow_to_guest();
 
   // update vmx preemption timer
   cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, preempt_timer_value);
