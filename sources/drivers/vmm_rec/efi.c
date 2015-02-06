@@ -23,7 +23,8 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
   INFO("Pointer allocated 0x%016X\n", (uintptr_t)&paging_ia32e);
 
   // desactivate interruptions
-  __asm__ __volatile__("cli");
+  // XXX why ?
+  // __asm__ __volatile__("cli");
 
   INFO("VMM driver startup\n");
   INFO("main at %X\n", efi_main);
@@ -39,7 +40,6 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
   // do not write anything after this line,
   // this is where the vm begin his exectution
 vm_entrypoint:
-  __asm__ __volatile__("vmcall");
 
   return EFI_SUCCESS;
 }
