@@ -16,6 +16,7 @@
 #include "string.h"
 #include "msr_bitmap.h"
 #include "io_bitmap.h"
+#include "idt.h"
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
@@ -36,6 +37,11 @@ void bsp_main() {
   cpuid_setup();
   INFO("PAT SETUP\n");
   pat_setup();
+
+  INFO("IDT SETUP\n");
+  idt_create();
+  idt_debug_host();
+  idt_debug_bios();
 
   INFO("VMCS addresses %X %X\n", vmxon, vmcs0);
   INFO("_protected_begin %X\n", &_protected_begin);
@@ -107,7 +113,9 @@ void vmm_create_vmxon_and_vmcs_regions(void) {
 }
 
 void vmm_vm_setup_and_launch() {
+  INFO("vmclear\n");
   cpu_vmclear((uint8_t *) vmcs0);
+  INFO("vmptrld\n");
   cpu_vmptrld((uint8_t *) vmcs0);
   vmcs_fill_host_state_fields();
   vmcs_fill_vm_exit_control_fields();
@@ -126,5 +134,6 @@ void vmm_vm_setup_and_launch() {
   }
 #endif
 
+  INFO("vmlaunch\n");
   cpu_vmlaunch();
 }

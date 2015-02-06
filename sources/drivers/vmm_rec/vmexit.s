@@ -2,13 +2,11 @@
 .global vmm_vm_exit_handler
 
 vmm_vm_exit_handler:
-  // XXX We have now an invalid IDT !!!
-  // Very important, if not, BSP core will be stalled in VM with a l0, l1
-  // configuration
-  cli
   /*
    * Save guest general purpose registers.
    */
+  // XXX
+  cli
   sub $8, %rsp /* placeholder, will be replaced by rip */
   push %r15
   push %r14
@@ -57,7 +55,6 @@ vmm_vm_exit_handler:
   /*
    * Resume guest execution.
    */
-  // XXX
   sti
   vmresume
 
