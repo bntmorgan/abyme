@@ -117,7 +117,7 @@ void vmm_vm_setup_and_launch() {
   INFO("READY TO GO!\n");
 
 #ifdef _DEBUG_SERVER
-  if (debug_server) {
+  if (debug_printk) {
     INFO("Debug infos by ethernet enabled\n");
     debug_server_enable_putc();
   } else {
