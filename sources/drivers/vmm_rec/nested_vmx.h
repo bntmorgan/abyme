@@ -8,8 +8,8 @@
           VM_ENTRY_CONTROLS, \
           VM_ENTRY_INTR_INFO_FIELD, \
           CR0_READ_SHADOW, \
-          CR4_READ_SHADOW, \
-          VIRTUAL_PROCESSOR_ID
+          CR4_READ_SHADOW/*, \
+          VIRTUAL_PROCESSOR_ID*/
 
 #define NESTED_GUEST_FIELDS \
           GUEST_ES_SELECTOR, \
@@ -158,7 +158,7 @@
           GUEST_LINEAR_ADDRESS
 
 #define NESTED_CTRL_FIELDS \
-          VIRTUAL_PROCESSOR_ID, \
+          /*VIRTUAL_PROCESSOR_ID, \*/
           POSTED_INT_NOTIF_VECTOR, \
           EPTP_INDEX, \
           IO_BITMAP_A, \
@@ -233,7 +233,9 @@
           CR3_TARGET_VALUE3
 
 
-extern uint8_t guest_vmcs[4096];
+#define GVMCS_NB 8
+
+extern uint8_t guest_vmcs[GVMCS_NB][4096];
 
 enum NESTED_STATE {
   NESTED_DISABLED,
@@ -247,7 +249,7 @@ void nested_vmxon(uint8_t *vmxon_guest);
 
 void nested_vmclear(uint8_t *shadow_vmcs);
 
-void nested_vmptrld(uint8_t *shadow_vmcs);
+void nested_vmptrld(uint8_t *shadow_vmcs, struct registers *gr);
 
 void nested_vmlaunch(struct registers *guest_regs);
 
