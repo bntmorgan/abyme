@@ -158,7 +158,7 @@
           GUEST_LINEAR_ADDRESS
 
 #define NESTED_CTRL_FIELDS \
-          /*VIRTUAL_PROCESSOR_ID, \*/
+          /*VIRTUAL_PROCESSOR_ID,*/ \
           POSTED_INT_NOTIF_VECTOR, \
           EPTP_INDEX, \
           IO_BITMAP_A, \
