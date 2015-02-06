@@ -17,6 +17,7 @@ EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID;
 protocol_82579LM proto = {
   send,
   recv,
+  get_level,
   uninstall,
   .pci_addr = {
     0,
@@ -26,6 +27,8 @@ protocol_82579LM proto = {
   0,
   ETH_MTU
 };
+  
+static uint32_t level = 0;
 
 static inline uint16_t htons(uint16_t data) {
   return ((data >> 8) & 0xff) | ((data << 8) & 0xff00);
@@ -98,6 +101,12 @@ uint32_t recv(void *buf, uint32_t len, uint8_t flags) {
     return -1;
   }
   memcpy(buf, frame + sizeof(eth_header), l);
+  return l;
+}
+
+int get_level(void) {
+  uint32_t l = level;
+  level++;;
   return l;
 }
 

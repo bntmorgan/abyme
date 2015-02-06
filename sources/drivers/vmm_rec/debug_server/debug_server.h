@@ -15,6 +15,7 @@ void debug_server_panic(uint8_t core, uint64_t code, uint64_t extra,
     struct registers *guest_regs);
 
 extern uint8_t debug_server;
+extern uint8_t debug_printk;
 
 enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_MESSAGE,
@@ -175,6 +176,7 @@ typedef struct _message_info {
   uint8_t type;
   uint8_t core;
   uint64_t length;
+  uint32_t level; // for recursive debug purpose, we put the level of VMM
 } __attribute__((packed)) message_info;
 
 static inline void *message_check_type(message *m, uint8_t type) {

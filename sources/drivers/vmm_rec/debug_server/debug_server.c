@@ -16,6 +16,9 @@ extern void (*putc)(uint8_t);
 protocol_82579LM *eth;
 
 uint8_t debug_server = 0;
+uint8_t debug_printk = 0;
+
+static uint32_t level = 0;
 
 static uint8_t send_debug[NB_EXIT_REASONS];
 
@@ -116,10 +119,15 @@ void debug_server_init() {
   if (EFI_ERROR(status)) {
     INFO("FAILED LOL LocateProtocol\n");
   } else {
-    INFO("Debug server enabled\n");
-    debug_server = 1;
-    INFO("Uninstalling efi interface\n");
-    eth->uninstall();
+    debug_printk = 1;
+    level = eth->get_level();
+    INFO("VMM level %d\n", level);
+    if (level == 0) {
+      INFO("Debug server enabled\n");
+      debug_server = 1;
+    }
+//     INFO("Uninstalling efi interface\n");
+//     eth->uninstall();
     printk("DEBUG SERVER INIT : ETH BAR0 %X\n", eth->bar0);
   }
 }
@@ -358,6 +366,7 @@ void debug_server_putc(uint8_t value) {
     m->type = MESSAGE_INFO;
     m->core = debug_server_get_core();
     m->length = current_size;
+    m->level = level;
     eth->send(b, current_size + sizeof(message_info), EFI_82579LM_API_BLOCK);
     current_size = 0;
   }
