@@ -13,7 +13,8 @@ OBJECTS 				+= $(OBJS_$(d))
 dir	:= $(d)/debug_server
 include	$(dir)/rules.mk
 
-$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -D_DEBUG_SERVER -U_NO_PRINTK
+$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -D_DEBUG_SERVER -U_NO_PRINTK \
+	-D_VMCS_SHADOWING
 
 # Old Style C files
 SOURCES_$(d)		:= $(call FIND, $(d))

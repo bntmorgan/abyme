@@ -23,6 +23,10 @@ static uint64_t fields_values[NB_VMCS_FIELDS];
 static inline void read_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields);
 static inline void write_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields);
 
+#ifdef _VMCS_SHADOWING
+uint8_t vmread_bitmap [4096] __attribute__((aligned(0x1000))) = {0};
+uint8_t vmwrite_bitmap[4096] __attribute__((aligned(0x1000))) = {0};
+#endif
 
 enum shadow_err_code {
   SHADOW_OK,
@@ -36,8 +40,9 @@ enum shadow_err_code {
 uint8_t guest_vmcs[GVMCS_NB][4096] __attribute((aligned(0x1000)));
 uint8_t *shadow_vmcs_ptr[GVMCS_NB];
 static uint8_t guest_vmcs_idx = 0;
-static uint8_t* shadow_ptr = NULL;
 static uint32_t shadow_idx = 0;
+// Current shadow VMCS pointer
+static uint8_t* shadow_ptr = (uint8_t*)(uint64_t)-1;;
 
 static int shadow_add(uint8_t *ptr, uint32_t *idx) {
   if (guest_vmcs_idx >= GVMCS_NB) {
@@ -90,6 +95,19 @@ static int shadow_set(uint8_t *ptr) {
  * VMX Emulation
  */
 
+static void set_vmcs_link_pointer(uint64_t shadow_vmcs) {
+  // Set the VMCS link pointer for vmcs0
+  cpu_vmwrite(VMCS_LINK_POINTER, shadow_vmcs & 0xffffffff);
+  cpu_vmwrite(VMCS_LINK_POINTER_HIGH, (shadow_vmcs >> 32) & 0xffffffff);
+  cpu_vmwrite(SECONDARY_VM_EXEC_CONTROL, cpu_vmread(SECONDARY_VM_EXEC_CONTROL) &
+      ~(uint64_t)VMCS_SHADOWING);
+  // Exit bitmap
+  cpu_vmwrite(VMREAD_BITMAP_ADDR, (uint64_t)&vmread_bitmap & 0xffffffff);
+  cpu_vmwrite(VMREAD_BITMAP_ADDR_HIGH, ((uint64_t)&vmread_bitmap >> 32) & 0xffffffff);
+  cpu_vmwrite(VMWRITE_BITMAP_ADDR, (uint64_t)&vmwrite_bitmap & 0xffffffff);
+  cpu_vmwrite(VMWRITE_BITMAP_ADDR_HIGH, ((uint64_t)&vmwrite_bitmap >> 32) & 0xffffffff);
+}
+
 void nested_vmxon(uint8_t *vmxon_guest) {
   if (nested_state != NESTED_DISABLED) {
     panic("#!NESTED_VMXON not disabled\n");
@@ -122,6 +140,10 @@ void nested_vmptrld(uint8_t *shadow_vmcs, struct registers *gr) {
   }
   // set guest carry and zero flag to 0
   cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
+
+#ifdef _VMCS_SHADOWING
+  set_vmcs_link_pointer((uint64_t)shadow_vmcs);
+#endif
 }
 
 void nested_shadow_to_guest(void) {
