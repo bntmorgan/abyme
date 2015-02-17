@@ -118,7 +118,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     case EXIT_REASON_VMRESUME:
       // return to L2 guest
-      nested_load_guest();
+      nested_vmresume(&guest_regs);
       return;
       break;
     case EXIT_REASON_INVVPID: {

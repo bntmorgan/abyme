@@ -95,6 +95,7 @@ static int shadow_set(uint8_t *ptr) {
  * VMX Emulation
  */
 
+#ifdef _VMCS_SHADOWING
 static void set_vmcs_link_pointer(uint64_t shadow_vmcs) {
   // Set the VMCS link pointer for vmcs0
   cpu_vmwrite(VMCS_LINK_POINTER, shadow_vmcs & 0xffffffff);
@@ -107,6 +108,7 @@ static void set_vmcs_link_pointer(uint64_t shadow_vmcs) {
   cpu_vmwrite(VMWRITE_BITMAP_ADDR, (uint64_t)&vmwrite_bitmap & 0xffffffff);
   cpu_vmwrite(VMWRITE_BITMAP_ADDR_HIGH, ((uint64_t)&vmwrite_bitmap >> 32) & 0xffffffff);
 }
+#endif
 
 void nested_vmxon(uint8_t *vmxon_guest) {
   if (nested_state != NESTED_DISABLED) {
@@ -133,7 +135,9 @@ void nested_vmclear(uint8_t *shadow_vmcs) {
 
 void nested_vmptrld(uint8_t *shadow_vmcs, struct registers *gr) {
 
-  shadow_set(shadow_vmcs);
+  // Remember the current shadow VMCS
+  shadow_ptr = shadow_vmcs;
+  // shadow_set(shadow_ptr);
 
   if (shadow_vmcs == 0x0) {
     ERROR("Shadow VMCS pointer is null\n");
@@ -180,11 +184,18 @@ void nested_cpu_vmlaunch(struct registers *guest_regs) {
                        "call vmx_transition_display_error");
 }
 
-void nested_vmlaunch(struct registers *guest_regs) {
-//   static uint8_t guest_launched = 0;
+void nested_vmresume(struct registers *guest_regs) {
+  // Current shadow VMCS will be executed !
+  shadow_set(shadow_ptr);
+  nested_load_guest();
+}
 
+void nested_vmlaunch(struct registers *guest_regs) {
   static uint64_t ctrl_host_fields[] = { NESTED_CTRL_FIELDS, NESTED_HOST_FIELDS };
   uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
+
+  // Current shadow VMCS will be really executed, we allocate a VMCS for it
+  shadow_new(shadow_ptr);
 
   // copy ctrl fields + host fields from vmcs0 to guest_vmcs
   READ_VMCS_FIELDS(ctrl_host_fields);
@@ -201,12 +212,7 @@ void nested_vmlaunch(struct registers *guest_regs) {
 
   nested_state = NESTED_GUEST_RUNNING;
 
-//   if (!guest_launched) {
-//     guest_launched = 1;
-    nested_cpu_vmlaunch(guest_regs);
-//   } else {
-//     nested_cpu_vmresume(guest_regs);
-//   }
+  nested_cpu_vmlaunch(guest_regs);
 }
 
 uint64_t nested_vmread(uint64_t field) {
@@ -214,7 +220,11 @@ uint64_t nested_vmread(uint64_t field) {
 
   // Reading ro_data fields is done in guest_vmcs instead of shadow_vmcs
   if (((field >> 10) & 0x3) == 0x1) { // ro_data fields
-    cpu_vmptrld(guest_vmcs[shadow_idx]);
+    uint32_t idx;
+    if (shadow_get(shadow_ptr, &idx) == SHADOW_NOT_FOUND) {
+      ERROR("VMCSs not found...\n");
+    }
+    cpu_vmptrld(guest_vmcs[idx]);
   } else {
     cpu_vmptrld(shadow_ptr);
   }
@@ -232,18 +242,6 @@ uint64_t nested_vmread(uint64_t field) {
 void nested_vmwrite(uint64_t field, uint64_t value) {
   cpu_vmptrld(shadow_ptr);
   cpu_vmwrite(field, value);
-
-//   // We forward the modification in guest_vmcs if needed
-//   if ( (((field >> 10) & 0x3) == 0x2)     // all guest fields
-//     || ( (((field >> 10) & 0x3) == 0x0)   // several ctrl fields
-//       && ( (field == VM_ENTRY_CONTROLS)
-//         || (field == VM_ENTRY_INTR_INFO_FIELD)
-//         || (field == CR0_READ_SHADOW)
-//         || (field == CR4_READ_SHADOW)
-//         || (field == VIRTUAL_PROCESSOR_ID)))) {
-//     cpu_vmptrld(guest_vmcs);
-//     cpu_vmwrite(field, value);
-//   }
 
   cpu_vmptrld(vmcs0);
 
