@@ -113,9 +113,9 @@ void vmm_create_vmxon_and_vmcs_regions(void) {
 }
 
 void vmm_vm_setup_and_launch() {
-  INFO("vmclear\n");
+  INFO("vmclear(0x%016X)\n", (uint64_t)&vmcs0[0]);
   cpu_vmclear((uint8_t *) vmcs0);
-  INFO("vmptrld\n");
+  INFO("vmptrld(0x%016X)\n", (uint64_t)&vmcs0[0]);
   cpu_vmptrld((uint8_t *) vmcs0);
   vmcs_fill_host_state_fields();
   vmcs_fill_vm_exit_control_fields();
