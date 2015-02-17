@@ -4,17 +4,15 @@
 #include <efi.h>
 #include "types.h"
 
+#ifdef _DEBUG_SERVER
+#include "debug_server/debug_server.h"
+#endif
+
 static inline void _stdio_stop(void) {
   __asm__ __volatile__("cli");
   __asm__ __volatile__("hlt");
   while (1);
 }
-
-/* WHY IT DOESN'T WORK ?
- TODO
-      __asm__ __volatile__("cli");                                   
-      __asm__ __volatile__("hlt");                                   
-      while (1);                                                     */
 
 #define PRINTK(stop, msg, ...)                                       \
   do {                                                               \

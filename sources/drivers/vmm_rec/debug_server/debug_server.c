@@ -18,7 +18,7 @@ protocol_82579LM *eth;
 uint8_t debug_server = 0;
 uint8_t debug_printk = 0;
 
-static uint32_t level = 0;
+uint32_t debug_server_level = 0;
 
 static uint8_t send_debug[NB_EXIT_REASONS];
 
@@ -120,9 +120,9 @@ void debug_server_init() {
     INFO("FAILED LOL LocateProtocol\n");
   } else {
     debug_printk = 1;
-    level = eth->get_level();
-    INFO("VMM level %d\n", level);
-    if (level == 0) {
+    debug_server_level = eth->get_level();
+    INFO("VMM level %d\n", debug_server_level);
+    if (debug_server_level == 0) {
       INFO("Debug server enabled\n");
       debug_server = 1;
     }
@@ -366,7 +366,7 @@ void debug_server_putc(uint8_t value) {
     m->type = MESSAGE_INFO;
     m->core = debug_server_get_core();
     m->length = current_size;
-    m->level = level;
+    m->level = debug_server_level;
     eth->send(b, current_size + sizeof(message_info), EFI_82579LM_API_BLOCK);
     current_size = 0;
   }

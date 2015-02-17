@@ -17,6 +17,7 @@
 #endif
 #include "mtrr.h"
 #include "nested_vmx.h"
+#include "level.h"
 
 uint8_t vmm_stack[VMM_STACK_SIZE];
 

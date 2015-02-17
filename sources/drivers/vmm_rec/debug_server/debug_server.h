@@ -16,6 +16,7 @@ void debug_server_panic(uint8_t core, uint64_t code, uint64_t extra,
 
 extern uint8_t debug_server;
 extern uint8_t debug_printk;
+extern uint32_t debug_server_level;
 
 enum DEBUG_SERVER_MESSAGE_TYPES {
   MESSAGE_MESSAGE,

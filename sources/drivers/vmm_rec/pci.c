@@ -52,7 +52,7 @@ void pci_writed(uint32_t id, uint32_t reg, uint32_t data) {
 // XXX On considère value comme étant toujours sur 32 bits
 uint8_t pci_no_protect_out(uint16_t port, uint32_t value) {
 #ifdef _DEBUG_SERVER
-  if (debug_server) {
+  if (debug_printk) {
     uint32_t pci_addr = pci_make_addr(PCI_MAKE_ID(eth->pci_addr.bus, eth->pci_addr.device, eth->pci_addr.function));
     if (port == PCI_CONFIG_ADDR) {
       if ((value & ~(0xff)) == pci_addr) {
@@ -70,13 +70,15 @@ uint8_t pci_no_protect_out(uint16_t port, uint32_t value) {
 }
 
 uint8_t pci_no_protect_in(uint16_t port) {
-  if (debug_server) {
+#ifdef _DEBUG_SERVER
+  if (debug_printk) {
     if (port == PCI_CONFIG_ADDR) {
       return 1;
     } else if (port == PCI_CONFIG_DATA) {
       return 1 - protect;
     }
   }
+#endif
   return 1;
 }
 
