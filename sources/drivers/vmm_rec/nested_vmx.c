@@ -77,16 +77,22 @@ static int shadow_get(uint8_t *ptr, uint32_t *idx) {
   return SHADOW_NOT_FOUND;
 }
 
+static int shadow_new(uint8_t *ptr) {
+  uint32_t idx;
+  if (!shadow_add(ptr, &idx)) {
+    shadow_init(idx);
+  } else {
+    ERROR("No more space for VMCS\n");
+  }
+  shadow_idx = idx;
+  return SHADOW_OK;
+}
+
 static int shadow_set(uint8_t *ptr) {
   uint32_t idx;
   if (shadow_get(ptr, &idx) == SHADOW_NOT_FOUND) {
-    if (!shadow_add(ptr, &idx)) {
-      shadow_init(idx);
-    } else {
-      ERROR("No more space for VMCSs...\n");
-    }
+    ERROR("VMCSs not found...\n");
   }
-  shadow_ptr = ptr;
   shadow_idx = idx;
   return SHADOW_OK;
 }
