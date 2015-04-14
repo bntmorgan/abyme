@@ -21,6 +21,9 @@
 #include "debug_server/debug_server.h"
 #endif
 #include "smp.h"
+#ifdef _VMCS_SHADOWING
+#include "nested_vmx.h"
+#endif
 
 //extern char __text;
 extern uint8_t _protected_begin;
@@ -33,6 +36,7 @@ void bsp_main() {
 #ifdef _DEBUG_SERVER
   debug_server_init();
 #endif
+
   INFO("CPUID SETUP\n");
   cpuid_setup();
   INFO("PAT SETUP\n");
@@ -42,6 +46,10 @@ void bsp_main() {
   idt_create();
   idt_debug_host();
   idt_debug_bios();
+
+#ifdef _VMCS_SHADOWING
+  nested_vmx_shadow_bitmap_init();
+#endif
 
   INFO("VMCS addresses %X %X\n", vmxon, vmcs0);
   INFO("_protected_begin %X\n", &_protected_begin);

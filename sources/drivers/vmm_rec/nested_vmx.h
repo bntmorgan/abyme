@@ -3,13 +3,25 @@
 
 #include "vmm.h"
 
+#ifdef _VMCS_SHADOWING
+#define NESTED_COPY_FROM_SHADOW_VMCS_SHADOWING ,\
+          VMCS_LINK_POINTER, \
+          VMCS_LINK_POINTER_HIGH, \
+          VMREAD_BITMAP_ADDR, \
+          VMREAD_BITMAP_ADDR_HIGH, \
+          VMWRITE_BITMAP_ADDR, \
+          VMWRITE_BITMAP_ADDR_HIGH
+#else
+#define NESTED_COPY_FROM_SHADOW_VMCS_SHADOWING
+#endif
+
 #define NESTED_COPY_FROM_SHADOW \
           NESTED_GUEST_FIELDS, \
           VM_ENTRY_CONTROLS, \
           VM_ENTRY_INTR_INFO_FIELD, \
           CR0_READ_SHADOW, \
-          CR4_READ_SHADOW/*, \
-          VIRTUAL_PROCESSOR_ID*/
+          CR4_READ_SHADOW \
+          NESTED_COPY_FROM_SHADOW_VMCS_SHADOWING
 
 #define NESTED_GUEST_FIELDS \
           GUEST_ES_SELECTOR, \
@@ -243,7 +255,15 @@ enum NESTED_STATE {
   NESTED_GUEST_RUNNING
 };
 
-extern uint8_t nested_state;
+struct nested_state {
+  uint8_t state;
+  uint8_t *shadow_ptr;
+  uint32_t shadow_idx;
+  uint32_t nested_level;
+  uint8_t *shadow_vmcs_ptr[GVMCS_NB];
+};
+
+extern struct nested_state ns;
 
 void nested_vmxon(uint8_t *vmxon_guest);
 
@@ -262,5 +282,7 @@ void nested_vmwrite(uint64_t field, uint64_t value);
 void nested_load_guest(void);
 
 void nested_load_host(void);
+
+void nested_vmx_shadow_bitmap_init(void);
 
 #endif

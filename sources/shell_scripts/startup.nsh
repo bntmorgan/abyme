@@ -10,5 +10,5 @@ rec.nsh
 # flash_l2.nsh
 echo Launching grub
 echo press any key
-pause
+# pause
 fs0:\EFI\arch_grub\grubx64.efi

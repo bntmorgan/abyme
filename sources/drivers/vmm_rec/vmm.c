@@ -50,9 +50,9 @@ void vmm_init(void) { }
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
 
-//   if (nested_state == NESTED_GUEST_RUNNING) {
+//   if (ns.state == NESTED_GUEST_RUNNING) {
 //     INFO("Guest running\n");
-//   } else if (nested_state == NESTED_HOST_RUNNING) {
+//   } else if (ns.state == NESTED_HOST_RUNNING) {
 //     INFO("Host running\n");
 //   } else {
 //     INFO("Not nested\n");
@@ -67,17 +67,18 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint8_t** instr_param_ptr;
 
   // check VMX abort
-  uint32_t vmx_abort = (nested_state != NESTED_GUEST_RUNNING)
+  uint32_t vmx_abort = (ns.state != NESTED_GUEST_RUNNING)
                         ? ((uint32_t*)vmcs0)[1]
                         : ((uint32_t*)guest_vmcs[0])[1];
   if (vmx_abort) {
     printk("VMX abort detected : %d\n", vmx_abort);
-    vmm_panic(nested_state, 0, 0, &guest_regs);
+    vmm_panic(ns.state, 0, 0, &guest_regs);
   }
 
 #ifdef _DEBUG_SERVER
-  if (debug_server) {
-    debug_server_vmexit(nested_state, exit_reason, &guest_regs);
+  // if (debug_server) {
+  if (debug_server/* && ns.nested_level == 3*/) {
+    debug_server_vmexit(ns.nested_level, exit_reason, &guest_regs);
   }
 #endif
 
@@ -91,7 +92,18 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     return;
   }
 
-  if (nested_state == NESTED_GUEST_RUNNING) {
+
+  if (ns.state == NESTED_GUEST_RUNNING) {
+    //if (debug_server_level == 1) {
+      // static uint32_t lol = 0;
+      // if (lol < 2) {
+      //  LEVEL(1, "state %d, shadow_idx %d, nested_level %d, grip 0x%016X\n", ns.state,
+      //      ns.shadow_idx, ns.nested_level, guest_regs.rip);
+      //  lol++;
+      // } else {
+      // ERROR("Here we are\n");
+      // }
+    //}
     // Forward to L2 host
     nested_load_host();
     return;
@@ -154,7 +166,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       if (cpu_mode == MODE_LONG) {
         __asm__ __volatile__("xsetbv" : : "a"(guest_regs.rax), "c"(guest_regs.rcx), "d"(guest_regs.rdx));
       } else {
-        vmm_panic(nested_state, VMM_PANIC_XSETBV, 0, &guest_regs);
+        vmm_panic(ns.state, VMM_PANIC_XSETBV, 0, &guest_regs);
       }
       break;
     }
@@ -166,7 +178,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       if (cpu_mode == MODE_REAL || cpl <= iopl) {
         // REP prefixed || String I/O
         if ((exit_qualification & 0x20) || (exit_qualification & 0x10)) {
-          vmm_panic(nested_state, VMM_PANIC_IO, 0, &guest_regs);
+          vmm_panic(ns.state, VMM_PANIC_IO, 0, &guest_regs);
         }
         uint8_t direction = exit_qualification & 8;
         uint8_t size = exit_qualification & 7;
@@ -176,7 +188,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 
         // Unsupported
         if (rep || string) {
-          vmm_panic(nested_state, VMM_PANIC_IO, 4, &guest_regs);
+          vmm_panic(ns.state, VMM_PANIC_IO, 4, &guest_regs);
         }
 
         // out
@@ -190,7 +202,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
             } else if (size == 3) {
               __asm__ __volatile__("out %%eax, %%dx" : : "a"(v), "d"(port));
             } else {
-              vmm_panic(nested_state, VMM_PANIC_IO, 1, &guest_regs);
+              vmm_panic(ns.state, VMM_PANIC_IO, 1, &guest_regs);
             }
           }
         // in
@@ -206,7 +218,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
               __asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port));
               guest_regs.rax = (guest_regs.rax & 0xffffffff00000000) | (v & 0xffffffff);
             } else {
-              vmm_panic(nested_state, VMM_PANIC_IO, port, &guest_regs);
+              vmm_panic(ns.state, VMM_PANIC_IO, port, &guest_regs);
             }
           } else {
             if (size == 0) {
@@ -216,13 +228,13 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
             } else if (size == 3) {
               guest_regs.rax = guest_regs.rax | 0xffffffff;
             } else {
-              vmm_panic(nested_state, VMM_PANIC_IO, 2, &guest_regs);
+              vmm_panic(ns.state, VMM_PANIC_IO, 2, &guest_regs);
             }
           }
         }
       // Unsufficient privileges
       } else {
-        vmm_panic(nested_state, VMM_PANIC_IO, 3, &guest_regs);
+        vmm_panic(ns.state, VMM_PANIC_IO, 3, &guest_regs);
       }
       break;
     }
@@ -241,7 +253,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         guest_regs.rbx = io_count;
         guest_regs.rcx = cr3_count;
       } else if (guest_regs.rax == 0x99999999) {
-        vmm_panic(nested_state, VMM_PANIC_RDMSR, 1234, &guest_regs);
+        vmm_panic(ns.state, VMM_PANIC_RDMSR, 1234, &guest_regs);
       /*} else if (guest_regs.rax == 0x0) {
         __asm__ __volatile__("cpuid"
             : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
@@ -309,10 +321,10 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
           uint8_t need_recompute_ept = mtrr_update_ranges();
           // Recompute ept tables
           if (need_recompute_ept) {
-            ept_create_tables();
+            ept_cache();
           }
       } else {
-        vmm_panic(nested_state, VMM_PANIC_WRMSR, 0, &guest_regs);
+        vmm_panic(ns.state, VMM_PANIC_WRMSR, 0, &guest_regs);
       }
       break;
     }
@@ -323,7 +335,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 
       if (access_type != 0) {
         INFO("Unsupported : access type != mov to CR\n");
-        vmm_panic(nested_state, VMM_PANIC_CR_ACCESS, 0, &guest_regs);
+        vmm_panic(ns.state, VMM_PANIC_CR_ACCESS, 0, &guest_regs);
       }
 
       uint64_t value = ((uint64_t*)&guest_regs)[reg_num];
@@ -347,7 +359,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         uint8_t invvpid_desc[16] = { cpu_vmread(VIRTUAL_PROCESSOR_ID) };
         __asm__ __volatile__("invvpid %1, %0" : : "r"((uint64_t)3), "m"(*invvpid_desc));
       } else {
-        vmm_panic(nested_state, VMM_PANIC_CR_ACCESS, 0, &guest_regs);
+        vmm_panic(ns.state, VMM_PANIC_CR_ACCESS, 0, &guest_regs);
       }
       break;
     }
@@ -363,21 +375,18 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       printk("rax = %016X\n",guest_regs.rax);
       break;
     case EXIT_REASON_TRIPLE_FAULT:
-      vmm_panic(nested_state, 0,0,&guest_regs);
+      vmm_panic(ns.state, 0,0,&guest_regs);
       break;
     default: {
 #ifdef _DEBUG_SERVER
       if (debug_server) {
-        debug_server_vmexit(nested_state, exit_reason, &guest_regs);
+        debug_server_vmexit(ns.nested_level, exit_reason, &guest_regs);
       }
 #endif
     }
   }
 
-  // A nested launch can be a vm resume...
-  // if (exit_reason != EXIT_REASON_VMLAUNCH) {
-    increment_rip(cpu_mode, &guest_regs);
-  // }
+  increment_rip(cpu_mode, &guest_regs);
 }
 
 static inline int get_cpu_mode(void) {
@@ -459,7 +468,7 @@ static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs)
       break;
     }
     default :
-      vmm_panic(nested_state, VMM_PANIC_UNKNOWN_CPU_MODE, 0, guest_regs);
+      vmm_panic(ns.state, VMM_PANIC_UNKNOWN_CPU_MODE, 0, guest_regs);
   }
 }
 
