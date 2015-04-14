@@ -95,47 +95,38 @@ void ept_perm(uint64_t address, uint32_t pages, uint8_t rights) {
   uint16_t PDPT_offset_begin = get_PDPT_offset(p_begin);
   uint16_t PDPT_offset_end = get_PDPT_offset(p_end);
   uint16_t PD_offset_begin = get_PD_offset(p_begin);
-  uint16_t PD_offset_end = get_PD_offset(p_end);
   uint16_t PT_offset_begin = get_PT_offset(p_begin);
-  uint16_t PT_offset_end = get_PT_offset(p_end);
 
   if (PML4_offset_end > 0) {
     panic("!#EPT protected_zone doesn't fit in the first PML4 entry\n", EPTN);
   }
 
-  if (PDPT_offset_end > EPTN) {
+  if (PDPT_offset_end >= EPTN) {
     panic("!#EPT protected_zone doesn't fit in %d PDPT entries\n", EPTN);
   }
 
-  INFO("PDPT(%d, %d), PD(%d, %d), PT(%d, %d)\n", PDPT_offset_begin,
-      PDPT_offset_end, PD_offset_begin, PD_offset_end, PT_offset_begin,
-      PT_offset_end);
+  uint64_t a = address & (~(uint64_t)0xfff);
+  INFO("begin a 0x%016X, p_end 0x%016X\n", a, p_end);
 
-  for (j = PDPT_offset_begin; j <= PDPT_offset_end; j++) {
-    for (k = 0; k <= 512; k++) {
-      for (l = 0; l < 512; l++) {
-        if (
-            (j == PDPT_offset_begin && k == PD_offset_begin &&
-             l >= PT_offset_begin) ||
-            (j == PDPT_offset_end && k == PD_offset_end &&
-             l < PT_offset_end) ||
-            (j == PDPT_offset_begin && k >= PD_offset_begin) ||
-            (j == PDPT_offset_end && k <= PD_offset_end) ||
-            (j != PDPT_offset_end && j != PDPT_offset_end &&
-             k != PD_offset_end && k != PD_offset_end && l != PT_offset_end && l
-             != PT_offset_end)
-           ) {
+  k = PD_offset_begin;
+  l = PT_offset_begin;
+  for (j = PDPT_offset_begin; j < EPTN; j++) {
+    for (; k <= 512; k++) {
+      for (; l < 512; l++, a += ((uint64_t)1 << 12)) {
+        if (a < p_end) {
           ept_tables.PML40_PDPT0_N_PD_PT[j][k][l] &= (uint64_t)~0x7;
           ept_tables.PML40_PDPT0_N_PD_PT[j][k][l] |= rights & 0x7;
+        } else {
+          return;
         }
       }
+      l = 0;
     }
+    k = 0;
   }
 }
 
-/* All the physical memory is mapped using identity mapping. */
-void ept_create_tables(void) {
-
+void ept_cache(void) {
   uint64_t i; // MPL4
   uint64_t j; // PDPT
   uint64_t k; // PD
@@ -151,6 +142,41 @@ void ept_create_tables(void) {
 
   /* ID Map all virtual memory taking into account MTRR and Hypervisor code */
   for (i = 0; i < 512; i++) {
+    for (j = 0; j < 512; j++) {
+      if (i == 0) {
+        for (k = 0; k < 512; k++) {
+          if (j < EPTN) {
+            for (l = 0; l < 512; l++) {
+              address = (j << 30) | (k << 21) | (l << 12);
+              set_memory_type(&ept_tables.PML40_PDPT0_N_PD_PT[j][k][l], address,
+                  0x1000, max_phyaddr);
+            }
+          } else {
+            address = (j << 30) | (k << 21);
+            set_memory_type(&ept_tables.PML40_PDPT_PD[j][k], address, 0x200000,
+                max_phyaddr);
+          }
+        }
+      } else {
+        // Over 512 giga bytes : 1 GB mapped
+        address = (i << 39) | (j << 30);
+        set_memory_type(&ept_tables.PML4_PDPT[i][j], address, 0x40000000,
+            max_phyaddr);
+      }
+    }
+  }
+}
+
+/* All the physical memory is mapped using identity mapping. */
+void ept_create_tables(void) {
+  uint64_t i; // MPL4
+  uint64_t j; // PDPT
+  uint64_t k; // PD
+  uint64_t l; // PT
+  uint64_t address; // Current address
+
+  /* ID Map all virtual memory with rwx rights */
+  for (i = 0; i < 512; i++) {
     ept_tables.PML4[i] = ((uint64_t) &ept_tables.PML4_PDPT[i][0]) | 0x07;
     for (j = 0; j < 512; j++) {
       if (i == 0) {
@@ -165,22 +191,16 @@ void ept_create_tables(void) {
             for (l = 0; l < 512; l++) {
               address = (j << 30) | (k << 21) | (l << 12);
               ept_tables.PML40_PDPT0_N_PD_PT[j][k][l] = address | 0x07;
-              set_memory_type(&ept_tables.PML40_PDPT0_N_PD_PT[j][k][l], address,
-                  0x1000, max_phyaddr);
             }
           } else {
             address = (j << 30) | (k << 21);
             ept_tables.PML40_PDPT_PD[j][k] = address | (1 << 7) | 0x07;
-            set_memory_type(&ept_tables.PML40_PDPT_PD[j][k], address, 0x200000,
-                max_phyaddr);
           }
         }
       } else {
         // Over 512 giga bytes : 1 GB mapped
         address = (i << 39) | (j << 30);
         ept_tables.PML4_PDPT[i][j] = address | (1 << 7) | 0x07;
-        set_memory_type(&ept_tables.PML4_PDPT[i][j], address, 0x40000000,
-            max_phyaddr);
       }
     }
   }
@@ -194,8 +214,15 @@ void ept_create_tables(void) {
   uint64_t p_begin = (uint64_t) &_protected_begin;
   uint64_t p_end = (uint64_t) &_protected_end;
 
-  // XXX Should be protected...
-  ept_perm(p_begin, (p_end - p_begin) >> 12, 0x7);
+  INFO("0x0 rights zone : [0x%016X: 0x%016X]\n", p_begin, p_end);
+  extern uint64_t vm_RIP;
+  INFO("vm start 0x%016X\n", vm_RIP);
+
+  // Protect the VMM memory space
+  ept_perm(p_begin + 0x1000, (p_end - p_begin) >> 12, 0x0);
+
+  // Compute the cache policy thanks to the mtrrs ranges
+  ept_cache();
 
   //
   // Network card

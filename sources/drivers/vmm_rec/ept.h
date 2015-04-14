@@ -11,6 +11,7 @@ enum ept_error {
 };
 
 void ept_create_tables(void);
+void ept_cache(void);
 
 uint64_t ept_get_eptp(void);
 
