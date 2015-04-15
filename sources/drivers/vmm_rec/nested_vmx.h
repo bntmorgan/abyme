@@ -2,6 +2,7 @@
 #define __NESTED_VMX_H__
 
 #include "vmm.h"
+#include "ept.h"
 
 #ifdef _VMCS_SHADOWING
 #define NESTED_COPY_FROM_SHADOW_VMCS_SHADOWING ,\

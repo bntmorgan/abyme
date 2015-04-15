@@ -94,6 +94,95 @@ uint8_t paging_get_frame_address(uint64_t entry, uint64_t type, uint64_t *addres
   return -1;
 }
 
+int paging_iterate(uint64_t cr3, int (*cb)(uint64_t *, uint64_t, uint8_t)) {
+  uint64_t i; // PML4
+  uint64_t j; // PDPT
+  uint64_t k; // PD
+  uint64_t l; // PT
+  uint64_t *e; // entry
+  uint64_t a; // address
+  uint8_t s; // page size
+  uint64_t *pml4;
+  uint64_t *pdpt;
+  uint64_t *pd;
+  uint64_t *pt;
+
+  max_phyaddr = cpuid_get_maxphyaddr();
+
+  INFO("cr3 0x%016X\n", cr3);
+
+  // Initiate the algorithm
+  pml4 = (uint64_t *)(cr3 & PAGING_CR3_PLM4_ADDR);
+  INFO("@PML4 0x%016X\n", pml4);
+
+  // PML4
+  for (i = 0; i < 512; i++) {
+    e = &pml4[i];
+    // INFO("@PML4E 0x%016X\n", *e);
+    if (!(*e & PAGING_PML4E_P)) {
+      paging_error = PAGING_WALK_NOT_PRESENT;
+      return -1;
+    }
+    pdpt = (uint64_t *)(*e & PAGING_PML4E_PDPT_ADDR);
+    // INFO("@PDPT 0x%016X\n", pdpt);
+    // PDPT
+    for (j = 0; j < 512; j++) {
+      e = &pdpt[j];
+      // INFO("@PDPTE 0x%016X\n", *e);
+      if (!(*e & PAGING_PDPTE_P)) {
+        paging_error = PAGING_WALK_NOT_PRESENT;
+        return -1;
+      }
+      // 1 GB Frame
+      if (*e & PAGING_PDPTE_PAGE) {
+        a = (*e & PAGING_PDPTE_FRAME_ADDR);
+        s = PAGING_ENTRY_PDPTE;
+        if (!cb(e, a, s)) {
+          return 0;
+        }
+        continue;
+      }
+      pd = (uint64_t *)(*e & PAGING_PDPTE_PD_ADDR);
+      // INFO("@PD 0x%016X\n", pd);
+      // PD
+      for (k = 0; k < 512; k++) {
+        e = &pd[k];
+        // INFO("@PDE 0x%016X\n", *e);
+        if (!(*e & PAGING_PDE_P)) {
+          paging_error = PAGING_WALK_NOT_PRESENT;
+          return -1;
+        }
+        // 2 MB Frame
+        if (*e & PAGING_PDE_PAGE) {
+          a = (*e & PAGING_PDE_FRAME_ADDR);
+          s = PAGING_ENTRY_PDE;
+          if (!cb(e, a, s)) {
+            return 0;
+          }
+          continue;
+        }
+        pt = (uint64_t *)(*e & PAGING_PDE_PT_ADDR);
+        // INFO("@PT 0x%016X\n", pt);
+        // PT
+        for (l = 0; l < 512; l++) {
+          e = &pt[l];
+          // INFO("@PTE 0x%016X\n", *e);
+          if (!(*e & PAGING_PTE_P)) {
+            paging_error = PAGING_WALK_NOT_PRESENT;
+            return -1;
+          }
+          a = (*e & PAGING_PTE_FRAME_ADDR);
+          s = PAGING_ENTRY_PTE;
+          if (!cb(e, a, s)) {
+            return 0;
+          }
+        }
+      }
+    }
+  }
+  return 0;
+}
+
 int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **e, uint64_t *a, uint8_t *s) {
   max_phyaddr = cpuid_get_maxphyaddr();
   // INFO("Max phy 0x%016x, 0x%016x\n", max_phyaddr, PAGING_MAXPHYADDR(max_phyaddr));

@@ -8,6 +8,8 @@
 #include "string.h"
 #include "debug.h"
 #include "nested_vmx.h"
+#include "paging.h"
+#include "ept.h"
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
@@ -16,7 +18,8 @@ struct nested_state ns = {
   NESTED_DISABLED,
   (uint8_t*)(uint64_t)-1,
   0,
-  0
+  0,
+  {0}
 };
 
 static uint64_t fields_values[NB_VMCS_FIELDS];
@@ -184,12 +187,42 @@ void nested_vmptrld(uint8_t *shadow_vmcs, struct registers *gr) {
 #endif
 }
 
+#ifdef _NESTED_EPT
+void nested_smap_build(void) {
+  uint64_t start, end;
+  uint8_t in = 0;
+  // XXX already done in shadow to guest
+  cpu_vmptrld(ns.shadow_ptr);
+  // Private callback for chunk detection
+  int cb(uint64_t *e, uint64_t a, uint8_t s) {
+    if (in == 0) {
+      if ((*e & 0x7) == 0) {
+        start = a;
+        in = 1;
+      }
+    } else {
+      if ((*e & 0x7) != 0) {
+        end = a; 
+        // Add the detected memory chunk to the smap
+        INFO("chunk(0x%x, 0x%016X, 0x%016X)\n", ns.shadow_idx, start, (end -
+              start) >> 12);
+        in = 0;
+      }
+    }
+    return 1;
+  }
+  uint64_t eptp = (cpu_vmread(EPT_POINTER_HIGH) << 32) |
+    cpu_vmread(EPT_POINTER);
+  INFO("EPTP 0x%016X\n", eptp);
+  if (ept_iterate(eptp, &cb)) {
+    ERROR("PAGING error... 0x%x\n", paging_error);
+  }
+}
+#endif
+
 void nested_shadow_to_guest(void) {
   static uint64_t guest_fields[] = { NESTED_COPY_FROM_SHADOW };
   cpu_vmptrld(ns.shadow_ptr);
-#ifdef _NESTED_EPT
-  nested_merge_ept();
-#endif
   READ_VMCS_FIELDS(guest_fields);
 #ifdef _VMCS_SHADOWING
   // !!! With VMCS shadowing write exits are bypassed !!!
@@ -260,6 +293,10 @@ void nested_vmlaunch(struct registers *guest_regs) {
   READ_VMCS_FIELDS(ctrl_host_fields);
   cpu_vmptrld(guest_vmcs[ns.shadow_idx]);
   WRITE_VMCS_FIELDS(ctrl_host_fields);
+
+#ifdef _NESTED_EPT
+  nested_smap_build();
+#endif
 
   nested_shadow_to_guest();
 

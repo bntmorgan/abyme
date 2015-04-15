@@ -21,6 +21,8 @@ uint64_t paging_get_host_cr3(void);
 
 extern uint64_t paging_error;
 
+int paging_iterate(uint64_t cr3, int (*cb)(uint64_t *, uint64_t, uint8_t));
+
 /**
  * This function is computing physical address from a linear one
  * It is returning the location pointer to the entry referecing the frame,
