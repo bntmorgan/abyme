@@ -148,7 +148,7 @@ void vmcs_fill_host_state_fields(void) {
   // XXX TEST
   // cpu_read_idt((uint8_t *) &idt_ptr);
   idt_get_idt_ptr(&idt_ptr);
-  // cpu_vmwrite(HOST_IDTR_BASE, idt_ptr.base);
+  cpu_vmwrite(HOST_IDTR_BASE, idt_ptr.base);
 
   cpu_vmwrite(HOST_IA32_SYSENTER_CS, msr_read(MSR_ADDRESS_IA32_SYSENTER_CS));
   cpu_vmwrite(HOST_IA32_SYSENTER_ESP, msr_read(MSR_ADDRESS_IA32_SYSENTER_ESP));

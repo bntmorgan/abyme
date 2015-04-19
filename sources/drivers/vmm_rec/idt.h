@@ -10,7 +10,7 @@ struct idt_ptr {
 
 struct idt_gdsc {
   uint32_t o0:16;
-  uint32_t ss:16;
+  uint32_t cs:16;
   uint32_t ist:3;
   uint32_t zeroes:5;
   uint32_t t:4; // type
@@ -23,6 +23,7 @@ struct idt_gdsc {
 } __attribute__((packed));
 
 struct idt_isr_stack {
+  uint64_t number;
   uint64_t error_code;
   uint64_t rip;
   uint64_t cs;
