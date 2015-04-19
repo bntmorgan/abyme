@@ -11,13 +11,15 @@
 #include "efiw.h"
 
 struct ept_tables {
-  uint64_t PML4[512]                           __attribute__((aligned(0x1000)));
+  uint64_t PML4[512]                                 __attribute__((aligned(0x1000)));
   // 1 GB mapped over 512 giga bytes
-  uint64_t PML4_PDPT[512][512]                 __attribute__((aligned(0x1000)));
+  uint64_t PML4_PDPT[512][512]                       __attribute__((aligned(0x1000)));
   // 2 MB mapped over 4 giga bytes
-  uint64_t PML40_PDPT_PD[512][512]             __attribute__((aligned(0x1000)));
-  // 4 KB mapped under 4 giga bytes
-  uint64_t PML40_PDPT0_N_PD_PT[EPTN][512][512] __attribute__((aligned(0x1000)));
+  uint64_t PML40_PDPT_PD[512 - EPTN][512]            __attribute__((aligned(0x1000)));
+  // 4 KB mapped under EPTN giga bytes
+  // CTXN number of contexts under EPTN GB
+  uint64_t PML40_PDPT0_N_PD[CTXN][EPTN][512]         __attribute__((aligned(0x1000)));
+  uint64_t PML40_PDPT0_N_PD_PT[CTXN][EPTN][512][512] __attribute__((aligned(0x1000)));
 } __attribute__((aligned(8)));
 
 
@@ -35,6 +37,8 @@ uint8_t trap_bar[0x1000] __attribute__((aligned(0x1000)));
   
 static const struct memory_range *memory_range;
 
+static uint8_t ctx = 0;
+
 inline static void set_memory_type(uint64_t *entry, uint64_t address,
     uint64_t page_size, uint8_t max_phyaddr) {
   uint64_t max_address = ((uint64_t)1 << max_phyaddr);
@@ -47,16 +51,19 @@ inline static void set_memory_type(uint64_t *entry, uint64_t address,
           page_size);
     }
     if (address + page_size-1 > memory_range->range_address_end) {
-      panic("!#EPT MR4KB [?%x<0x%X<0x%X:%d]\n", memory_range->range_address_begin
-          , address, memory_range->range_address_end , memory_range->type);
+      panic("!#EPT MR4KB [?%x<0x%X<0x%X:%d]\n",
+          memory_range->range_address_begin, address,
+          memory_range->range_address_end, memory_range->type);
     }
+    // XXX faux
     *entry |= (memory_range->type << 3);
   } else {
+    // XXX faux
     *entry |= (0 << 3);
   }
 }
 
-void ept_remap(uint64_t virt, uint64_t phy, uint8_t rights) {
+void ept_remap(uint64_t virt, uint64_t phy, uint8_t rights, uint8_t c) {
   uint16_t PML4_offset = get_PML4_offset(virt);
   uint16_t PDPT_offset = get_PDPT_offset(virt);
   uint16_t PD_offset = get_PD_offset(virt);
@@ -72,11 +79,28 @@ void ept_remap(uint64_t virt, uint64_t phy, uint8_t rights) {
 
   INFO("PDPT(%d), PD(%d), PT(%d), virt(@0x%016X) => phy(@0x%016X)\n",
       PDPT_offset, PD_offset, PT_offset, virt, phy);
-  ept_tables->PML40_PDPT0_N_PD_PT[PDPT_offset][PD_offset][PT_offset] = phy |
+  // XXX Save the cache level...
+  ept_tables->PML40_PDPT0_N_PD_PT[c][PDPT_offset][PD_offset][PT_offset] = phy |
     (rights & 0x7);
 } 
 
-void ept_perm(uint64_t address, uint32_t pages, uint8_t rights) {
+/**
+ * Juste relink the pages the TLB are handled via VPIDs
+ * by default ctx is zero, set by create tables
+ */
+void ept_set_ctx(uint8_t c) {
+  uint64_t j; // PTPT
+  ctx = c;
+  if (c >= CTXN) {
+    ERROR("Invalid context number\n");
+  }
+  for (j = 0; j < EPTN; j++) {
+    ept_tables->PML4_PDPT[0][j] = 
+      ((uint64_t) &ept_tables->PML40_PDPT0_N_PD[ctx][j][0]) | 0x07;
+  }
+}
+
+void ept_perm(uint64_t address, uint32_t pages, uint8_t rights, uint8_t c) {
   uint64_t p_begin = address;
   uint64_t p_end = address + (pages * 0x1000);
 
@@ -111,8 +135,8 @@ void ept_perm(uint64_t address, uint32_t pages, uint8_t rights) {
     for (; k <= 512; k++) {
       for (; l < 512; l++, a += ((uint64_t)1 << 12)) {
         if (a < p_end) {
-          ept_tables->PML40_PDPT0_N_PD_PT[j][k][l] &= (uint64_t)~0x7;
-          ept_tables->PML40_PDPT0_N_PD_PT[j][k][l] |= rights & 0x7;
+          ept_tables->PML40_PDPT0_N_PD_PT[c][j][k][l] &= (uint64_t)~0x7;
+          ept_tables->PML40_PDPT0_N_PD_PT[c][j][k][l] |= rights & 0x7;
         } else {
           return;
         }
@@ -128,6 +152,7 @@ void ept_cache(void) {
   uint64_t j; // PDPT
   uint64_t k; // PD
   uint64_t l; // PT
+  uint64_t m; // context
   uint8_t max_phyaddr = cpuid_get_maxphyaddr(); // Physical address space
   uint64_t address; // Current address
 
@@ -145,13 +170,15 @@ void ept_cache(void) {
           if (j < EPTN) {
             for (l = 0; l < 512; l++) {
               address = (j << 30) | (k << 21) | (l << 12);
-              set_memory_type(&ept_tables->PML40_PDPT0_N_PD_PT[j][k][l], address,
-                  0x1000, max_phyaddr);
+              for (m = 0; m < CTXN; m++) {
+                set_memory_type(&ept_tables->PML40_PDPT0_N_PD_PT[m][j][k][l],
+                    address, 0x1000, max_phyaddr);
+              }
             }
           } else {
             address = (j << 30) | (k << 21);
-            set_memory_type(&ept_tables->PML40_PDPT_PD[j][k], address, 0x200000,
-                max_phyaddr);
+            set_memory_type(&ept_tables->PML40_PDPT_PD[j - EPTN][k], address,
+                0x200000, max_phyaddr);
           }
         }
       } else {
@@ -170,9 +197,12 @@ void ept_create_tables(void) {
   uint64_t j; // PDPT
   uint64_t k; // PD
   uint64_t l; // PT
+  uint64_t m; // context
   uint64_t address; // Current address
 
   ept_tables = efi_allocate_pages(sizeof(struct ept_tables) >> 12);
+
+  uint64_t max_addr = ((uint64_t)1 << cpuid_get_maxphyaddr());
 
   /* ID Map all virtual memory with rwx rights */
   for (i = 0; i < 512; i++) {
@@ -180,29 +210,48 @@ void ept_create_tables(void) {
     for (j = 0; j < 512; j++) {
       if (i == 0) {
         // Under 512 giga bytes : 2 MB mapped
-        ept_tables->PML4_PDPT[i][j] = 
-          ((uint64_t) &ept_tables->PML40_PDPT_PD[j][0]) | 0x07;
+        if (j < EPTN) {
+          // Under 4 gigabytes first context PD 
+          ept_tables->PML4_PDPT[i][j] = 
+            ((uint64_t) &ept_tables->PML40_PDPT0_N_PD[0][j][0]) | 0x07;
+        } else {
+          // Under 512 giga bytes : 2 MB mapped
+          ept_tables->PML4_PDPT[i][j] = 
+            ((uint64_t) &ept_tables->PML40_PDPT_PD[j - EPTN][0]) | 0x07;
+        }
         for (k = 0; k < 512; k++) {
           if (j < EPTN) {
             // Under EPTN giga bytes : 4 kB mapped
-            ept_tables->PML40_PDPT_PD[j][k] = 
-              ((uint64_t) &ept_tables->PML40_PDPT0_N_PD_PT[j][k][0]) | 0x07;
-            for (l = 0; l < 512; l++) {
-              address = (j << 30) | (k << 21) | (l << 12);
-              ept_tables->PML40_PDPT0_N_PD_PT[j][k][l] = address | 0x07;
+            // Link context 0
+            for (m = 0; m < CTXN; m++) {
+              ept_tables->PML40_PDPT0_N_PD[m][j][k] = ((uint64_t)
+                  &ept_tables->PML40_PDPT0_N_PD_PT[m][j][k][0]) | 0x07;
+              for (l = 0; l < 512; l++) {
+                address = (j << 30) | (k << 21) | (l << 12);
+                // Map 4kB pages for all contexts
+                ept_tables->PML40_PDPT0_N_PD_PT[m][j][k][l] = address | 0x07;
+              }
             }
           } else {
             address = (j << 30) | (k << 21);
-            ept_tables->PML40_PDPT_PD[j][k] = address | (1 << 7) | 0x07;
+            ept_tables->PML40_PDPT_PD[j - EPTN][k] = address | (1 << 7) | 0x07;
           }
         }
       } else {
         // Over 512 giga bytes : 1 GB mapped
         address = (i << 39) | (j << 30);
-        ept_tables->PML4_PDPT[i][j] = address | (1 << 7) | 0x07;
+        // We don't map over the physical address space
+        if (address >= max_addr) {
+          ept_tables->PML4_PDPT[i][j] = 0;
+        } else {
+          ept_tables->PML4_PDPT[i][j] = address | (1 << 7) | 0x07;
+        }
       }
     }
   }
+
+  ept_check_mapping();
+  INFO("EPT CHECK MAPPING DONE\n");
 
   //
   // Protect VMM pages : we split the first and the last 2Mo pages corresponding
@@ -217,7 +266,10 @@ void ept_create_tables(void) {
   INFO("vm start 0x%016X\n", vm_RIP);
 
   // Protect the VMM memory space
-  ept_perm(p_begin + 0x1000, (p_end - p_begin) >> 12, 0x0);
+  // Map 4kB pages for all contexts
+  for (m = 0; m < CTXN; m++) {
+    ept_perm(p_begin + 0x1000, (p_end - p_begin) >> 12, 0x0, m);
+  }
 
   // Compute the cache policy thanks to the mtrrs ranges
   ept_cache();
@@ -267,13 +319,15 @@ void ept_create_tables(void) {
     base_addr = MMCONFIG_base + PCI_MAKE_MMCONFIG(eth->pci_addr.bus,
         eth->pci_addr.device, eth->pci_addr.function);
 
-    // ept_perm(base_addr, 1, 0x7);
     INFO("MMIO NIC config space(@0x%016X)\n", base_addr);
 
     // XXX For the moment the VMs can use the network card with the UEFI driver
     // for debug purpose
-    // ept_remap(base_addr, (uint64_t)&trap_pci[0], 0x7);
-    ept_remap(eth->bar0, (uint64_t)&trap_bar[0], 0x7);
+    for (m = 0; m < CTXN; m++) {
+      // ept_remap(base_addr, (uint64_t)&trap_pci[0], 0x0, m);
+      // XXX WTF the debug still works...
+      ept_remap(eth->bar0, (uint64_t)&trap_bar[0], 0x0, m);
+    }
   }
 #endif
 }
@@ -292,12 +346,13 @@ int ept_iterate(uint64_t eptp, int (*cb)(uint64_t *, uint64_t, uint8_t)) {
   uint64_t *pt;
 
   uint64_t max_phyaddr = cpuid_get_maxphyaddr();
+  INFO("Max phy 0x%016x, 0x%016x\n", max_phyaddr, PAGING_MAXPHYADDR(max_phyaddr));
 
   INFO("eptp 0x%016X\n", eptp);
 
   // Initiate the algorithm
   pml4 = (uint64_t *)(eptp & PAGING_CR3_PLM4_ADDR);
-  INFO("@PML4 0x%016X\n", pml4);
+  // INFO("@PML4 0x%016X\n", pml4);
 
   // PML4
   for (i = 0; i < 512; i++) {
@@ -305,7 +360,6 @@ int ept_iterate(uint64_t eptp, int (*cb)(uint64_t *, uint64_t, uint8_t)) {
     // INFO("@PML4E 0x%016X\n", *e);
     if (!(*e & EPT_PML4E_P)) {
       paging_error = PAGING_WALK_NOT_PRESENT;
-      INFO("YO1 (%x, %x, %x, %x)\n", i, j, k, l);
       return -1;
     }
     pdpt = (uint64_t *)(*e & PAGING_PML4E_PDPT_ADDR);
@@ -313,7 +367,7 @@ int ept_iterate(uint64_t eptp, int (*cb)(uint64_t *, uint64_t, uint8_t)) {
     // PDPT
     for (j = 0; j < 512; j++) {
       e = &pdpt[j];
-      // INFO("@PDPTE 0x%016X\n", *e);
+      // INFO("PDPTE 0x%016X\n", *e);
       // 1 GB Frame
       if (*e & PAGING_PDPTE_PAGE) {
         a = (*e & PAGING_PDPTE_FRAME_ADDR);
@@ -328,7 +382,7 @@ int ept_iterate(uint64_t eptp, int (*cb)(uint64_t *, uint64_t, uint8_t)) {
       // PD
       for (k = 0; k < 512; k++) {
         e = &pd[k];
-        // INFO("@PDE 0x%016X\n", *e);
+        // INFO("PDE 0x%016X\n", *e);
         // 2 MB Frame
         if (*e & PAGING_PDE_PAGE) {
           a = (*e & PAGING_PDE_FRAME_ADDR);
@@ -343,7 +397,7 @@ int ept_iterate(uint64_t eptp, int (*cb)(uint64_t *, uint64_t, uint8_t)) {
         // PT
         for (l = 0; l < 512; l++) {
           e = &pt[l];
-          // INFO("@PTE 0x%016X\n", *e);
+          // INFO("PTE 0x%016X\n", *e);
           a = (*e & PAGING_PTE_FRAME_ADDR);
           s = PAGING_ENTRY_PTE;
           if (!cb(e, a, s)) {
@@ -354,6 +408,44 @@ int ept_iterate(uint64_t eptp, int (*cb)(uint64_t *, uint64_t, uint8_t)) {
     }
   }
   return 0;
+}
+
+void ept_check_mapping(void) {
+  uint64_t pa = 0, ta = 0;
+  uint8_t max_phyaddr = cpuid_get_maxphyaddr();
+  // Private callback for chunk detection
+  int cb(uint64_t *e, uint64_t a, uint8_t s) {
+    if (a == ta) {
+      pa = a;
+    } else {
+      INFO("a(0x%016X), s(0x%x), address(0x%016X), ta(0x%016X)\n", a, s, pa, ta);
+      ERROR("id mapping error yolord\n");
+    }
+    switch (s) {
+      case PAGING_ENTRY_PTE:
+        ta = pa + 0x1000;
+        break;
+      case PAGING_ENTRY_PDE:
+        ta = pa + 0x200000;
+        break;
+      case PAGING_ENTRY_PDPTE:
+        ta = pa + 0x40000000;
+        break;
+      default:
+        ERROR("BAD page size\n");
+    }
+    if (ta == ((uint64_t)1 << max_phyaddr)) {
+      INFO("CHECK END maxphyaddr reached\n");
+      return 0;
+    } else {
+      return 1;
+    }
+  }
+  uint64_t eptp = ept_get_eptp();
+  INFO("EPTP 0x%016X\n", eptp);
+  if (ept_iterate(eptp, &cb)) {
+    ERROR("PAGING error... 0x%x\n", paging_error);
+  }
 }
 
 uint64_t ept_get_eptp(void) {

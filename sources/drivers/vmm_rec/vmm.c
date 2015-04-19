@@ -136,6 +136,11 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_INVVPID: {
       uint8_t* desc = get_instr_param_ptr(&guest_regs);
       uint64_t type = ((uint64_t*)&guest_regs)[(cpu_vmread(VMX_INSTRUCTION_INFO) >> 28) & 0xF];
+      // INFO("INVVPID VPID(0x%04x), addr(0x%016X), type(0x%016X)\n", ((uint64_t*)desc)[1],
+      //    ((uint16_t*)desc)[0], type);
+      // We need to increment the VPID
+      ((uint16_t*)desc)[0]++;
+      // INFO("INVVPID VPID(0x%04x)\n", ((uint16_t*)desc)[0]);
       __asm__ __volatile__("invvpid %0, %1" : : "m"(*desc), "r"(type) );
       break;
     }
@@ -366,7 +371,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     //
     // Debug
     //
-    case EXIT_REASON_EPT_VIOLATION: {
+    case EXIT_REASON_EPT_VIOLATION: 
+    case EXIT_REASON_EPT_MISCONFIG: {
       uint64_t guest_linear_addr = cpu_vmread(GUEST_LINEAR_ADDRESS);
       INFO("EPT violation, Qualification : %X, addr : %X\n", exit_qualification, guest_linear_addr);
       break;

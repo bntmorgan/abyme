@@ -59,8 +59,8 @@ uint8_t paging_get_frame_address(uint64_t entry, uint64_t type, uint64_t *addres
 #define PAGING_LINEAR_PDPTE(x)          ((x >> 30) & 0x1ff)
 #define PAGING_LINEAR_PDE(x)            ((x >> 21) & 0x1ff)
 #define PAGING_LINEAR_PTE(x)            ((x >> 12) & 0x1ff)
-#define PAGING_LINEAR_PDPTE_OFFSET(x)   ((x >>  0) & 0x1fffffff)
-#define PAGING_LINEAR_PDE_OFFSET(x)     ((x >>  0) & 0xfffff)
+#define PAGING_LINEAR_PDPTE_OFFSET(x)   ((x >>  0) & 0x3fffffff)
+#define PAGING_LINEAR_PDE_OFFSET(x)     ((x >>  0) & 0x1fffff)
 #define PAGING_LINEAR_PTE_OFFSET(x)     ((x >>  0) & 0xfff)
 
 // CR3
@@ -90,7 +90,7 @@ uint8_t paging_get_frame_address(uint64_t entry, uint64_t type, uint64_t *addres
 #define PAGING_PDPTE_G            (1 <<  8)
 #define PAGING_PDPTE_PAT          (1 << 12)
 #define PAGING_PDPTE_PD_ADDR      (PAGING_MAXPHYADDR(max_phyaddr) & ~0xfff)
-#define PAGING_PDPTE_FRAME_ADDR   (PAGING_MAXPHYADDR(max_phyaddr) & ~0x1fffffff) // 1Go
+#define PAGING_PDPTE_FRAME_ADDR   (PAGING_MAXPHYADDR(max_phyaddr) & ~0x3fffffff) // 1Go
 #define PAGING_PDPTE_XD           (1 << 63)
 
 // PDE
@@ -105,7 +105,7 @@ uint8_t paging_get_frame_address(uint64_t entry, uint64_t type, uint64_t *addres
 #define PAGING_PDE_G              (1 <<  8)
 #define PAGING_PDE_PAT            (1 << 12)
 #define PAGING_PDE_PT_ADDR        (PAGING_MAXPHYADDR(max_phyaddr) & ~0xfff)
-#define PAGING_PDE_FRAME_ADDR     (PAGING_MAXPHYADDR(max_phyaddr) & ~0xfffff) // 2Mo
+#define PAGING_PDE_FRAME_ADDR     (PAGING_MAXPHYADDR(max_phyaddr) & ~0x1fffff) // 2Mo
 
 // PTE
 #define PAGING_PTE_P              (1 << 0)

@@ -279,6 +279,22 @@ void nested_cpu_vmlaunch(struct registers *guest_regs) {
 void nested_vmresume(struct registers *guest_regs) {
   // Current shadow VMCS will be executed !
   shadow_set(ns.shadow_ptr);
+#ifdef _NESTED_EPT
+  ept_set_ctx(ns.shadow_idx + 1); // 0 is for vmcs0
+  uint64_t desc1[2] = {
+    0x0000000000000000,
+    0x000000000000ffff | 0x0000
+  };
+  uint64_t type1 = 0x2;
+  // Flush all tlb caches #YOLO
+  __asm__ __volatile__("invvpid %0, %1" : : "m"(desc1), "r"(type1));
+  uint64_t desc2[2] = {
+    0x0000000000000000,
+    0x000000000000ffff | 0x0000
+  };
+  uint64_t type2 = 0x1;
+  __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
+#endif
   nested_load_guest();
 }
 
@@ -295,7 +311,21 @@ void nested_vmlaunch(struct registers *guest_regs) {
   WRITE_VMCS_FIELDS(ctrl_host_fields);
 
 #ifdef _NESTED_EPT
-  nested_smap_build();
+  ept_set_ctx(ns.shadow_idx + 1); // 0 is for vmcs0
+  uint64_t desc1[2] = {
+    0x0000000000000000,
+    0x000000000000ffff | 0x0000
+  };
+  uint64_t type1 = 0x2;
+  // Flush all tlb caches #YOLO
+  __asm__ __volatile__("invvpid %0, %1" : : "m"(desc1), "r"(type1));
+  uint64_t desc2[2] = {
+    0x0000000000000000,
+    0x000000000000ffff | 0x0000
+  };
+  uint64_t type2 = 0x1;
+  __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
+//   nested_smap_build();
 #endif
 
   nested_shadow_to_guest();
@@ -360,6 +390,24 @@ void nested_load_host(void) {
   READ_VMCS_FIELDS(host_fields);
   cpu_vmptrld(vmcs0);
   WRITE_VMCS_FIELDS(host_fields_dest);
+
+#ifdef _NESTED_EPT
+  // Restore ept mapping
+  ept_set_ctx(0); // 0 is for vmcs0
+  uint64_t desc1[2] = {
+    0x0000000000000000,
+    0x000000000000ffff | 0x0000
+  };
+  uint64_t type1 = 0x2;
+  // Flush all tlb caches #YOLO
+  __asm__ __volatile__("invvpid %0, %1" : : "m"(desc1), "r"(type1));
+  uint64_t desc2[2] = {
+    0x0000000000000000,
+    0x000000000000ffff | 0x0000
+  };
+  uint64_t type2 = 0x1;
+  __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
+#endif
 
   // update vmx preemption timer
   cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, preempt_timer_value);

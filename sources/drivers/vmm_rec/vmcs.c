@@ -108,6 +108,8 @@ void vmcs_fill_guest_state_fields(void) {
   tsc_freq_MHz = ((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
   tsc_divider = msr_read(MSR_ADDRESS_IA32_VMX_MISC) & 0x7;
   vmcs_set_vmx_preemption_timer_value(VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
+
+  cpu_vmwrite(VIRTUAL_PROCESSOR_ID, 1); // vmcs0 is 1
 }
 
 void vmcs_fill_host_state_fields(void) {
