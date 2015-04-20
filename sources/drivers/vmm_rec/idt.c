@@ -40,8 +40,8 @@ void idt_create(void) {
   memset(&idt[0], 0, sizeof(struct idt_gdsc) * IDT_LOW_IT);
   INFO("isr start address(0x%016X)\n", a);
   INFO("cs(0x%04x)\n", cs);
-  // isr handler are aligned on 16
-  for (i = 0; i < IDT_LOW_IT; i++, a += 16) {
+  // isr handler are aligned on 32
+  for (i = 0; i < IDT_LOW_IT; i++, a += 32) {
     struct idt_gdsc *gdsc = &idt[i];
     // set the 3 parts address
     gdsc->o0 = (a >> 0) & 0xffff;
