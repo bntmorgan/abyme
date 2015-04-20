@@ -10,6 +10,7 @@
 #include "nested_vmx.h"
 #include "paging.h"
 #include "ept.h"
+#include "cpuid.h"
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
@@ -47,7 +48,7 @@ enum shadow_err_code {
  */
 uint8_t guest_vmcs[GVMCS_NB][4096] __attribute((aligned(0x1000)));
 struct nested_state *gns[GVMCS_NB];
-static uint8_t guest_vmcs_idx = 0;
+static uint32_t guest_vmcs_idx = 0;
 
 static int shadow_add(uint8_t *ptr, uint32_t *idx, uint64_t rip) {
   if (guest_vmcs_idx >= GVMCS_NB) {
@@ -190,7 +191,9 @@ void nested_vmptrld(uint8_t *shadow_vmcs, struct registers *gr) {
 #ifdef _NESTED_EPT
 void nested_smap_build(void) {
   uint64_t start, end;
+  uint64_t ta = 0;
   uint8_t in = 0;
+  uint8_t max_phyaddr = cpuid_get_maxphyaddr();
   // XXX already done in shadow to guest
   cpu_vmptrld(ns.shadow_ptr);
   // Private callback for chunk detection
@@ -206,10 +209,29 @@ void nested_smap_build(void) {
         // Add the detected memory chunk to the smap
         INFO("chunk(0x%x, 0x%016X, 0x%016X)\n", ns.shadow_idx, start, (end -
               start) >> 12);
+        // ept_perm(start, ((end- start) >> 12), 0x0, ns.shadow_idx + 1);
         in = 0;
       }
     }
-    return 1;
+    switch (s) {
+      case PAGING_ENTRY_PTE:
+        ta = a + 0x1000;
+        break;
+      case PAGING_ENTRY_PDE:
+        ta = a + 0x200000;
+        break;
+      case PAGING_ENTRY_PDPTE:
+        ta = a + 0x40000000;
+        break;
+      default:
+        ERROR("BAD page size\n");
+    }
+    if (ta == ((uint64_t)1 << max_phyaddr)) {
+      INFO("CHECK END maxphyaddr reached\n");
+      return 0;
+    } else {
+      return 1;
+    }
   }
   uint64_t eptp = (cpu_vmread(EPT_POINTER_HIGH) << 32) |
     cpu_vmread(EPT_POINTER);
@@ -325,7 +347,7 @@ void nested_vmlaunch(struct registers *guest_regs) {
   };
   uint64_t type2 = 0x1;
   __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
-//   nested_smap_build();
+  nested_smap_build();
 #endif
 
   nested_shadow_to_guest();
