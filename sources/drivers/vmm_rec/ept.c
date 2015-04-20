@@ -324,9 +324,13 @@ void ept_create_tables(void) {
     // XXX For the moment the VMs can use the network card with the UEFI driver
     // for debug purpose
     for (m = 0; m < CTXN; m++) {
-      // ept_remap(base_addr, (uint64_t)&trap_pci[0], 0x0, m);
-      // XXX WTF the debug still works...
+      ept_remap(base_addr, (uint64_t)&trap_pci[0], 0x0, m);
+      // XXX We only hide bar0 which is not use anymore by the network driver
       ept_remap(eth->bar0, (uint64_t)&trap_bar[0], 0x0, m);
+      // XXX TODO here we should protect dynamically allocate pages 
+      // * page tables
+      // * Ethernet buffers
+      // * Ethernet memory space
     }
   }
 #endif
