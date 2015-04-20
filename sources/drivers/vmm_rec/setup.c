@@ -76,6 +76,10 @@ void bsp_main() {
   INFO("MSR BITMAP DONE\n");
   msr_bitmap_set_for_mtrr();
   INFO("MSR BITMAP FOR MTRR DONE\n");
+#ifdef _NO_GUEST_EPT
+  msr_bitmap_set_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2);
+  INFO("MSR BITMAP FOR EPT PROTECTION DONE\n");
+#endif
   io_bitmap_setup();
   INFO("IO BITMAP DONE\n");
   // Ethernet card protection

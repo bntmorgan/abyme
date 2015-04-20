@@ -313,6 +313,12 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
           : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
           :  "a" (guest_regs.rax),  "b" (guest_regs.rbx),  "c" (guest_regs.rcx),  "d" (guest_regs.rdx));
       }
+#ifdef _NO_GUEST_EPT
+      if (guest_regs.rcx == MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2) {
+        guest_regs.rax &= ~((uint32_t)1 << 1) & 0xffffffff;
+        guest_regs.rdx &= ~((uint32_t)1 << 1) & 0xffffffff;
+      }
+#endif
       break;
     }
     case EXIT_REASON_WRMSR: {

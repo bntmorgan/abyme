@@ -9,6 +9,7 @@
 #include "cpuid.h"
 #include "paging.h"
 #include "efiw.h"
+#include "msr.h"
 
 struct ept_tables {
   uint64_t PML4[512]                                 __attribute__((aligned(0x1000)));
@@ -199,6 +200,12 @@ void ept_create_tables(void) {
   uint64_t l; // PT
   uint64_t m; // context
   uint64_t address; // Current address
+
+  // Check if EPT is available
+  uint64_t msr = msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2);
+  if ((msr & ((uint64_t)1 << (1 + 32))) == 0) {
+    ERROR("EPT is not available on this platform\n");
+  }
 
   ept_tables = efi_allocate_pages(sizeof(struct ept_tables) >> 12);
 
