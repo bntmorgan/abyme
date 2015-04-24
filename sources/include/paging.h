@@ -23,6 +23,11 @@ extern uint64_t paging_error;
 
 int paging_iterate(uint64_t cr3, int (*cb)(uint64_t *, uint64_t, uint8_t));
 
+inline uint64_t *paging_get_pml4e(uint64_t e, uint64_t linear);
+inline uint64_t *paging_get_pdpte(uint64_t e, uint64_t linear);
+inline uint64_t *paging_get_pde(uint64_t e, uint64_t linear);
+inline uint64_t *paging_get_pte(uint64_t e, uint64_t linear);
+
 /**
  * This function is computing physical address from a linear one
  * It is returning the location pointer to the entry referecing the frame,

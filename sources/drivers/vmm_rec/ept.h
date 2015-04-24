@@ -28,6 +28,9 @@ void ept_set_ctx(uint8_t c);
 uint64_t ept_get_eptp(void);
 void ept_perm(uint64_t address, uint32_t pages, uint8_t rights, uint8_t c);
 void ept_check_mapping(void);
+uint8_t ept_get_ctx(void);
+int ept_walk(uint64_t cr3, uint64_t linear, uint64_t **e, uint64_t *a,
+    uint8_t *s);
 
 //
 // Paging masks
@@ -35,6 +38,9 @@ void ept_check_mapping(void);
 //
 
 // PML4E
-#define EPT_PML4E_P            (3 <<  0)
+#define EPT_PML4E_P          (7 << 0)
+#define EPT_PDPTE_P          (7 << 0)
+#define EPT_PDE_P            (7 << 0)
+#define EPT_PTE_P            (7 << 0)
 
 #endif

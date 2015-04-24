@@ -11,6 +11,8 @@
 #include "paging.h"
 #include "ept.h"
 #include "cpuid.h"
+#include "msr.h"
+#include "cpu.h"
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
@@ -209,7 +211,7 @@ void nested_smap_build(void) {
         // Add the detected memory chunk to the smap
         INFO("chunk(0x%x, 0x%016X, 0x%016X)\n", ns.shadow_idx, start, (end -
               start) >> 12);
-        // ept_perm(start, ((end- start) >> 12), 0x0, ns.shadow_idx + 1);
+        ept_perm(start, ((end - start) >> 12), 0x0, ns.shadow_idx + 1);
         in = 0;
       }
     }
@@ -303,18 +305,18 @@ void nested_vmresume(struct registers *guest_regs) {
   shadow_set(ns.shadow_ptr);
 #ifdef _NESTED_EPT
   ept_set_ctx(ns.shadow_idx + 1); // 0 is for vmcs0
-  uint64_t desc1[2] = {
-    0x0000000000000000,
-    0x000000000000ffff | 0x0000
-  };
-  uint64_t type1 = 0x2;
-  // Flush all tlb caches #YOLO
-  __asm__ __volatile__("invvpid %0, %1" : : "m"(desc1), "r"(type1));
+//   uint64_t desc1[2] = {
+//     0x0000000000000000,
+//     0x000000000000ffff | 0x0000
+//   };
+//   uint64_t type1 = 0x2;
+//   // Flush all tlb caches #YOLO
+//   __asm__ __volatile__("invvpid %0, %1" : : "m"(desc1), "r"(type1));
   uint64_t desc2[2] = {
     0x0000000000000000,
     0x000000000000ffff | 0x0000
   };
-  uint64_t type2 = 0x1;
+  uint64_t type2 = 0x2;
   __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
 #endif
   nested_load_guest();
@@ -334,18 +336,18 @@ void nested_vmlaunch(struct registers *guest_regs) {
 
 #ifdef _NESTED_EPT
   ept_set_ctx(ns.shadow_idx + 1); // 0 is for vmcs0
-  uint64_t desc1[2] = {
-    0x0000000000000000,
-    0x000000000000ffff | 0x0000
-  };
-  uint64_t type1 = 0x2;
-  // Flush all tlb caches #YOLO
-  __asm__ __volatile__("invvpid %0, %1" : : "m"(desc1), "r"(type1));
+//   uint64_t desc1[2] = {
+//     0x0000000000000000,
+//     0x000000000000ffff | 0x0000
+//   };
+//   uint64_t type1 = 0x2;
+//   // Flush all tlb caches #YOLO
+//   __asm__ __volatile__("invvpid %0, %1" : : "m"(desc1), "r"(type1));
   uint64_t desc2[2] = {
     0x0000000000000000,
     0x000000000000ffff | 0x0000
   };
-  uint64_t type2 = 0x1;
+  uint64_t type2 = 0x2;
   __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
   nested_smap_build();
 #endif
@@ -416,18 +418,18 @@ void nested_load_host(void) {
 #ifdef _NESTED_EPT
   // Restore ept mapping
   ept_set_ctx(0); // 0 is for vmcs0
-  uint64_t desc1[2] = {
-    0x0000000000000000,
-    0x000000000000ffff | 0x0000
-  };
-  uint64_t type1 = 0x2;
-  // Flush all tlb caches #YOLO
-  __asm__ __volatile__("invvpid %0, %1" : : "m"(desc1), "r"(type1));
+//   uint64_t desc1[2] = {
+//     0x0000000000000000,
+//     0x000000000000ffff | 0x0000
+//   };
+//   uint64_t type1 = 0x2;
+//   // Flush all tlb caches #YOLO
+//   __asm__ __volatile__("invvpid %0, %1" : : "m"(desc1), "r"(type1));
   uint64_t desc2[2] = {
     0x0000000000000000,
     0x000000000000ffff | 0x0000
   };
-  uint64_t type2 = 0x1;
+  uint64_t type2 = 0x2;
   __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
 #endif
 
@@ -436,6 +438,11 @@ void nested_load_host(void) {
 
   ns.state = NESTED_HOST_RUNNING;
   ns.nested_level = 1;
+
+  // handle Monitor trap flag
+#ifdef _DEBUG_SERVER
+  debug_server_mtf();
+#endif
 }
 
 void nested_load_guest(void) {
@@ -447,6 +454,11 @@ void nested_load_guest(void) {
   cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, preempt_timer_value);
 
   ns.state = NESTED_GUEST_RUNNING;
+
+  // handle Monitor trap flag
+#ifdef _DEBUG_SERVER
+  debug_server_mtf();
+#endif
 }
 
 static inline void read_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields) {

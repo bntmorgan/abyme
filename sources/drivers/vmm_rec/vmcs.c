@@ -157,8 +157,9 @@ void vmcs_fill_host_state_fields(void) {
 }
 
 void vmcs_fill_vm_exec_control_fields(void) {
-  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS | USE_IO_BITMAPS | CR3_LOAD_EXITING /* | MONITOR_TRAP_FLAG*/;
-  uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST;
+  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS | USE_IO_BITMAPS | CR3_LOAD_EXITING | USE_TSC_OFFSETTING;
+  uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST | ENABLE_RDTSCP/* | VIRT_INTR_DELIVERY | APIC_REGISTER_VIRT*/;
+                             
   uint64_t msr_bitmap_ptr;
   uint64_t eptp;
   uint64_t io_bitmap_ptr;
@@ -208,14 +209,22 @@ void vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(MSR_BITMAP_HIGH, (msr_bitmap_ptr >> 32) & 0xffffffff);
 
   eptp = ept_get_eptp();
+
   cpu_vmwrite(EPT_POINTER, eptp & 0xffffffff);
   cpu_vmwrite(EPT_POINTER_HIGH, (eptp >> 32) & 0xffffffff);
-  cpu_vmwrite(VIRTUAL_PROCESSOR_ID, 0x1);
+  cpu_vmwrite(VIRTUAL_PROCESSOR_ID, 0x1); // vmcs0 is 1
+
+  // TEST virtual APIC
+  cpu_vmwrite(VIRTUAL_APIC_PAGE_ADDR, (((uintptr_t)&vapic[0]) >> 0) &
+      0xffffffff);
+  cpu_vmwrite(VIRTUAL_APIC_PAGE_ADDR_HIGH, (((uintptr_t)&vapic[0]) >> 32) &
+      0xffffffff);
 }
 
 void vmcs_fill_vm_exit_control_fields(void) {
-  uint32_t exit_controls = EXIT_SAVE_IA32_EFER | EXIT_LOAD_IA32_EFER | EXIT_LOAD_IA32_PERF_GLOBAL_CTRL
-                         | HOST_ADDR_SPACE_SIZE | SAVE_VMX_PREEMPT_TIMER_VAL;
+  uint32_t exit_controls = EXIT_SAVE_IA32_EFER | EXIT_LOAD_IA32_EFER |
+    EXIT_LOAD_IA32_PERF_GLOBAL_CTRL | HOST_ADDR_SPACE_SIZE |
+    SAVE_VMX_PREEMPT_TIMER_VAL;
   cpu_vmwrite(VM_EXIT_CONTROLS, cpu_adjust32(exit_controls, MSR_ADDRESS_IA32_VMX_EXIT_CTLS));
   cpu_vmwrite(VM_EXIT_MSR_STORE_COUNT, 0);
   cpu_vmwrite(VM_EXIT_MSR_LOAD_COUNT, 0);

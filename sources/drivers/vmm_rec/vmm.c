@@ -18,6 +18,7 @@
 #include "mtrr.h"
 #include "nested_vmx.h"
 #include "level.h"
+#include "paging.h"
 
 uint8_t vmm_stack[VMM_STACK_SIZE];
 
@@ -49,6 +50,8 @@ static inline uint8_t is_MTRR(uint64_t msr_addr);
 void vmm_init(void) { }
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
+
+  uint64_t tsca = cpu_read_tsc();
 
 //   if (ns.state == NESTED_GUEST_RUNNING) {
 //     INFO("Guest running\n");
@@ -380,7 +383,24 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_EPT_VIOLATION: 
     case EXIT_REASON_EPT_MISCONFIG: {
       uint64_t guest_linear_addr = cpu_vmread(GUEST_LINEAR_ADDRESS);
-      INFO("EPT violation, Qualification : %X, addr : %X\n", exit_qualification, guest_linear_addr);
+      if (exit_reason == EXIT_REASON_EPT_VIOLATION) {
+        INFO("ept violation\n");
+      } else if (exit_reason == EXIT_REASON_EPT_MISCONFIG) {
+        INFO("ept misconfiguration\n");
+      }
+      INFO("Qualification : 0x%016X, addr : 0x%016X\n",
+          exit_qualification, guest_linear_addr);
+      INFO("ctx 0x%x\n", ept_get_ctx());
+      INFO("VPID 0x%04x\n", cpu_vmread(VIRTUAL_PROCESSOR_ID));
+      uint64_t eptp = (cpu_vmread(EPT_POINTER_HIGH) << 32) |
+        cpu_vmread(EPT_POINTER);
+      uint64_t *e;
+      uint64_t a;
+      uint8_t s;
+      if(ept_walk(eptp, guest_linear_addr, &e, &a, &s)) {
+        ERROR("ERROR walking address 0x%016X\n", guest_linear_addr);
+      }
+      INFO("walk : e(0x%016X), a(0x%016X), s(0x%02x)\n", *e, a, s);
       break;
     }
     case EXIT_REASON_VMCALL:
@@ -399,6 +419,16 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   }
 
   increment_rip(cpu_mode, &guest_regs);
+  uint64_t tscd = cpu_read_tsc() - tsca;
+  uint64_t tsco = ((uint64_t)cpu_vmread(TSC_OFFSET_HIGH) << 32) |
+    cpu_vmread(TSC_OFFSET);
+  tsco -= tscd;
+  cpu_vmwrite(TSC_OFFSET, tsco & 0xffffffff);
+  cpu_vmwrite(TSC_OFFSET_HIGH, (tsco >> 32) & 0xffffffff);
+  if (msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE) > 0) {
+    INFO("tsc deadline 0x%016X\n", msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE));
+  }
+  msr_write(MSR_ADDRESS_IA32_TSC_DEADLINE, msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE) + tscd);
 }
 
 static inline int get_cpu_mode(void) {

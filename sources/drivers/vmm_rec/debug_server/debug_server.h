@@ -203,4 +203,6 @@ extern protocol_82579LM *eth;
 #define DEBUG_SERVER_CR3_PER_MESSAGE 128
 void debug_server_log_cr3_add(struct registers *regs, uint64_t cr3);
 
+void debug_server_mtf(void);
+
 #endif

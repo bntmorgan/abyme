@@ -62,7 +62,7 @@ uint64_t paging_get_host_cr3(void) {
 /**
  * Return the entry
  */
-uint64_t *paging_get_pml4e(uint64_t e, uint64_t linear) {
+inline uint64_t *paging_get_pml4e(uint64_t e, uint64_t linear) {
   return ((uint64_t *)(e & PAGING_CR3_PLM4_ADDR)) + PAGING_LINEAR_PML4E(linear);
 }
 

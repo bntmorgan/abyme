@@ -40,6 +40,10 @@ static const struct memory_range *memory_range;
 
 static uint8_t ctx = 0;
 
+uint8_t ept_get_ctx(void) {
+  return ctx;
+}
+
 inline static void set_memory_type(uint64_t *entry, uint64_t address,
     uint64_t page_size, uint8_t max_phyaddr) {
   uint64_t max_address = ((uint64_t)1 << max_phyaddr);
@@ -99,6 +103,7 @@ void ept_set_ctx(uint8_t c) {
     ept_tables->PML4_PDPT[0][j] = 
       ((uint64_t) &ept_tables->PML40_PDPT0_N_PD[ctx][j][0]) | 0x07;
   }
+//   INFO("CTX 0x%x set\n", ctx);
 }
 
 void ept_perm(uint64_t address, uint32_t pages, uint8_t rights, uint8_t c) {
@@ -331,9 +336,9 @@ void ept_create_tables(void) {
     // XXX For the moment the VMs can use the network card with the UEFI driver
     // for debug purpose
     for (m = 0; m < CTXN; m++) {
-      ept_remap(base_addr, (uint64_t)&trap_pci[0], 0x0, m);
+      ept_remap(base_addr, (uint64_t)&trap_pci[0], 0x7, m);
       // XXX We only hide bar0 which is not use anymore by the network driver
-      ept_remap(eth->bar0, (uint64_t)&trap_bar[0], 0x0, m);
+      ept_remap(eth->bar0, (uint64_t)&trap_bar[0], 0x7, m);
       // XXX TODO here we should protect dynamically allocate pages 
       // * page tables
       // * Ethernet buffers
@@ -341,6 +346,52 @@ void ept_create_tables(void) {
     }
   }
 #endif
+}
+
+int ept_walk(uint64_t cr3, uint64_t linear, uint64_t **e, uint64_t *a, uint8_t *s) {
+  uint64_t max_phyaddr = cpuid_get_maxphyaddr();
+  // INFO("Max phy 0x%016x, 0x%016x\n", max_phyaddr, PAGING_MAXPHYADDR(max_phyaddr));
+  *e = &cr3;
+  // INFO("// Cr3 -> PML4E\n");
+  *e = paging_get_pml4e(**e, linear);
+  if (!(**e & EPT_PML4E_P)) {
+    paging_error = PAGING_WALK_NOT_PRESENT;
+    return -1;
+  }
+  // INFO("// PML4E -> PDPTE\n");
+  *e = paging_get_pdpte(**e, linear);
+  if (!(**e & EPT_PDPTE_P)) {
+    paging_error = PAGING_WALK_NOT_PRESENT;
+    return -1;
+  }
+  if (**e & PAGING_PDPTE_PAGE) {
+    // INFO("// 1 Go Frame\n");
+    *a = (**e & PAGING_PDPTE_FRAME_ADDR) | PAGING_LINEAR_PDPTE_OFFSET(linear);
+    *s = PAGING_ENTRY_PDPTE;
+    return 0;
+  }
+  // INFO("// PDPTE -> PDE\n");
+  *e = paging_get_pde(**e, linear);
+  if (!(**e & EPT_PDE_P)) {
+    paging_error = PAGING_WALK_NOT_PRESENT;
+    return -1;
+  }
+  if (**e & PAGING_PDE_PAGE) {
+    // INFO("// 2 Mo Frame\n");
+    *a = (**e & PAGING_PDE_FRAME_ADDR) | PAGING_LINEAR_PDE_OFFSET(linear);
+    *s = PAGING_ENTRY_PDE;
+    return 0;
+  }
+  // INFO("// PDE -> PTE\n");
+  *e = paging_get_pte(**e, linear);
+  if (!(**e & EPT_PTE_P)) {
+    paging_error = PAGING_WALK_NOT_PRESENT;
+    return -1;
+  }
+  // INFO("// 4 Ko Frame\n");
+  *a = (**e & PAGING_PTE_FRAME_ADDR) | PAGING_LINEAR_PTE_OFFSET(linear);
+  *s = PAGING_ENTRY_PTE;
+  return 0;
 }
 
 int ept_iterate(uint64_t eptp, int (*cb)(uint64_t *, uint64_t, uint8_t)) {

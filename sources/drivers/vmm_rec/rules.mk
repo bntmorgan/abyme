@@ -14,7 +14,7 @@ dir	:= $(d)/debug_server
 include	$(dir)/rules.mk
 
 $(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -D_DEBUG_SERVER -U_NO_PRINTK \
-	-D_VMCS_SHADOWING -U_PARTIAL_VMX -D_NESTED_EPT -U_NO_GUEST_EPT
+	-D_VMCS_SHADOWING -U_PARTIAL_VMX -D_NESTED_EPT -U_NO_GUEST_EPT -U_ESXI
 
 # Old Style C files
 SOURCES_$(d)		:= $(call FIND, $(d))

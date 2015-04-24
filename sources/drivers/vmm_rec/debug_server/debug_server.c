@@ -22,6 +22,8 @@ uint32_t debug_server_level = 0;
 
 static uint8_t send_debug[NB_EXIT_REASONS];
 
+static uint8_t mtf = 0;
+
 /**
  * Logging
  */
@@ -283,6 +285,16 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr) {
     }
     // Write the vmcs fields
     cpu_vmwrite(e, v);
+    // Special case for monitor trap flag handling
+    if (e == CPU_BASED_VM_EXEC_CONTROL) {
+      if (v & MONITOR_TRAP_FLAG) {
+        // INFO("Monitor trap flag activation\n");
+        mtf = 1;
+      } else {
+        // INFO("Monitor trap flag deactivation\n");
+        mtf = 0;
+      }
+    }
     // Size
     s = *((uint8_t *)data);
     data += 1;
@@ -381,4 +393,19 @@ void debug_server_enable_putc() {
 void no_putc(uint8_t value) {}
 void debug_server_disable_putc() {
   putc = &no_putc;
+}
+
+uint8_t ismtf(void) {
+  return mtf;
+}
+
+void debug_server_mtf(void) {
+  // monitor trap flag handling
+  if (ismtf()) {
+    cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, cpu_vmread(CPU_BASED_VM_EXEC_CONTROL)
+        | MONITOR_TRAP_FLAG);
+  } else {
+    cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, cpu_vmread(CPU_BASED_VM_EXEC_CONTROL)
+        & ~(uint32_t)MONITOR_TRAP_FLAG);
+  }
 }
