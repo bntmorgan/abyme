@@ -19,8 +19,6 @@ $(TARGET_ELF)				:  LD_OBJECTS	:= $(OBJS_$(d))
 #$(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-bsdrv-$(ARCH)
 # Application
 $(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-app-$(ARCH)
-$(warning $(TARGET_ELF))
-$(warning $(OBJS_$(d)))
 $(TARGET_ELF)				:  $(OBJS_$(d))
 
 d               := $(dirstack_$(sp))
