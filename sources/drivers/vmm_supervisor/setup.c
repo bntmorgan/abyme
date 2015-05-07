@@ -19,7 +19,6 @@
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
-#include "smp.h"
 
 //extern char __text;
 extern uint8_t _protected_begin;

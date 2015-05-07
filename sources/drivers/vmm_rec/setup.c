@@ -20,7 +20,6 @@
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
-#include "smp.h"
 #ifdef _VMCS_SHADOWING
 #include "nested_vmx.h"
 #endif

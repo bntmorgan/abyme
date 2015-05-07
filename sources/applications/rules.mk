@@ -20,8 +20,6 @@ dir	:= $(d)/sys_table_2go
 include	$(dir)/rules.mk
 dir	:= $(d)/shadowck
 include	$(dir)/rules.mk
-dir	:= $(d)/test_web
-include	$(dir)/rules.mk
 dir	:= $(d)/mp
 include	$(dir)/rules.mk
 

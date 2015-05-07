@@ -8,9 +8,6 @@ OBJS_$(d)				:= $(call SRC_2_OBJ, \
 										$(d)/efi.o)
 OBJECTS 				+= $(OBJS_$(d))
 
-SOURCES_$(d)		:= $(call FIND, $(d))
-SOURCES					+= $(SOURCES_$(d))
-
 # Building IA32 binary
 $(OBJS_$(d))		:  ARCH						 := ia32
 $(OBJS_$(d))		:  EFI_PATH 			 := ./local/lib

@@ -3,7 +3,7 @@ OBJDUMP				:= objdump
 PYTHON				:= python3
 USB						:= /dev/sdb1
 
-INCLUDE_DIR			:= psources/include
+INCLUDE_DIR			:= sources/include
 
 ARCH := $(shell uname -m | sed s,i[3456789]86,ia32,)
 
@@ -26,7 +26,7 @@ EFI_CRT_OBJS 		:= $(EFI_PATH)/crt0-efi-$(ARCH).o
 EFI_LDS 				:= efi.ld
 
 CC_FLAGS_ALL		:= -Wall -Werror -Werror -O2 -fno-stack-protector \
-		-fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC -O0
+		-fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC # -O0
 
 ifeq ($(ARCH),x86_64)
 	CC_FLAGS_ALL	+= -DEFI_FUNCTION_WRAPPER
@@ -43,66 +43,28 @@ define SRC_2_BIN
   $(foreach src,$(1),$(patsubst sources/%,binary/%,$(src)))
 endef
 
-define MOD_2_SRC
-  $(foreach src,$(1),$(patsubst sources/%,psources/%,$(src)))
-endef
-
-define SVG_2_PDF
-  $(foreach src,$(1),$(patsubst sources/%.svg,psources/%.pdf,$(src)))
-endef
-
-define FIND
-	$(shell find $(1) -type f | grep -v '/\.' | grep -v 'mk$$' | grep -v \
-			'\.w$$' | grep -v '\.svg$$')
-endef
-
-define FIND_FIGURES
-  $(shell find $(1) -type f | grep -i '\.svg$$')
-endef
-
 all: targets
 # make -C test
 
 # Overriden in rules.mk
 TARGETS :=
 OBJECTS :=
-WEBS		:=
-FIGS 		:=
-SOURCES :=
 
 dir	:= sources
 include	$(dir)/rules.mk
 
-psources/%temoin:
-	@for w in $^; do \
-		filename=`basename $$w`; \
-		if [ "$${filename%.*}" = "root" ]; then \
-			echo '  [W@]    '$$w; \
-			$(PYTHON) literale/prepare.py -b `dirname $$w` `basename $$w` | \
-					$(PYTHON) literale/tangle.py -d $(dir $@); \
-			$(PYTHON) literale/prepare.py -b `dirname $$w` `basename $$w` | \
-					$(PYTHON) literale/weave.py latex > $(dir $@)/doc.tex; \
-			touch $@; \
-			#echo '  [TX]    '$(dir $@)doc.tex; \
-			#cd $(dir $@) && pdflatex doc.tex > /dev/null && pdflatex doc.tex > \
-			#		/dev/null;\
-		fi \
-	done
-
-# Copy rule
-psources: $(call MOD_2_SRC, $(SOURCES))
-
-build/%.o: psources/%.s
+build/%.o: sources/%.s
 	@echo "  [CC]    $< -> $@"
 	@mkdir -p $(dir $@)
 	@$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_TARGET) -o $@ -c $<
 
-build/%.o: psources/%.c
+build/%.o: sources/%.c
 	@echo "  [CC]    $< -> $@"
 	@mkdir -p $(dir $@)
 	@$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_TARGET) -o $@ -c $<
 
 binary/%.efi: binary/%.elf
+	@echo "  [OC]    $@"
 	@objcopy -j .padding_begin -j .text -j .sdata -j .data \
 		-j .dynamic -j .dynsym  -j .rel \
 		-j .rela -j .reloc -j .padding_end \
@@ -115,38 +77,19 @@ binary/%.elf:
 	@mkdir -p $(dir $@)
 	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_TARGET) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
 
-tests/%:
-	@echo "  [LD]    $< -> $@"
-	@mkdir -p $(dir $@)
-	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_TARGET) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
-
-psources/%.pdf: sources/%.svg
-	@mkdir -p $(dir $@)
-	@echo "  [IS]    $^ -> $@"
-	@inkscape $< --export-pdf="$@"
-
-psources/%: sources/%
-	@mkdir -p $(dir $@)
-	@cp -r --force $^ $@
-	@echo "  [CP]    $^ -> $@"
-
-targets: psources $(WEBS) $(patsubst sources/%, binary/%, $(TARGETS))
+targets: $(patsubst sources/%, binary/%, $(TARGETS))
 
 clean:
-	@rm -fr psources
 	@rm -f $(TARGETS) $(OBJECTS)
 
 info:
 	@echo Targets [$(TARGETS)]
 	@echo Objects [$(OBJECTS)]
-	@echo Webs [$(WEBS)]
-	@echo Sources [$(SOURCES)]
-	@echo Figures [$(FIGS)]
 
 usb: all mount $(patsubst binary/%, /mnt/EFI/%, $(TARGETS)) shell umount
 
 shell:
-	sudo cp psources/shell_scripts/*.nsh /mnt
+	sudo cp sources/shell_scripts/*.nsh /mnt
 
 mount:
 	sudo mount $(USB) /mnt
