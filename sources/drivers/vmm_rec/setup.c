@@ -17,6 +17,7 @@
 #include "msr_bitmap.h"
 #include "io_bitmap.h"
 #include "idt.h"
+#include "apic.h"
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
@@ -66,6 +67,8 @@ void bsp_main() {
   INFO("MTRR PRINT RANGES DONE\n");
   ept_create_tables();
   INFO("EPT CREATE TABLES DONE\n");
+  apic_setup();
+  INFO("APIC SETUP DONE\n");
 
   // Test smp
   // smp_setup();
@@ -79,6 +82,8 @@ void bsp_main() {
   msr_bitmap_set_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2);
   INFO("MSR BITMAP FOR EPT PROTECTION DONE\n");
 #endif
+  msr_bitmap_set_write(MSR_ADDRESS_IA32_APIC_BASE);
+  INFO("MSR BITMAP FOR APIC PROTECTION DONE\n");
   io_bitmap_setup();
   INFO("IO BITMAP DONE\n");
   // Ethernet card protection

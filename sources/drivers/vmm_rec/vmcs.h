@@ -289,6 +289,44 @@ enum vm_entry_control {
   ENTRY_LOAD_IA32_EFER             = (1 << 15),
 };
 
+enum vm_entry_interrupt_type {
+  VM_ENTRY_INT_TYPE_EXT_INT              = 0,
+  VM_ENTRY_INT_TYPE_RESERVED             = 1,
+  VM_ENTRY_INT_TYPE_NMI                  = 2,
+  VM_ENTRY_INT_TYPE_HW_EXCEPTION         = 3,
+  VM_ENTRY_INT_TYPE_SOFT_INT             = 4,
+  VM_ENTRY_INT_TYPE_PRIVILEGED_SOFT_INT  = 5,
+  VM_ENTRY_INT_TYPE_SOFT_EXCEPTION       = 6,
+  VM_ENTRY_INT_TYPE_OTHER                = 7
+};
+
+struct vm_entry_interrupt_info {
+  union {
+    struct {
+      uint32_t vector:8;
+      uint32_t type:3;
+      uint32_t error_code:1;
+      uint32_t _r0:19;
+      uint32_t valid:1;
+    };
+    uint32_t raw;
+  };
+};
+
+struct vm_exit_interrupt_info {
+  union {
+    struct {
+      uint32_t vector:8;
+      uint32_t type:3;
+      uint32_t error_code:1;
+      uint32_t nmi_blocking_due_to_iret:1;
+      uint32_t _r0:18;
+      uint32_t valid:1;
+    };
+    uint32_t raw;
+  };
+};
+
 void vmcs_fill_guest_state_fields(void);
 
 void vmcs_fill_host_state_fields(void);

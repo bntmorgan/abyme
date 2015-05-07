@@ -12,6 +12,8 @@ void cpu_vmclear(uint8_t *region);
 
 void cpu_vmptrld(uint8_t *region);
 
+uint8_t *cpu_vmptrst(void);
+
 void cpu_vmlaunch(void);
 
 void cpu_vmwrite(uint64_t field, uint64_t value);

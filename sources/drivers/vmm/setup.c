@@ -19,7 +19,6 @@
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
-#include "smp.h"
 #include "env.h"
 
 //extern char __text;

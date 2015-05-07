@@ -33,7 +33,9 @@ struct cpuid_00000001_ecx {
     struct {
       uint64_t _undef_1:5;
       uint64_t vmx:1;
-      uint64_t _undef_2:58;
+      uint64_t _undef_2:15;
+      uint64_t x2APIC:1;
+      uint64_t _undef_3:42;
     } __attribute__((packed));
     uint64_t value;
   };
@@ -61,6 +63,10 @@ uint32_t cpuid_80000000_eax;
 struct cpuid_80000001_edx cpuid_80000001_edx;
 
 struct cpuid_80000008_eax cpuid_80000008_eax;
+
+uint8_t cpuid_is_x2APIC_supported(void) {
+  return cpuid_00000001_ecx.x2APIC;
+}
 
 uint8_t cpuid_is_page1g_supported(void) {
   return cpuid_80000001_edx.page1g;

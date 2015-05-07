@@ -48,6 +48,22 @@ void cpu_vmptrld(uint8_t *region) {
   }
 }
 
+uint8_t *cpu_vmptrst(void) {
+  uint16_t ok = 0;
+  uint8_t *region;
+  __asm__ __volatile__(
+      "vmptrst (%1) ;"
+      "setc %%cl    ;"
+      "setz %%ch    ;"
+    : "=c" (ok) : "D" (&region));
+  if (ok != 0x0) {
+    // panic("!#CPU VMPTRLD\n");
+    INFO("REGION 0x%016X\n", region);
+    vmx_transition_display_error((ok >> 8) & 0xff, (ok >> 0) & 0xff);
+  }
+  return region;
+}
+
 void cpu_vmlaunch(void) {
   /* Set rsp and rip in VMCS here because they depend on the implementation of this function. */
   cpu_vmwrite(GUEST_RIP, vm_RIP);

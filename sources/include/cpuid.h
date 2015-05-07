@@ -20,4 +20,6 @@ uint8_t cpuid_get_maxphyaddr(void);
 
 uint8_t cpuid_are_mtrr_supported(void);
 
+uint8_t cpuid_is_x2APIC_supported(void);
+
 #endif

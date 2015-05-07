@@ -17,6 +17,7 @@
 
 uint8_t vmxon[4096] __attribute((aligned(0x1000)));
 uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
+uint8_t vapic[4096] __attribute((aligned(0x1000)));
 
 static uint16_t tsc_freq_MHz;
 static uint8_t tsc_divider;
@@ -214,7 +215,7 @@ void vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(EPT_POINTER_HIGH, (eptp >> 32) & 0xffffffff);
   cpu_vmwrite(VIRTUAL_PROCESSOR_ID, 0x1); // vmcs0 is 1
 
-  // TEST virtual APIC
+  // XXX TEST virtual APIC
   cpu_vmwrite(VIRTUAL_APIC_PAGE_ADDR, (((uintptr_t)&vapic[0]) >> 0) &
       0xffffffff);
   cpu_vmwrite(VIRTUAL_APIC_PAGE_ADDR_HIGH, (((uintptr_t)&vapic[0]) >> 32) &

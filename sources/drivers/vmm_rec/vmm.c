@@ -19,6 +19,7 @@
 #include "nested_vmx.h"
 #include "level.h"
 #include "paging.h"
+#include "apic.h"
 
 uint8_t vmm_stack[VMM_STACK_SIZE];
 
@@ -337,6 +338,11 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
           if (need_recompute_ept) {
             ept_cache();
           }
+      } else if (guest_regs.rcx == MSR_ADDRESS_IA32_APIC_BASE) {
+          __asm__ __volatile__("wrmsr"
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+          INFO("Writing in apic base msr!\n"); 
+          apic_setup();
       } else {
         vmm_panic(ns.state, VMM_PANIC_WRMSR, 0, &guest_regs);
       }
@@ -398,7 +404,11 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       uint64_t a;
       uint8_t s;
       if(ept_walk(eptp, guest_linear_addr, &e, &a, &s)) {
-        ERROR("ERROR walking address 0x%016X\n", guest_linear_addr);
+        if (paging_error == PAGING_WALK_NOT_PRESENT) {
+          INFO("Linear 0x%016X not preset\n", guest_linear_addr);
+        } else {
+          ERROR("ERROR walking address 0x%016X\n", guest_linear_addr);
+        }
       }
       INFO("walk : e(0x%016X), a(0x%016X), s(0x%02x)\n", *e, a, s);
       break;

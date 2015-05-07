@@ -61,6 +61,16 @@
 #define MSR_ADDRESS_IA32_MTRR_FIX4K_F8000           0x26f
 #define MSR_ADDRESS_IA32_MTRR_PHYSBASE0             0x200
 
+#define MSR_ADDRESS_IA32_X2APIC_APICID              0x802
+#define MSR_ADDRESS_IA32_X2APIC_VESION              0x803
+#define MSR_ADDRESS_IA32_X2APIC_LVT_CMCI            0x82f
+#define MSR_ADDRESS_IA32_X2APIC_LVT_TIMER           0x832
+#define MSR_ADDRESS_IA32_X2APIC_LVT_THERMAL         0x833
+#define MSR_ADDRESS_IA32_X2APIC_LVT_PMI             0x834
+#define MSR_ADDRESS_IA32_X2APIC_LVT_LINT0           0x835
+#define MSR_ADDRESS_IA32_X2APIC_LVT_LINT1           0x836
+#define MSR_ADDRESS_IA32_X2APIC_LVT_ERROR           0x837
+
 uint64_t msr_read(uint64_t msr_address);
 
 void msr_write(uint64_t msr_address, uint64_t msr_value);
