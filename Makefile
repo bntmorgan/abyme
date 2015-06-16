@@ -103,27 +103,34 @@ mount:
 umount:
 	sudo umount /mnt
 
-/mnt/EFI/%.efi: binary/%.efi
+/mnt/EFI/%: binary/%
 	@echo "  [CP]    $^ -> $@"
+	@sudo mkdir -p $(dir $@)
 	@sudo cp $< $@
 
 qemu: launch
 
 pre-launch:
-	rm -rf qemu/roms/*
-	cp qemu/packages/OVMF-X64-r11337-alpha.zip qemu/roms
-	cd qemu/roms ; unzip OVMF-X64-r11337-alpha.zip
-	rm qemu/roms/OVMF-X64-r11337-alpha.zip
-	mv qemu/roms/CirrusLogic5446.rom qemu/roms/vgabios-cirrus.bin
-	mv qemu/roms/OVMF.fd qemu/roms/bios.bin
-#	cp qemu/edk2/Build/OvmfX64/DEBUG_GCC46/FV/OVMF.fd qemu/roms/bios.bin
-	cp /usr/share/qemu/kvmvapic.bin qemu/roms
-	cp /usr/share/qemu/pxe-rtl8139.rom qemu/roms
+	rm -fr qemu/hda-contents
+	mkdir qemu/hda-contents
 	cp -r binary/ qemu/hda-contents
+	cp -r sources/shell_scripts/* qemu/hda-contents
+#	rm -rf qemu/roms/*
+#	cp qemu/packages/OVMF-X64-r11337-alpha.zip qemu/roms
+#	cd qemu/roms ; unzip OVMF-X64-r11337-alpha.zip
+#	rm qemu/roms/OVMF-X64-r11337-alpha.zip
+#	mv qemu/roms/CirrusLogic5446.rom qemu/roms/vgabios-cirrus.bin
+#	mv qemu/roms/OVMF.fd qemu/roms/bios.bin
+#	cp qemu/edk2/Build/OvmfX64/DEBUG_GCC46/FV/OVMF.fd qemu/roms/bios.bin
+#	cp /usr/share/qemu/kvmvapic.bin qemu/roms
+#	cp /usr/share/qemu/pxe-rtl8139.rom qemu/roms
 
 launch: pre-launch
-	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
-			tcp:localhost:6666 -cpu qemu64,model=6,+vmx -monitor stdio -m 8G \
+	qemu-system-x86_64 -bios /usr/share/ovmf/ovmf_x64.bin -m 4G \
+		-hda fat:qemu/hda-contents -cpu host -enable-kvm
+
+# 	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
+# 			tcp:localhost:6666 -cpu qemu64,model=6,+vmx -monitor stdio -m 8G \
 			#-enable-kvm
 
 #pre-launch:
