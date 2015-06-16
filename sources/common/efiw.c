@@ -2,6 +2,23 @@
 
 EFI_STATUS efiw_status;
 
+int efi_loaded_image_info(EFI_HANDLE image_handle, struct efi_loaded_image
+    *eli) {
+  EFI_LOADED_IMAGE *img;
+  EFI_GUID guid = LOADED_IMAGE_PROTOCOL;
+
+  efiw_status = uefi_call_wrapper(BS->HandleProtocol, 3, image_handle, &guid,
+      &img); 
+
+  if (!EFI_ERROR (efiw_status)) {
+    eli->start = (uint64_t)img->ImageBase;
+    eli->end = eli->start + img->ImageSize;
+  }
+  return efiw_status;
+}
+
+
+
 void *efi_allocate_pool(uint64_t size) {
   void *buf;
   // allocate the page tables 
