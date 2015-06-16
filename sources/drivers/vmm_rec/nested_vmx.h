@@ -247,6 +247,7 @@
 
 
 #define GVMCS_NB 8
+#define CHUNK_NB 16
 
 extern uint8_t guest_vmcs[GVMCS_NB][4096];
 
@@ -256,19 +257,40 @@ enum NESTED_STATE {
   NESTED_GUEST_RUNNING
 };
 
+struct guest_ept_tables {
+  // 4 KB mapped under EPTN giga bytes
+  uint64_t PML40_PDPT0_N_PD_PT[EPTN][512][512] __attribute__((aligned(0x1000)));
+};
+
 struct nested_state {
   uint8_t state;
   uint8_t *shadow_ptr;
   uint32_t shadow_idx;
   uint32_t nested_level;
   uint8_t *shadow_vmcs_ptr[GVMCS_NB];
+  uint32_t guest_vmcs_idx;
+  uint8_t guest_vmx_operation;
+  // save here the current guest shadow vmcs ptr
+  uint8_t *guest_shadow_vmcs_ptr[GVMCS_NB];
 };
 
 extern struct nested_state ns;
 
+static inline int is_top_guest(void) {
+  return (ns.shadow_idx == ns.guest_vmcs_idx - 1);
+}
+
+void nested_recover_state(void);
+
+#ifdef _PARTIAL_VMX
+void nested_partial_vmresume(struct registers *guest_regs);
+#endif
+
 void nested_vmxon(uint8_t *vmxon_guest);
 
 void nested_vmclear(uint8_t *shadow_vmcs);
+
+void nested_guest_vmptrld(uint8_t *shadow_vmcs, struct registers *gr);
 
 void nested_vmptrld(uint8_t *shadow_vmcs, struct registers *gr);
 
@@ -285,5 +307,11 @@ void nested_load_guest(void);
 void nested_load_host(void);
 
 void nested_vmx_shadow_bitmap_init(void);
+
+void nested_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code);
+
+void nested_interrupt_inject(void);
+
+void nested_vmptrst(uint8_t **shadow_vmcs, struct registers *gr);
 
 #endif

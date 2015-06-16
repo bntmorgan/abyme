@@ -18,6 +18,16 @@ dir	:= $(d)/vmm_supervisor
 include	$(dir)/rules.mk
 dir	:= $(d)/vmm_rec
 include	$(dir)/rules.mk
+dir	:= $(d)/vmm_rec_none
+include	$(dir)/rules.mk
+dir	:= $(d)/vmm_rec_0
+include	$(dir)/rules.mk
+dir	:= $(d)/vmm_rec_1
+include	$(dir)/rules.mk
+dir	:= $(d)/vmm_rec_2
+include	$(dir)/rules.mk
+dir	:= $(d)/vmm_rec_eric
+include	$(dir)/rules.mk
 dir	:= $(d)/smm
 include	$(dir)/rules.mk
 # dir	:= $(d)/smm_handler

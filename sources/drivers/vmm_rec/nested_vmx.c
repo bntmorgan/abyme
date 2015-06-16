@@ -13,6 +13,7 @@
 #include "cpuid.h"
 #include "msr.h"
 #include "cpu.h"
+#include "level.h"
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
@@ -20,6 +21,9 @@
 struct nested_state ns = {
   NESTED_DISABLED,
   (uint8_t*)(uint64_t)-1,
+  0,
+  0,
+  {0},
   0,
   0,
   {0}
@@ -33,6 +37,8 @@ static uint64_t fields_values[NB_VMCS_FIELDS];
 
 static inline void read_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields);
 static inline void write_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields);
+
+void nested_set_vm_succeed(void);
 
 #ifdef _VMCS_SHADOWING
 uint8_t vmread_bitmap [4096] __attribute__((aligned(0x1000)));
@@ -49,18 +55,16 @@ enum shadow_err_code {
  * Gestion des VMCS GUEST
  */
 uint8_t guest_vmcs[GVMCS_NB][4096] __attribute((aligned(0x1000)));
-struct nested_state *gns[GVMCS_NB];
-static uint32_t guest_vmcs_idx = 0;
 
 static int shadow_add(uint8_t *ptr, uint32_t *idx, uint64_t rip) {
-  if (guest_vmcs_idx >= GVMCS_NB) {
+  if (ns.guest_vmcs_idx >= GVMCS_NB) {
     return SHADOW_NO_SPACE;
   }
-  ns.shadow_vmcs_ptr[guest_vmcs_idx] = ptr;
+  ns.shadow_vmcs_ptr[ns.guest_vmcs_idx] = ptr;
   if (idx != NULL) {
-    *idx = guest_vmcs_idx;
+    *idx = ns.guest_vmcs_idx;
   }
-  guest_vmcs_idx++;
+  ns.guest_vmcs_idx++;
   return SHADOW_OK;
 }
 
@@ -68,6 +72,7 @@ static int shadow_add(uint8_t *ptr, uint32_t *idx, uint64_t rip) {
 static void shadow_bitmap_read_set_field(uint64_t field) {
   vmread_bitmap[(field & 0x7fff) >> 3] |= (1 << ((field & 0x7fff) & 0x7));
 }
+
 
 void nested_vmx_shadow_bitmap_init(void) {
   static uint64_t fields[] = {NESTED_READ_ONLY_DATA_FIELDS};
@@ -88,10 +93,11 @@ static int shadow_init(uint32_t idx) {
   return SHADOW_OK;
 }
 
-static int shadow_get_do(uint8_t *ptr, uint32_t *idx, uint8_t **tab) {
+// Get guest vmcs index from shadow
+static int shadow_get_idx(uint8_t *ptr, uint32_t *idx) {
   uint32_t i;
-  for (i = 0; i < guest_vmcs_idx; i++) {
-    if (tab[i] == ptr) {
+  for (i = 0; i < ns.guest_vmcs_idx; i++) {
+    if (ns.shadow_vmcs_ptr[i] == ptr) {
       if (idx != NULL) {
         *idx = i;
       }
@@ -101,9 +107,21 @@ static int shadow_get_do(uint8_t *ptr, uint32_t *idx, uint8_t **tab) {
   return SHADOW_NOT_FOUND;
 }
 
-static int shadow_get(uint8_t *ptr, uint32_t *idx) {
- return shadow_get_do(ptr, idx, &ns.shadow_vmcs_ptr[0]);
+// Get guest vmcs index from guest vmcs pointer
+#ifdef _PARTIAL_VMX
+static int guest_vmcs_get_idx(uint8_t *ptr, uint32_t *idx) {
+  uint32_t i;
+  for (i = 0; i < ns.guest_vmcs_idx; i++) {
+    if ((uint8_t *)&guest_vmcs[i] == ptr) {
+      if (idx != NULL) {
+        *idx = i;
+      }
+      return SHADOW_OK;
+    }
+  }
+  return SHADOW_NOT_FOUND;
 }
+#endif
 
 static int shadow_new(uint8_t *ptr, uint64_t rip) {
   uint32_t idx;
@@ -120,13 +138,82 @@ static int shadow_new(uint8_t *ptr, uint64_t rip) {
 
 static int shadow_set(uint8_t *ptr) {
   uint32_t idx;
-  if (shadow_get(ptr, &idx) == SHADOW_NOT_FOUND) {
-    ERROR("VMCSs not found...\n");
+  if (shadow_get_idx(ptr, &idx) == SHADOW_NOT_FOUND) {
+    ERROR("VMCSs not found... (0x%016X)\n", ptr);
   }
   ns.shadow_idx = idx;
   // Set the level of virtualization
   ns.nested_level = idx + 2; // vmcs0 is already 1
   return SHADOW_OK;
+}
+
+/**
+ * VMM state recovery in case of partial VMX
+ */
+#ifdef _PARTIAL_VMX
+void nested_recover_state(void) {
+  uint8_t *region = cpu_vmptrst();
+  uint32_t shadow_idx;
+  uint32_t nested_level = 0;
+  uint8_t state = NESTED_DISABLED;
+  // If the running guest is vmcs0
+  if (ns.guest_vmx_operation == 0) {
+    state = NESTED_DISABLED;
+    nested_level = 1;
+  } else if (region == &vmcs0[0]) {
+    state = NESTED_HOST_RUNNING;
+    nested_level = 1;
+  } else {
+    state = NESTED_GUEST_RUNNING;
+    if(guest_vmcs_get_idx(region, &shadow_idx)) {
+      ERROR("Guest VMCS not found...\n");
+    }
+    nested_level = shadow_idx + 2;
+  }
+  ns.state = state;
+  ns.shadow_idx = shadow_idx;
+  ns.nested_level = nested_level;
+  if (state != ns.state || (state == NESTED_GUEST_RUNNING && shadow_idx !=
+      ns.shadow_idx)) {
+    ERROR("New information not corresponding...\n");
+  }
+  LEVEL(1, "state(0x%x), shadow_idx(0x%x), nested_level(0x%x)\n", ns.state,
+      ns.shadow_idx, ns.nested_level);
+}
+#endif
+
+/**
+ * Event injection
+ */ 
+
+static uint8_t charged = 0;
+static uint32_t error_code = 0;
+static struct vm_entry_interrupt_info iif;
+
+void nested_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code) {
+  if (charged) {
+    INFO("Multiple event injection unsupported : losing an interrupt \n");
+  }
+  charged = 1;
+  iif.vector = vector;
+  iif.type = type;
+  if (error_code > 0 && (type == VM_ENTRY_INT_TYPE_SOFT_EXCEPTION || type ==
+        VM_ENTRY_INT_TYPE_HW_EXCEPTION)) {
+    iif.error_code = 1;
+    error_code = error_code;
+  }
+  iif.valid = 1;
+}
+
+void nested_interrupt_inject(void) {
+  if (charged) {
+    charged = 0;
+    cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, iif.raw);
+    if (iif.error_code) {
+      cpu_vmwrite(VM_ENTRY_EXCEPTION_ERROR_CODE, error_code);
+    }
+    INFO("Event Injection in 0x%x!\n", ns.nested_level);
+  }
 }
 
 /**
@@ -154,8 +241,15 @@ void nested_vmxon(uint8_t *vmxon_guest) {
   if (ns.state != NESTED_DISABLED) {
     panic("#!NESTED_VMXON not disabled\n");
   }
-  // set guest carry flag to 0
-  cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x1);
+  // Notify the success
+  nested_set_vm_succeed();
+
+  // XXX ESXI
+//   cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x8);
+//   cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x4);
+// 
+//   INFO("IA32 TSC deadline 0x%016X : tsc 0x%016X\n",
+//       msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE), cpu_read_tsc());
 
   // check if vmcs addr is aligned on 4Ko and check rev identifier
   if (((uint64_t)vmxon_guest & 0xfff) != 0){
@@ -166,13 +260,26 @@ void nested_vmxon(uint8_t *vmxon_guest) {
   }
 
   ns.state = NESTED_HOST_RUNNING;
+  ns.guest_vmx_operation = 1;
 }
 
 void nested_vmclear(uint8_t *shadow_vmcs) {
   cpu_vmclear(shadow_vmcs);
   // set guest carry and zero flag to 0
-  cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
+  nested_set_vm_succeed();
+  // cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
 }
+
+// No emulation, just keep the pointer
+#ifdef _PARTIAL_VMX
+void nested_guest_vmptrld(uint8_t *shadow_vmcs, struct registers *gr) {
+  if (ns.state == NESTED_HOST_RUNNING) {
+    ns.guest_shadow_vmcs_ptr[0] = shadow_vmcs;
+  } else {
+    ns.guest_shadow_vmcs_ptr[ns.shadow_idx + 1] = shadow_vmcs;
+  }
+}
+#endif
 
 void nested_vmptrld(uint8_t *shadow_vmcs, struct registers *gr) {
 
@@ -183,11 +290,22 @@ void nested_vmptrld(uint8_t *shadow_vmcs, struct registers *gr) {
     ERROR("Shadow VMCS pointer is null\n");
   }
   // set guest carry and zero flag to 0
-  cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
+  nested_set_vm_succeed();
+  // cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
 
 #ifdef _VMCS_SHADOWING
   set_vmcs_link_pointer(shadow_vmcs);
 #endif
+}
+
+void nested_vmptrst(uint8_t **shadow_vmcs, struct registers *gr) {
+
+  // Give back the shadow ptr to the guest
+  *shadow_vmcs = ns.shadow_ptr;
+
+  // set guest carry and zero flag to 0
+  // cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
+  nested_set_vm_succeed();
 }
 
 #ifdef _NESTED_EPT
@@ -235,8 +353,8 @@ void nested_smap_build(void) {
       return 1;
     }
   }
-  uint64_t eptp = (cpu_vmread(EPT_POINTER_HIGH) << 32) |
-    cpu_vmread(EPT_POINTER);
+  uint64_t eptp = ((cpu_vmread(EPT_POINTER_HIGH) << 32) |
+    cpu_vmread(EPT_POINTER)) & ~((uint64_t)0xfff);
   INFO("EPTP 0x%016X\n", eptp);
   if (ept_iterate(eptp, &cb)) {
     ERROR("PAGING error... 0x%x\n", paging_error);
@@ -256,6 +374,8 @@ void nested_shadow_to_guest(void) {
 #endif
   cpu_vmptrld(guest_vmcs[ns.shadow_idx]);
   WRITE_VMCS_FIELDS(guest_fields);
+  // clear the RFLAGS.IF if this is a VMM
+
 #ifdef _VMCS_SHADOWING
   // Activate VMCS shadowing if any
   if (sec_ctrl) {
@@ -305,13 +425,6 @@ void nested_vmresume(struct registers *guest_regs) {
   shadow_set(ns.shadow_ptr);
 #ifdef _NESTED_EPT
   ept_set_ctx(ns.shadow_idx + 1); // 0 is for vmcs0
-//   uint64_t desc1[2] = {
-//     0x0000000000000000,
-//     0x000000000000ffff | 0x0000
-//   };
-//   uint64_t type1 = 0x2;
-//   // Flush all tlb caches #YOLO
-//   __asm__ __volatile__("invvpid %0, %1" : : "m"(desc1), "r"(type1));
   uint64_t desc2[2] = {
     0x0000000000000000,
     0x000000000000ffff | 0x0000
@@ -319,7 +432,17 @@ void nested_vmresume(struct registers *guest_regs) {
   uint64_t type2 = 0x2;
   __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
 #endif
+  // Copy exec controls from vmcs0
+  // uint32_t pinbased_ctls = cpu_vmread(PIN_BASED_VM_EXEC_CONTROL);
   nested_load_guest();
+  // Handle all interrupts of the virtualized VMMs to reroute them into linux
+  if (is_top_guest()) {
+    // Inject protential previous event into the top guest
+    nested_interrupt_inject();
+  } else {
+    // pinbased_ctls |= NMI_EXITING | EXT_INTR_EXITING;
+  }
+  // cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, pinbased_ctls);
 }
 
 void nested_vmlaunch(struct registers *guest_regs) {
@@ -336,13 +459,6 @@ void nested_vmlaunch(struct registers *guest_regs) {
 
 #ifdef _NESTED_EPT
   ept_set_ctx(ns.shadow_idx + 1); // 0 is for vmcs0
-//   uint64_t desc1[2] = {
-//     0x0000000000000000,
-//     0x000000000000ffff | 0x0000
-//   };
-//   uint64_t type1 = 0x2;
-//   // Flush all tlb caches #YOLO
-//   __asm__ __volatile__("invvpid %0, %1" : : "m"(desc1), "r"(type1));
   uint64_t desc2[2] = {
     0x0000000000000000,
     0x000000000000ffff | 0x0000
@@ -362,6 +478,28 @@ void nested_vmlaunch(struct registers *guest_regs) {
 
   ns.state = NESTED_GUEST_RUNNING;
 
+  // Adjust vm entry controls
+  INFO("rFAGZ 0x%016X\n", cpu_vmread(GUEST_RFLAGS));
+  vmm_adjust_vm_entry_controls();
+
+  // XXX
+  // Adjust Unrestricted Guest
+  cpu_vmptrld(ns.shadow_ptr);
+  uint32_t procbased_ctls_2 = cpu_vmread(SECONDARY_VM_EXEC_CONTROL);
+  uint32_t procbased_ctls = cpu_vmread(CPU_BASED_VM_EXEC_CONTROL);
+  uint32_t pinbased_ctls = cpu_vmread(PIN_BASED_VM_EXEC_CONTROL);
+  cpu_vmptrld(guest_vmcs[ns.shadow_idx]);
+  INFO("Pinbased controls 0x%016X\n", pinbased_ctls);
+  INFO("Procbased controls 0x%016X\n", procbased_ctls);
+  INFO("Seconary procbased controls 0x%016X\n", procbased_ctls_2);
+  if (procbased_ctls_2 & (uint32_t)UNRESTRICTED_GUEST) {
+    INFO("Unrestricted guest\n");
+  } else {
+    INFO("Normal guest\n");
+  }
+
+  // XXX 
+
   nested_cpu_vmlaunch(guest_regs);
 }
 
@@ -371,8 +509,8 @@ uint64_t nested_vmread(uint64_t field) {
   // Reading ro_data fields is done in guest_vmcs instead of shadow_vmcs
   if (((field >> 10) & 0x3) == 0x1) { // ro_data fields
     uint32_t idx;
-    if (shadow_get(ns.shadow_ptr, &idx) == SHADOW_NOT_FOUND) {
-      ERROR("VMCSs not found...\n");
+    if (shadow_get_idx(ns.shadow_ptr, &idx) == SHADOW_NOT_FOUND) {
+      INFO("vmread: shadow VMCS(0x%016X) is not launched, loading it\n");
     }
     cpu_vmptrld(guest_vmcs[idx]);
   } else {
@@ -384,7 +522,8 @@ uint64_t nested_vmread(uint64_t field) {
   cpu_vmptrld(vmcs0);
 
   // XXX We assume that everything went good : CF and ZF = 0
-  cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
+  // cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
+  nested_set_vm_succeed();
 
   return value;
 }
@@ -396,7 +535,8 @@ void nested_vmwrite(uint64_t field, uint64_t value) {
   cpu_vmptrld(vmcs0);
 
   // XXX We assume that everything went good : CF and ZF = 0
-  cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
+  // cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
+  nested_set_vm_succeed();
 }
 
 void nested_load_host(void) {
@@ -418,13 +558,6 @@ void nested_load_host(void) {
 #ifdef _NESTED_EPT
   // Restore ept mapping
   ept_set_ctx(0); // 0 is for vmcs0
-//   uint64_t desc1[2] = {
-//     0x0000000000000000,
-//     0x000000000000ffff | 0x0000
-//   };
-//   uint64_t type1 = 0x2;
-//   // Flush all tlb caches #YOLO
-//   __asm__ __volatile__("invvpid %0, %1" : : "m"(desc1), "r"(type1));
   uint64_t desc2[2] = {
     0x0000000000000000,
     0x000000000000ffff | 0x0000
@@ -459,6 +592,51 @@ void nested_load_guest(void) {
 #ifdef _DEBUG_SERVER
   debug_server_mtf();
 #endif
+}
+
+#ifdef _PARTIAL_VMX
+void nested_partial_vmresume(struct registers *guest_regs) {
+  // Get the cnsh shadow ptr where we need to copy
+  ns.shadow_ptr = ns.guest_shadow_vmcs_ptr[ns.shadow_idx + 1];
+
+  INFO("SHADOW courante de l'hyperviseur 0x%02x : 0x%016X\n", ns.nested_level,
+      ns.shadow_ptr);
+
+  // XXX lol because of the effect of the partial vmx for resume we just need to
+  // increment the shadow idx index
+  ns.shadow_idx++;
+  ns.nested_level = ns.shadow_idx + 2; // vmcs0 is already 1
+
+  // Copy shadow 
+  nested_load_guest();
+  uint64_t grip  = cpu_vmread(GUEST_RIP);
+  INFO("New rip 0x%016X\n", grip);
+
+  // Change the current shadow
+  ns.shadow_ptr = ns.shadow_vmcs_ptr[ns.shadow_idx];
+  INFO("New shadow ptr 0x%016X\n", ns.shadow_ptr);
+
+  // Set the mapping !
+#ifdef _NESTED_EPT
+  ept_set_ctx(ns.shadow_idx + 1); // 0 is for vmcs0
+  uint64_t desc2[2] = {
+    0x0000000000000000,
+    0x000000000000ffff | 0x0000
+  };
+  uint64_t type2 = 0x2;
+  __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
+#endif
+
+  debug_server_panic(ns.state, 0, 0, guest_regs);
+  // Let it go !
+}
+#endif
+
+void nested_set_vm_succeed(void) {
+  struct rflags rf;
+  rf.raw = cpu_vmread(GUEST_RFLAGS);
+  rf.cf = rf.pf = rf.af = rf.zf = rf.sf = rf.of = 0;
+  cpu_vmwrite(GUEST_RFLAGS, rf.raw);
 }
 
 static inline void read_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields) {

@@ -1,8 +1,11 @@
 echo changing terminal mode
 # mode 100 31
 echo Startup !
-fs1:
-rec.nsh
+fs0:
+vmm_rec.nsh
+# none.nsh
+# rec_eric.nsh
+# rec.nsh
 # supervisor.nsh
 # l2.nsh
 # l1_l2_eric.nsh
@@ -11,4 +14,4 @@ rec.nsh
 echo Launching grub
 echo press any key
 # pause
-fs0:\EFI\arch_grub\grubx64.efi
+# fs0:\EFI\grublord\grubx64.efi

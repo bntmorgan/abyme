@@ -145,6 +145,7 @@ void vmcs_fill_host_state_fields(void) {
   cpu_vmwrite(HOST_GDTR_BASE, gdt_get_host_base());
 
   idt_get_idt_ptr(&idt_ptr);
+  // cpu_read_idt((uint8_t *) &idt_ptr);
   cpu_vmwrite(HOST_IDTR_BASE, idt_ptr.base);
 
   cpu_vmwrite(HOST_IA32_SYSENTER_CS, msr_read(MSR_ADDRESS_IA32_SYSENTER_CS));
@@ -158,13 +159,13 @@ void vmcs_fill_host_state_fields(void) {
 }
 
 void vmcs_fill_vm_exec_control_fields(void) {
-  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS | USE_IO_BITMAPS | CR3_LOAD_EXITING | USE_TSC_OFFSETTING;
-  uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST | ENABLE_RDTSCP/* | VIRT_INTR_DELIVERY | APIC_REGISTER_VIRT*/;
+  uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS | USE_IO_BITMAPS | CR3_LOAD_EXITING;
+  uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST | ENABLE_RDTSCP;
                              
   uint64_t msr_bitmap_ptr;
   uint64_t eptp;
   uint64_t io_bitmap_ptr;
-  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER;
+  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER | NMI_EXITING;
 
   cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
 

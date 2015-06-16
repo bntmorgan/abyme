@@ -4,10 +4,6 @@
 #include "vmcs.h"
 #include "msr.h"
 
-extern uint64_t vm_RIP;
-extern uint64_t vm_RSP;
-extern uint64_t vm_RBP;
-
 void cpu_enable_vmxe(void) {
   cpu_write_cr4(cpu_read_cr4() | 0x00002000);
 }
@@ -64,12 +60,13 @@ uint8_t *cpu_vmptrst(void) {
   return region;
 }
 
-void cpu_vmlaunch(void) {
+void cpu_vmlaunch(uint64_t vm_RIP, uint64_t vm_RSP, uint64_t vm_RBP) {
   /* Set rsp and rip in VMCS here because they depend on the implementation of this function. */
   cpu_vmwrite(GUEST_RIP, vm_RIP);
   cpu_vmwrite(GUEST_RSP, vm_RSP);
   /* Correct rbp */
   __asm__ __volatile__("mov %0, %%rbp" : : "m" (vm_RBP));
+  INFO("rip 0x%016X, rsp 0x%016x, rbp 0x%016X\n", vm_RIP, vm_RSP, vm_RBP);
   /* Launch the vm */
   __asm__ __volatile__("vmlaunch;"
                        /* everything after should not be executed */

@@ -4,6 +4,7 @@
 #include <efi.h>
 
 #include "types.h"
+#include "setup.h"
 
 #define VMM_STACK_SIZE 0x400000
 #define NB_EXIT_REASONS 65
@@ -93,7 +94,8 @@ struct registers {
   uint64_t rip;
 } __attribute__((packed));
 
-void vmm_init(void);
 void vmm_vm_exit_handler(void);
+void vmm_init(struct setup_state *state);
+void vmm_adjust_vm_entry_controls(void);
 
 #endif

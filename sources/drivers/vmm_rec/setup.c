@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "paging.h"
 #include "pat.h"
+#include "dmar.h"
 #include "msr.h"
 #include "cpu.h"
 #include "cpuid.h"
@@ -18,6 +19,7 @@
 #include "io_bitmap.h"
 #include "idt.h"
 #include "apic.h"
+#include "hook.h"
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
@@ -25,22 +27,30 @@
 #include "nested_vmx.h"
 #endif
 
-//extern char __text;
-extern uint8_t _protected_begin;
-extern uint8_t _protected_end;
-
 uint32_t vmcs_revision_identifier;
 uint32_t number_bytes_regions;
 
-void bsp_main() {
+void bsp_main(struct setup_state *state) {
+
 #ifdef _DEBUG_SERVER
   debug_server_init();
+#endif
+
+#ifdef _DEBUG_SERVER
+  if (debug_printk) {
+    INFO("Debug infos by ethernet enabled\n");
+    debug_server_enable_putc();
+  } else {
+    INFO("Debug infos totally disabled\n");
+    debug_server_disable_putc();
+  }
 #endif
 
   INFO("CPUID SETUP\n");
   cpuid_setup();
   INFO("PAT SETUP\n");
   pat_setup();
+  // dmar_init();
 
   INFO("IDT SETUP\n");
   idt_create();
@@ -51,9 +61,9 @@ void bsp_main() {
   nested_vmx_shadow_bitmap_init();
 #endif
 
-  INFO("VMCS addresses %X %X\n", vmxon, vmcs0);
-  INFO("_protected_begin %X\n", &_protected_begin);
-  INFO("_protected_end %X\n", &_protected_end);
+  INFO("VMCS addresses 0x%X 0x%X\n", vmxon, vmcs0);
+  INFO("protected_begin 0x%X\n", state->protected_begin);
+  INFO("protected_end 0x%X\n", state->protected_end);
 
   gdt_setup_guest_gdt();
   INFO("GUEST GDT DONE\n");
@@ -65,13 +75,10 @@ void bsp_main() {
   INFO("MTRR CREATE RANGES DONE\n");
   mtrr_print_ranges();
   INFO("MTRR PRINT RANGES DONE\n");
-  ept_create_tables();
+  ept_create_tables(state->protected_begin, state->protected_end);
   INFO("EPT CREATE TABLES DONE\n");
-  apic_setup();
+  // apic_setup();
   INFO("APIC SETUP DONE\n");
-
-  // Test smp
-  // smp_setup();
 
   // Virtualization
   msr_bitmap_setup();
@@ -98,13 +105,14 @@ void bsp_main() {
   // Wait for the end of APs initialization chain
   // TODO implement
 
+  vmm_init(state);
+
   vmm_setup(/* TODO #core */);
   INFO("SETUP DONE\n");
-  vmm_vm_setup_and_launch(/* TODO #core */);
+  vmm_vm_setup_and_launch(state);
 }
 
 void vmm_setup() {
-  vmm_init();
   vmm_create_vmxon_and_vmcs_regions();
   cpu_write_cr0(cpu_adjust64(cpu_read_cr0(), MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1));
   cpu_write_cr4(cpu_adjust64(cpu_read_cr4(), MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
@@ -128,28 +136,21 @@ void vmm_create_vmxon_and_vmcs_regions(void) {
   *((uint32_t *) &vmcs0[0]) = vmcs_revision_identifier;
 }
 
-void vmm_vm_setup_and_launch() {
-  INFO("vmclear(0x%016X)\n", (uint64_t)&vmcs0[0]);
-  cpu_vmclear((uint8_t *) vmcs0);
-  INFO("vmptrld(0x%016X)\n", (uint64_t)&vmcs0[0]);
-  cpu_vmptrld((uint8_t *) vmcs0);
-  vmcs_fill_host_state_fields();
-  vmcs_fill_vm_exit_control_fields();
-  vmcs_fill_vm_entry_control_fields();
-  vmcs_fill_vm_exec_control_fields();
-  vmcs_fill_guest_state_fields();
-  INFO("READY TO GO!\n");
+void vmm_vm_setup_and_launch(struct setup_state *state) {
+ INFO("vmclear(0x%016X)\n", (uint64_t)&vmcs0[0]);
+ cpu_vmclear((uint8_t *) vmcs0);
+ INFO("vmptrld(0x%016X)\n", (uint64_t)&vmcs0[0]);
+ cpu_vmptrld((uint8_t *) vmcs0);
+ vmcs_fill_host_state_fields();
+ vmcs_fill_vm_exit_control_fields();
+ vmcs_fill_vm_entry_control_fields();
+ vmcs_fill_vm_exec_control_fields();
+ vmcs_fill_guest_state_fields();
+ INFO("READY TO GO!\n");
 
-#ifdef _DEBUG_SERVER
-  if (debug_printk) {
-    INFO("Debug infos by ethernet enabled\n");
-    debug_server_enable_putc();
-  } else {
-    INFO("Debug infos totally disabled\n");
-    debug_server_disable_putc();
-  }
-#endif
+  // Call hook main
+  hook_main();
 
   INFO("vmlaunch\n");
-  cpu_vmlaunch();
+  cpu_vmlaunch(state->vm_RIP, state->vm_RSP, state->vm_RBP);
 }

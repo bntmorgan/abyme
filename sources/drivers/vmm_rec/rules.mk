@@ -2,11 +2,10 @@ sp              := $(sp).x
 dirstack_$(sp)  := $(d)
 d               := $(dir)
 
-TARGET					:= $(call SRC_2_BIN, $(d)/efi.efi)
-TARGET_ELF		  := $(call SRC_2_BIN, $(d)/efi.elf)
-TARGETS 				+= $(call SRC_2_BIN, $(TARGET))
+TARGET_A			  := $(call SRC_2_BIN, $(d)/libvmm.a)
+TARGETS 				+= $(TARGET_A)
 OBJS_$(d)				:= $(call SRC_2_OBJ, \
-										$(d)/efi.o $(d)/vmm.o $(d)/common/efiw.o $(d)/common/screen.o $(d)/common/stdio.o $(d)/common/stdlib.o $(d)/common/debug.o $(d)/common/cpu.o $(d)/common/cpuid.o $(d)/common/msr.o $(d)/vmexit.o $(d)/setup.o $(d)/vmcs.o $(d)/gdt.o $(d)/common/mtrr.o $(d)/common/string.o $(d)/ept.o $(d)/msr_bitmap.o $(d)/common/paging.o $(d)/common/pat.o $(d)/io_bitmap.o $(d)/pci.o $(d)/vmx.o $(d)/nested_vmx.o $(d)/idt.o $(d)/isr.o $(d)/apic.o)
+										$(d)/efi.o $(d)/vmm.o $(d)/common/efiw.o $(d)/common/screen.o $(d)/common/stdio.o $(d)/common/stdlib.o $(d)/common/debug.o $(d)/common/cpu.o $(d)/common/cpuid.o $(d)/common/msr.o $(d)/vmexit.o $(d)/setup.o $(d)/vmcs.o $(d)/gdt.o $(d)/common/mtrr.o $(d)/common/string.o $(d)/ept.o $(d)/msr_bitmap.o $(d)/common/paging.o $(d)/common/pat.o $(d)/io_bitmap.o $(d)/pci.o $(d)/vmx.o $(d)/nested_vmx.o $(d)/idt.o $(d)/isr.o $(d)/apic.o $(d)/dmar.o $(d)/hook.o)
 
 OBJECTS 				+= $(OBJS_$(d))
 
@@ -14,23 +13,11 @@ OBJECTS 				+= $(OBJS_$(d))
 dir	:= $(d)/debug_server
 include	$(dir)/rules.mk
 
-$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -D_DEBUG_SERVER -U_NO_PRINTK \
+$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -U_DEBUG_SERVER -U_NO_PRINTK \
 	-D_VMCS_SHADOWING -U_PARTIAL_VMX -D_NESTED_EPT -U_NO_GUEST_EPT -U_ESXI
 
-$(TARGET_ELF)				:  LD_FLAGS_TARGET	:=
-$(TARGET_ELF)				:  LD_FLAGS_ALL	:= -nostdlib -T $(d)/efi.ld \
-							-shared -Bsymbolic -L$(EFI_PATH) \
-							$(EFI_CRT_OBJS) -znocombreloc -fPIC \
-							--no-undefined
-
-$(TARGET_ELF)			:  LD_OBJECTS	:= $(OBJS_$(d))
-# Runtime driver
-$(TARGET)					:  OBJCPY_FLAGS_TARGET	:= --target=efi-rtdrv-$(ARCH)
-# Bootservice driver
-#$(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-bsdrv-$(ARCH)
-# Application
-#$(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-app-$(ARCH)
-$(TARGET_ELF)			:  $(OBJS_$(d))
+$(TARGET_A)  			:  LD_OBJECTS	:= $(OBJS_$(d))
+$(TARGET_A)			:  $(OBJS_$(d))
 
 d               := $(dirstack_$(sp))
 sp              := $(basename $(sp))

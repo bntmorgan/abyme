@@ -25,7 +25,7 @@ SECTIONS
 
 /* === Protected zone begin === */
     _protected_begin = .;
-    *(.text)
+    *(*.text)
   }
 
   .data : ALIGN(0x1000)

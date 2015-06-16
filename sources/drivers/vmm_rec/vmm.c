@@ -20,8 +20,11 @@
 #include "level.h"
 #include "paging.h"
 #include "apic.h"
+#include "hook.h"
 
 uint8_t vmm_stack[VMM_STACK_SIZE];
+
+struct setup_state *setup_state;
 
 static uint64_t io_count = 0;
 static uint64_t cr3_count = 0;
@@ -29,7 +32,8 @@ static uint64_t cr3_count = 0;
 enum CPU_MODE {
   MODE_REAL,
   MODE_PROTECTED,
-  MODE_LONG
+  MODE_LONG,
+  MODE_VIRTUAL_8086
 };
 
 enum VMM_PANIC {
@@ -48,11 +52,19 @@ static void vmm_panic(uint8_t core, uint64_t code, uint64_t extra, struct
 static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs);
 static inline uint8_t is_MTRR(uint64_t msr_addr);
 
-void vmm_init(void) { }
+void vmm_init(struct setup_state *state) {
+  setup_state = state;
+}
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
+  uint8_t hook_override = 0;
 
-  uint64_t tsca = cpu_read_tsc();
+#ifdef _PARTIAL_VMX
+  nested_recover_state();
+#endif
+
+// XXX BAD TSC OFFSETTING
+//   uint64_t tsca = cpu_read_tsc();
 
 //   if (ns.state == NESTED_GUEST_RUNNING) {
 //     INFO("Guest running\n");
@@ -62,8 +74,19 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 //     INFO("Not nested\n");
 //   }
 
+  // XXX test
+//   INFO("RIP YOLORD 0x%016X\n", &vmm_handle_vm_exit);
+//   __asm__ __volatile__("int $0xff");
+
+  // LEVEL(1, "Nested state %d\n", ns.state);
+
   guest_regs.rsp = cpu_vmread(GUEST_RSP);
   guest_regs.rip = cpu_vmread(GUEST_RIP);
+
+  // LEVEL(1, "Guest rip 0x%016X\n", guest_regs.rip);
+//   if (guest_regs.rip == 0xffffffff8105786f) {
+//     vmm_panic(ns.state, 0, 0, &guest_regs);
+//   }
 
   uint32_t exit_reason = cpu_vmread(VM_EXIT_REASON);
   uint64_t exit_qualification = cpu_vmread(EXIT_QUALIFICATION);
@@ -86,16 +109,77 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   }
 #endif
 
+  // Boot hook
+  if (hook_boot[exit_reason] != 0) {
+    hook_override = (hook_boot[exit_reason])(&guest_regs);
+  }
+
+  // If we override we return to the VM
+  if (hook_override) {
+    increment_rip(cpu_mode, &guest_regs);
+    return;
+  }
+
   //
   // VMX Specific VMexits that we override
   //
   if (exit_reason == EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED) {
     vmcs_set_vmx_preemption_timer_value(VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
     return;
+  } else if (exit_reason == EXIT_REASON_EXTERNAL_INTERRUPT) {
+    INFO("External interrupt from 0x%x!\n", ns.nested_level);
+    struct vm_exit_interrupt_info iif = {.raw = cpu_vmread(VM_EXIT_INTR_INFO)};
+    uint32_t error_code = cpu_vmread(VM_EXIT_INTR_ERROR_CODE);
+    nested_interrupt_set(iif.vector, iif.type, error_code);
+    return;
+  } else if (exit_reason == EXIT_REASON_EXCEPTION_OR_NMI) {
+    INFO("NMI interrupt from 0x%x!\n", ns.nested_level);
+    struct vm_exit_interrupt_info iif = {.raw = cpu_vmread(VM_EXIT_INTR_INFO)};
+    uint32_t error_code = cpu_vmread(VM_EXIT_INTR_ERROR_CODE);
+    nested_interrupt_set(iif.vector, iif.type, error_code);
+    return;
   } else if (exit_reason == EXIT_REASON_MONITOR_TRAP_FLAG) {
     return;
   }
 
+#ifdef _PARTIAL_VMX
+  nested_recover_state();
+  // Get every shadow VMCS ptr for every vmm of the stack
+  if (ns.state == NESTED_GUEST_RUNNING && exit_reason == EXIT_REASON_VMPTRLD) {
+    instr_param_ptr = get_instr_param_ptr(&guest_regs);
+    nested_guest_vmptrld(*instr_param_ptr, &guest_regs);
+  } else if (ns.state == NESTED_GUEST_RUNNING && exit_reason ==
+      EXIT_REASON_VMRESUME) {
+    INFO("PARTIAL VMX YOLO !\n");
+    // THE BRAND NEW EXTREM' FEATURE
+    nested_partial_vmresume(&guest_regs);
+    return;
+  }
+#endif
+
+  // EPT violation hadling
+  if (exit_reason == EXIT_REASON_EPT_VIOLATION) {
+    uint64_t guest_physical_addr = cpu_vmread(GUEST_PHYSICAL_ADDRESS);
+    uint64_t eptp = (cpu_vmread(EPT_POINTER_HIGH) << 32) |
+      cpu_vmread(EPT_POINTER);
+    uint64_t *e;
+    uint64_t a;
+    uint8_t s;
+    if(ept_walk(eptp, guest_physical_addr, &e, &a, &s)) {
+      if (paging_error != PAGING_WALK_NOT_PRESENT) {
+        ERROR("EPT VIOLATION : ERROR walking address 0x%016X\n",
+            guest_physical_addr);
+      }
+    }
+    INFO("EPT VIOLATION from 0x%x: Guest physical 0x%016X\n",
+        ept_get_ctx(), guest_physical_addr);
+    if (guest_physical_addr >= setup_state->protected_begin &&
+        guest_physical_addr < setup_state->protected_end) {
+      INFO("EPT VIOLATION FOR ME!\n");
+      increment_rip(cpu_mode, &guest_regs);                                        
+      return;
+    }
+  }
 
   if (ns.state == NESTED_GUEST_RUNNING) {
     //if (debug_server_level == 1) {
@@ -110,6 +194,17 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     //}
     // Forward to L2 host
     nested_load_host();
+    return;
+  }
+
+  // Pre hook
+  if (hook_pre[exit_reason] != 0) {
+    hook_override = (hook_pre[exit_reason])(&guest_regs);
+  }
+
+  // If we override we return to the VM
+  if (hook_override) {
+    increment_rip(cpu_mode, &guest_regs);
     return;
   }
 
@@ -128,6 +223,10 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_VMPTRLD:
       instr_param_ptr = get_instr_param_ptr(&guest_regs);
       nested_vmptrld(*instr_param_ptr, &guest_regs);
+      break;
+    case EXIT_REASON_VMPTRST:
+      instr_param_ptr = get_instr_param_ptr(&guest_regs);
+      nested_vmptrst(instr_param_ptr, &guest_regs);
       break;
     case EXIT_REASON_VMLAUNCH:
       nested_vmlaunch(&guest_regs);
@@ -230,6 +329,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
               vmm_panic(ns.state, VMM_PANIC_IO, port, &guest_regs);
             }
           } else {
+            INFO("NIC I/O config space block\n");
             if (size == 0) {
               guest_regs.rax = guest_regs.rax | 0x000000ff;
             } else if (size == 1) {
@@ -386,31 +486,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     //
     // Debug
     //
-    case EXIT_REASON_EPT_VIOLATION: 
     case EXIT_REASON_EPT_MISCONFIG: {
-      uint64_t guest_linear_addr = cpu_vmread(GUEST_LINEAR_ADDRESS);
-      if (exit_reason == EXIT_REASON_EPT_VIOLATION) {
-        INFO("ept violation\n");
-      } else if (exit_reason == EXIT_REASON_EPT_MISCONFIG) {
-        INFO("ept misconfiguration\n");
-      }
-      INFO("Qualification : 0x%016X, addr : 0x%016X\n",
-          exit_qualification, guest_linear_addr);
-      INFO("ctx 0x%x\n", ept_get_ctx());
-      INFO("VPID 0x%04x\n", cpu_vmread(VIRTUAL_PROCESSOR_ID));
-      uint64_t eptp = (cpu_vmread(EPT_POINTER_HIGH) << 32) |
-        cpu_vmread(EPT_POINTER);
-      uint64_t *e;
-      uint64_t a;
-      uint8_t s;
-      if(ept_walk(eptp, guest_linear_addr, &e, &a, &s)) {
-        if (paging_error == PAGING_WALK_NOT_PRESENT) {
-          INFO("Linear 0x%016X not preset\n", guest_linear_addr);
-        } else {
-          ERROR("ERROR walking address 0x%016X\n", guest_linear_addr);
-        }
-      }
-      INFO("walk : e(0x%016X), a(0x%016X), s(0x%02x)\n", *e, a, s);
+      INFO("ept misconfiguration\n");
       break;
     }
     case EXIT_REASON_VMCALL:
@@ -429,22 +506,39 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   }
 
   increment_rip(cpu_mode, &guest_regs);
-  uint64_t tscd = cpu_read_tsc() - tsca;
-  uint64_t tsco = ((uint64_t)cpu_vmread(TSC_OFFSET_HIGH) << 32) |
-    cpu_vmread(TSC_OFFSET);
-  tsco -= tscd;
-  cpu_vmwrite(TSC_OFFSET, tsco & 0xffffffff);
-  cpu_vmwrite(TSC_OFFSET_HIGH, (tsco >> 32) & 0xffffffff);
-  if (msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE) > 0) {
-    INFO("tsc deadline 0x%016X\n", msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE));
+
+  // Adjust post treatment vm entry control fields
+  // TODO XXX
+  // If using unrestricted guests no need for that
+  // vmm_adjust_vm_entry_controls();
+
+  // Post hook
+  if (hook_post[exit_reason] != 0) {
+    (hook_post[exit_reason])(&guest_regs);
   }
-  msr_write(MSR_ADDRESS_IA32_TSC_DEADLINE, msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE) + tscd);
+
+// XXX BAD TSC OFFSETTING
+//   uint64_t tscd = cpu_read_tsc() - tsca;
+//   uint64_t tsco = ((uint64_t)cpu_vmread(TSC_OFFSET_HIGH) << 32) |
+//     cpu_vmread(TSC_OFFSET);
+//   tsco -= tscd;
+//   cpu_vmwrite(TSC_OFFSET, tsco & 0xffffffff);
+//   cpu_vmwrite(TSC_OFFSET_HIGH, (tsco >> 32) & 0xffffffff);
+//   if (msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE) > 0) {
+//     INFO("tsc deadline 0x%016X\n", msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE));
+//   }
+//   msr_write(MSR_ADDRESS_IA32_TSC_DEADLINE, msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE) + tscd);
+  // LEVEL(2, "rip(0x%016X), mode(0x%x), region(0x%016X)\n", cpu_vmread(GUEST_RIP),
+  //    cpu_mode, cpu_vmptrst());
 }
 
 static inline int get_cpu_mode(void) {
   uint64_t cr0 = cpu_vmread(GUEST_CR0);
   uint64_t ia32_efer = cpu_vmread(GUEST_IA32_EFER);
-  if (!(cr0 & (1 << 0))) {
+  struct rflags rf = {.raw = cpu_vmread(GUEST_RFLAGS)};
+  if (rf.vm == 1) {
+    return MODE_VIRTUAL_8086;
+  } else if (!(cr0 & (1 << 0))) {
     return MODE_REAL;
   } else if (!(ia32_efer & (1 << 10))) {
     return MODE_PROTECTED;
@@ -494,11 +588,20 @@ static inline void* get_instr_param_ptr(struct registers *guest_regs) {
   }
   addr_ptr += instruction_displacement_field;
 
-  return (void*)addr_ptr;
+  // XXX page a l'arrache
+  uint64_t *e;
+  uint64_t a;
+  uint8_t s;
+  if (paging_walk(cpu_vmread(GUEST_CR3), addr_ptr, &e, &a, &s)) {
+    ERROR("Page walk error\n");
+  }
+
+  return (void*)a;
 }
 
 static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs) {
   uint32_t exit_instruction_length = cpu_vmread(VM_EXIT_INSTRUCTION_LEN);
+  // LEVEL(2, "MODE %d, ILength %d\n", cpu_mode, exit_instruction_length);
 
   switch (cpu_mode) {
     case MODE_REAL: {
@@ -516,11 +619,30 @@ static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs)
     case MODE_LONG: {
       uint64_t tmp = (uint64_t) guest_regs->rip;
       tmp = tmp + (uint64_t) exit_instruction_length;
+      // LEVEL(2, "TMP 0x%016X\n", tmp);
       cpu_vmwrite(GUEST_RIP, (guest_regs->rip & 0x0000000000000000) | tmp);
+      // LEVEL(2, "Post VMCS Guest rip%016X\n", cpu_vmread(GUEST_RIP));
       break;
     }
     default :
       vmm_panic(ns.state, VMM_PANIC_UNKNOWN_CPU_MODE, 0, guest_regs);
+  }
+}
+
+void vmm_adjust_vm_entry_controls(void) {
+  uint8_t cpu_mode = get_cpu_mode();
+  uint64_t vm_entry_controls = cpu_vmread(VM_ENTRY_CONTROLS);
+  if (cpu_mode == MODE_LONG) {
+    // Guest is in IA32e mode
+    // INFO("Setting IA32E_MODE_GUEST\n");
+    cpu_vmwrite(VM_ENTRY_CONTROLS, vm_entry_controls |
+        (uint64_t)IA32E_MODE_GUEST);
+  } else {
+    // Guest is not in IA32e mode
+    INFO("Removing IA32E_MODE_GUEST : controls befor adjustments 0x%016X\n",
+        vm_entry_controls);
+    cpu_vmwrite(VM_ENTRY_CONTROLS, vm_entry_controls &
+        ~(uint64_t)IA32E_MODE_GUEST);
   }
 }
 

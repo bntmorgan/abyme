@@ -14,7 +14,7 @@ void cpu_vmptrld(uint8_t *region);
 
 uint8_t *cpu_vmptrst(void);
 
-void cpu_vmlaunch(void);
+void cpu_vmlaunch(uint64_t vm_RIP, uint64_t vm_RSP, uint64_t vm_RBP);
 
 void cpu_vmwrite(uint64_t field, uint64_t value);
 

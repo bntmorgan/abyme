@@ -4,6 +4,36 @@
 #include <efi.h>
 #include "types.h"
 
+struct rflags {
+  union {
+    struct {
+      uint64_t cf:1; // 0
+      uint64_t o0:1; // 1
+      uint64_t pf:1; // 2
+      uint64_t z0:1; // 3
+      uint64_t af:1; // 4
+      uint64_t z1:1; // 5
+      uint64_t zf:1; // 6
+      uint64_t sf:1; // 7
+      uint64_t tf:1; // 8
+      uint64_t IF:1; // 9
+      uint64_t df:1; // 10
+      uint64_t of:1; // 11
+      uint64_t iopl:2; // 12 - 13
+      uint64_t nt:1; // 14
+      uint64_t z2:1; // 15
+      uint64_t rf:1; // 16
+      uint64_t vm:1; // 17
+      uint64_t ac:1; // 18
+      uint64_t vif:1; // 19
+      uint64_t vip:1; // 20
+      uint64_t id:1; // 21
+      uint64_t r0:42; // 22
+    };
+    uint64_t raw;
+  };
+};
+
 void cpu_read_gdt(uint8_t *gdt_ptr);
 
 void cpu_read_idt(uint8_t *idt_ptr);
