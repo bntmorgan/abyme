@@ -12,7 +12,9 @@
 #define PCI_CONFIG_ADDR                 0xcf8
 #define PCI_CONFIG_DATA                 0xcfc
 
-inline uint32_t pci_make_addr(uint32_t id);
+static inline uint32_t pci_make_addr(uint32_t id) {
+  return 0x80000000 | id;
+}
 uint8_t pci_no_protect_out(uint16_t port, uint32_t value);
 uint8_t pci_no_protect_in(uint16_t port);
 

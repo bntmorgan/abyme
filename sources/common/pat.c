@@ -124,25 +124,25 @@ char *pat_type_strings[0x100] = {
   "Uncacheable (UC)"
 };
 
-inline uint8_t pat_decode_entry_pdpte(uint64_t e) {
+static inline uint8_t pat_decode_entry_pdpte(uint64_t e) {
   return (((e & PAGING_PDPTE_PWT) != 0) << 0) |
          (((e & PAGING_PDPTE_PCD) != 0) << 1) |
          (((e & PAGING_PDPTE_PAT) != 0) << 2) ;
 }
 
-inline uint8_t pat_decode_entry_pde(uint64_t e) {
+static inline uint8_t pat_decode_entry_pde(uint64_t e) {
   return (((e & PAGING_PDE_PWT) != 0) << 0) |
          (((e & PAGING_PDE_PCD) != 0) << 1) |
          (((e & PAGING_PDE_PAT) != 0) << 2) ;
 }
 
-inline uint8_t pat_decode_entry_pte(uint64_t e) {
+static inline uint8_t pat_decode_entry_pte(uint64_t e) {
   return (((e & PAGING_PTE_PWT) != 0) << 0) |
          (((e & PAGING_PTE_PCD) != 0) << 1) |
          (((e & PAGING_PTE_PAT) != 0) << 2) ;
 }
 
-inline uint8_t pat_decode_entry(uint64_t e, uint8_t s) {
+static inline uint8_t pat_decode_entry(uint64_t e, uint8_t s) {
   if (s == PAGING_ENTRY_PDPTE) {
     // INFO("PDPTE 0x%02x\n", pat_decode_entry_pdpte(e));
     return pat_decode_entry_pdpte(e);
@@ -156,7 +156,7 @@ inline uint8_t pat_decode_entry(uint64_t e, uint8_t s) {
   return -1;
 }
 
-inline uint8_t pat_encode_entry_pdpte(uint64_t *e, uint8_t pat_entry) {
+static inline uint8_t pat_encode_entry_pdpte(uint64_t *e, uint8_t pat_entry) {
   *e &= ~(PAGING_PDPTE_PWT | PAGING_PDPTE_PCD | PAGING_PDPTE_PAT);
   *e |= (((pat_entry & (1 << 0))) ? PAGING_PDPTE_PWT : 0) |
         (((pat_entry & (1 << 1))) ? PAGING_PDPTE_PCD : 0) |
@@ -164,7 +164,7 @@ inline uint8_t pat_encode_entry_pdpte(uint64_t *e, uint8_t pat_entry) {
   return 0;
 }
 
-inline uint8_t pat_encode_entry_pde(uint64_t *e, uint8_t pat_entry) {
+static inline uint8_t pat_encode_entry_pde(uint64_t *e, uint8_t pat_entry) {
   *e &= ~(PAGING_PDE_PWT | PAGING_PDE_PCD | PAGING_PDE_PAT);
   *e |= (((pat_entry & (1 << 0))) ? PAGING_PDE_PWT : 0) |
         (((pat_entry & (1 << 1))) ? PAGING_PDE_PCD : 0) |
@@ -172,7 +172,7 @@ inline uint8_t pat_encode_entry_pde(uint64_t *e, uint8_t pat_entry) {
   return 0;
 }
 
-inline uint8_t pat_encode_entry_pte(uint64_t *e, uint8_t pat_entry) {
+static inline uint8_t pat_encode_entry_pte(uint64_t *e, uint8_t pat_entry) {
   *e &= ~(PAGING_PTE_PWT | PAGING_PTE_PCD | PAGING_PTE_PAT);
   *e |= (((pat_entry & (1 << 0))) ? PAGING_PTE_PWT : 0) |
         (((pat_entry & (1 << 1))) ? PAGING_PTE_PCD : 0) |
@@ -180,7 +180,7 @@ inline uint8_t pat_encode_entry_pte(uint64_t *e, uint8_t pat_entry) {
   return 0;
 }
 
-inline uint8_t pat_encode_entry(uint64_t *e, uint8_t s, uint8_t pat_entry) {
+static inline uint8_t pat_encode_entry(uint64_t *e, uint8_t s, uint8_t pat_entry) {
   if (s == PAGING_ENTRY_PDPTE) {
     // INFO("PDPTE\n");
     return pat_encode_entry_pdpte(e, pat_entry);

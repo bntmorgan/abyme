@@ -119,3 +119,9 @@ void printk_bin(uint32_t size, char *sep, uint8_t *data) {
   }
   printk("\n");
 }
+
+void _stdio_stop(void) {
+  __asm__ __volatile__("cli");
+  __asm__ __volatile__("hlt");
+  while (1);
+}

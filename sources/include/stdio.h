@@ -8,28 +8,24 @@
 #include "debug_server/debug_server.h"
 #endif
 
-static inline void _stdio_stop(void) {
-  __asm__ __volatile__("cli");
-  __asm__ __volatile__("hlt");
-  while (1);
-}
+void _stdio_stop(void);
 
 #define PRINTK(stop, msg, ...)                                       \
   do {                                                               \
+    printk(msg);                                                     \
     printk("%s(%03d): ", __FUNCTION__, __LINE__);                    \
     /* printk("%s(%s,%03d): ", __FUNCTION__, __FILE__, __LINE__); */ \
-    printk(msg);                                                     \
     printk(__VA_ARGS__);                                             \
     if (stop == 1) {                                                 \
       _stdio_stop();                                                 \
     }                                                                \
   } while (0)
 
-#define ERROR(...)  PRINTK(1, "<ERROR> ",  __VA_ARGS__)
-#define ACTION(...) PRINTK(0, "<ACTION> ", __VA_ARGS__)
-#define INFO(...)   PRINTK(0, "<INFO> ",   __VA_ARGS__)
+#define ERROR(...)  PRINTK(1, "[ERROR]",  __VA_ARGS__)
+#define ACTION(...) PRINTK(0, "[ACTION]", __VA_ARGS__)
+#define INFO(...)   PRINTK(0, "[INFO]",   __VA_ARGS__)
 #ifdef _DEBUG
-#define DBG(...)  PRINTK(0, "<DEBUG> ",   __VA_ARGS__)
+#define DBG(...)  PRINTK(0, "[DEBUG]",   __VA_ARGS__)
 #else
 #define DBG(...)
 #endif

@@ -95,7 +95,7 @@ uint8_t mtrr_create_ranges(void);
 
 uint8_t mtrr_update_ranges(void);
 
-inline uint8_t mtrr_get_nb_variable_mtrr(void);
+uint8_t mtrr_get_nb_variable_mtrr(void);
 
 const struct memory_range *mtrr_get_memory_range(uint64_t address);
 

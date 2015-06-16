@@ -255,7 +255,7 @@ int eth_init() {
   return 0;
 }
 
-inline void eth_wait_tx(uint8_t idx) {
+static inline void eth_wait_tx(uint8_t idx) {
   trans_desc *tx_desc = tx_descs + idx;
   // Wait until the packet is send
   while (!(tx_desc->status & 0xf)) {
@@ -286,7 +286,7 @@ void eth_send(const void *buf, uint16_t len, uint8_t block) {
   }
 }
 
-inline void eth_wait_rx(uint8_t idx) {
+static inline void eth_wait_rx(uint8_t idx) {
   recv_desc *rx_desc = rx_descs + idx;
   // Wait until the packet is send
   while (!(rx_desc->status & RSTA_DD)) {

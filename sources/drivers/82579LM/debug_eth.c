@@ -4,12 +4,7 @@
 #include "debug_eth.h"
 #include "stdio.h"
 
-inline uint32_t debug_reg_get(uint32_t reg) {
-  uint8_t *bar0 = eth_get_bar0();
-  return cpu_mem_readd(bar0 + reg);
-}
-
-inline void debug_print_reg_stat() {
+void debug_print_reg_stat() {
   INFO("Crc error count 0x%x\n", debug_reg_get(REG_CRCERRS));
   INFO("Reception error count 0x%x\n", debug_reg_get(REG_RXERRC));
   INFO("Missed packet count 0x%x\n", debug_reg_get(REG_MPC));

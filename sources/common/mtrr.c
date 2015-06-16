@@ -237,7 +237,7 @@ static void fill_gap(uint8_t *k, uint64_t *current_addr, uint64_t to, uint8_t ty
   }
 }
 
-inline uint8_t mtrr_get_nb_variable_mtrr(void) {
+uint8_t mtrr_get_nb_variable_mtrr(void) {
   return mtrr_cap.vcnt;
 }
 

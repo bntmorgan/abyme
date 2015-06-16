@@ -21,12 +21,9 @@ uint64_t paging_get_host_cr3(void);
 
 extern uint64_t paging_error;
 
-int paging_iterate(uint64_t cr3, int (*cb)(uint64_t *, uint64_t, uint8_t));
+extern uint8_t max_phyaddr;
 
-inline uint64_t *paging_get_pml4e(uint64_t e, uint64_t linear);
-inline uint64_t *paging_get_pdpte(uint64_t e, uint64_t linear);
-inline uint64_t *paging_get_pde(uint64_t e, uint64_t linear);
-inline uint64_t *paging_get_pte(uint64_t e, uint64_t linear);
+int paging_iterate(uint64_t cr3, int (*cb)(uint64_t *, uint64_t, uint8_t));
 
 /**
  * This function is computing physical address from a linear one
@@ -123,5 +120,25 @@ uint8_t paging_get_frame_address(uint64_t entry, uint64_t type, uint64_t *addres
 #define PAGING_PTE_PAT            (1 << 7)
 #define PAGING_PTE_G              (1 << 8)
 #define PAGING_PTE_FRAME_ADDR     (PAGING_MAXPHYADDR(max_phyaddr) & ~0xfff) // 4ko
+
+/**
+ * Return the entry
+ */
+static inline uint64_t *paging_get_pml4e(uint64_t e, uint64_t linear) {
+  return ((uint64_t *)(e & PAGING_CR3_PLM4_ADDR)) + PAGING_LINEAR_PML4E(linear);
+}
+
+static inline uint64_t *paging_get_pdpte(uint64_t e, uint64_t linear) {
+  return ((uint64_t *)(e & PAGING_PML4E_PDPT_ADDR)) + PAGING_LINEAR_PDPTE(linear);
+}
+
+static inline uint64_t *paging_get_pde(uint64_t e, uint64_t linear) {
+  return ((uint64_t *)(e & PAGING_PDPTE_PD_ADDR)) + PAGING_LINEAR_PDE(linear);
+}
+
+
+static inline uint64_t *paging_get_pte(uint64_t e, uint64_t linear) {
+  return ((uint64_t *)(e & PAGING_PDE_PT_ADDR)) + PAGING_LINEAR_PTE(linear);
+}
 
 #endif

@@ -59,26 +59,6 @@ uint64_t paging_get_host_cr3(void) {
   return (uint64_t) &paging_ia32e->PML4[0];
 }
 
-/**
- * Return the entry
- */
-inline uint64_t *paging_get_pml4e(uint64_t e, uint64_t linear) {
-  return ((uint64_t *)(e & PAGING_CR3_PLM4_ADDR)) + PAGING_LINEAR_PML4E(linear);
-}
-
-inline uint64_t *paging_get_pdpte(uint64_t e, uint64_t linear) {
-  return ((uint64_t *)(e & PAGING_PML4E_PDPT_ADDR)) + PAGING_LINEAR_PDPTE(linear);
-}
-
-inline uint64_t *paging_get_pde(uint64_t e, uint64_t linear) {
-  return ((uint64_t *)(e & PAGING_PDPTE_PD_ADDR)) + PAGING_LINEAR_PDE(linear);
-}
-
-
-inline uint64_t *paging_get_pte(uint64_t e, uint64_t linear) {
-  return ((uint64_t *)(e & PAGING_PDE_PT_ADDR)) + PAGING_LINEAR_PTE(linear);
-}
-
 uint8_t paging_get_frame_address(uint64_t entry, uint64_t type, uint64_t *address) {
   switch (type) {
     case PAGING_ENTRY_PDPTE:
