@@ -30,8 +30,8 @@ inline static void check_memory_range(const struct memory_range *memory_range,
 
 struct ept_tables ept_tables;
 
-extern uint8_t _protected_begin;
-extern uint8_t _protected_end;
+extern uint64_t _protected_begin;
+extern uint64_t _protected_end;
 
 uint8_t trap_pci[0x1000] __attribute__((aligned(0x1000)));
 uint8_t trap_bar[0x1000] __attribute__((aligned(0x1000)));

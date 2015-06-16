@@ -30,9 +30,6 @@ inline static uint16_t get_PD_offset(uint64_t addr);
 inline static uint16_t get_PT_offset(uint64_t addr);
 static struct ept_tables *ept_tables;
 
-extern uint8_t _protected_begin;
-extern uint8_t _protected_end;
-
 uint8_t trap_pci[0x1000] __attribute__((aligned(0x1000)));
 uint8_t trap_bar[0x1000] __attribute__((aligned(0x1000)));
   
@@ -198,7 +195,7 @@ void ept_cache(void) {
 }
 
 /* All the physical memory is mapped using identity mapping. */
-void ept_create_tables(void) {
+void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
   uint64_t i; // MPL4
   uint64_t j; // PDPT
   uint64_t k; // PD
@@ -271,15 +268,13 @@ void ept_create_tables(void) {
   //
 
   /* Already aligned on 4Ko (cf efi.ld) */
-  uint64_t p_begin = (uint64_t) &_protected_begin;
-  uint64_t p_end = (uint64_t) &_protected_end;
-
-  extern uint64_t vm_RIP;
-  INFO("vm start 0x%016X\n", vm_RIP);
+  uint64_t p_begin = protected_begin;
+  uint64_t p_end = protected_end;
 
   // Protect the VMM memory space
   // Map 4kB pages for all contexts
   for (m = 0; m < CTXN; m++) {
+    // XXX !
     ept_perm(p_begin + 0x1000, (p_end - p_begin) >> 12, 0x0, m);
   }
 

@@ -74,7 +74,3 @@ uint8_t pci_no_protect_in(uint16_t port) {
   }
   return 1;
 }
-
-inline uint32_t pci_make_addr(uint32_t id) {
-  return 0x80000000 | id;
-}

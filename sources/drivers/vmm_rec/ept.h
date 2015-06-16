@@ -20,7 +20,7 @@ enum ept_error {
   EPT_E_BAD_PARAMETER,
 };
 
-void ept_create_tables(void);
+void ept_create_tables(uint64_t protected_begin, uint64_t protected_end);
 void ept_cache(void);
 int ept_iterate(uint64_t eptp, int (*cb)(uint64_t *, uint64_t, uint8_t));
 void ept_set_ctx(uint8_t c);
