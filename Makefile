@@ -1,4 +1,5 @@
 CC						:= gcc
+AR						:= ar
 OBJDUMP				:= objdump
 PYTHON				:= python3
 USB						:= /dev/sdb1
@@ -25,8 +26,8 @@ EFI_LIBS 				:= -lefi -lgnuefi $(LIB_GCC)
 EFI_CRT_OBJS 		:= $(EFI_PATH)/crt0-efi-$(ARCH).o
 EFI_LDS 				:= efi.ld
 
-CC_FLAGS_ALL		:= -Wall -Werror -Werror -O2 -fno-stack-protector \
-		-fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC # -O0
+CC_FLAGS_ALL		:= -Wall -Werror -Werror -fno-stack-protector \
+		-fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC -O0
 
 ifeq ($(ARCH),x86_64)
 	CC_FLAGS_ALL	+= -DEFI_FUNCTION_WRAPPER
@@ -75,7 +76,12 @@ binary/%.efi: binary/%.elf
 binary/%.elf:
 	@echo "  [LD]    $@"
 	@mkdir -p $(dir $@)
-	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_TARGET) $(LD_OBJECTS) -o $@ $(EFI_LIBS)
+	@$(LD) $(LD_FLAGS_ALL) $(LD_OBJECTS) -o $@ $(EFI_LIBS_TARGET) $(EFI_LIBS)
+
+binary/%.a:
+	@echo "  [AR]    $@"
+	@mkdir -p $(dir $@)
+	@$(AR) rc $@ $(LD_OBJECTS)
 
 targets: $(patsubst sources/%, binary/%, $(TARGETS))
 
