@@ -1,6 +1,7 @@
 #include "paging.h"
 #include "stdio.h"
 #include "cpuid.h"
+#include "efiw.h"
 
 struct paging_ia32e *paging_ia32e;
 
@@ -9,6 +10,11 @@ uint64_t paging_error;
 uint8_t max_phyaddr;
 
 void paging_setup_host_paging(void) {
+
+  paging_ia32e = efi_allocate_pages(sizeof(struct paging_ia32e) / 0x1000 +
+      (sizeof(struct paging_ia32e) % 0x1000 != 0 ));
+  INFO("Pointer allocated 0x%016X\n", (uintptr_t)&paging_ia32e);
+
   /* TODO: pcide dans le registre cr4 */
   INFO("SETTING HOST UP PAGING\n");
   uint64_t i;
