@@ -101,17 +101,19 @@ void debug_server_panic(uint8_t core, uint64_t code, uint64_t extra,
 
 void debug_server_init() {
   /* Init exit reasons for which we need to send a debug message */
-  memset(&send_debug[0], 1, NB_EXIT_REASONS);
-  send_debug[EXIT_REASON_CPUID] = 0;
-  send_debug[EXIT_REASON_IO_INSTRUCTION] = 0;
-  send_debug[EXIT_REASON_WRMSR] = 0;
-  send_debug[EXIT_REASON_RDMSR] = 0;
-  send_debug[EXIT_REASON_XSETBV] = 0;
-  send_debug[EXIT_REASON_CR_ACCESS] = 0;
-  send_debug[EXIT_REASON_INVVPID] = 0;
-  send_debug[EXIT_REASON_VMRESUME] = 0;
-  send_debug[EXIT_REASON_VMREAD] = 0;
-  send_debug[EXIT_REASON_VMWRITE] = 0;
+  // memset(&send_debug[0], 1, NB_EXIT_REASONS);
+  memset(&send_debug[0], 0, NB_EXIT_REASONS);
+  send_debug[EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED] = 1;
+//   send_debug[EXIT_REASON_CPUID] = 0;
+//   send_debug[EXIT_REASON_IO_INSTRUCTION] = 0;
+//   send_debug[EXIT_REASON_WRMSR] = 0;
+//   send_debug[EXIT_REASON_RDMSR] = 0;
+//   send_debug[EXIT_REASON_XSETBV] = 0;
+//   send_debug[EXIT_REASON_CR_ACCESS] = 0;
+//   send_debug[EXIT_REASON_INVVPID] = 0;
+//   send_debug[EXIT_REASON_VMRESUME] = 0;
+//   send_debug[EXIT_REASON_VMREAD] = 0;
+//   send_debug[EXIT_REASON_VMWRITE] = 0;
 
   debug_server_log_cr3_reset();
   EFI_STATUS status;
