@@ -104,6 +104,7 @@ void debug_server_init() {
   // memset(&send_debug[0], 1, NB_EXIT_REASONS);
   memset(&send_debug[0], 0, NB_EXIT_REASONS);
   send_debug[EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED] = 1;
+  send_debug[EXIT_REASON_VMCALL] = 1;
 //   send_debug[EXIT_REASON_CPUID] = 0;
 //   send_debug[EXIT_REASON_IO_INSTRUCTION] = 0;
 //   send_debug[EXIT_REASON_WRMSR] = 0;
