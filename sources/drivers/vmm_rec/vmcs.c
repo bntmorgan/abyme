@@ -89,21 +89,17 @@ void vmcs_fill_guest_state_fields(void) {
   cpu_vmwrite(GUEST_IDTR_LIMIT, idt_ptr.limit);
 
   cpu_vmwrite(GUEST_IA32_DEBUGCTL, msr_read(MSR_ADDRESS_IA32_DEBUGCTL));
-  cpu_vmwrite(GUEST_IA32_DEBUGCTL_HIGH, msr_read(MSR_ADDRESS_IA32_DEBUGCTL) >> 32);
   cpu_vmwrite(GUEST_SYSENTER_CS, msr_read(MSR_ADDRESS_IA32_SYSENTER_CS));
 
   msr = msr_read(MSR_ADDRESS_IA32_EFER);
-  cpu_vmwrite(GUEST_IA32_EFER, msr & 0xffffffff),
-  cpu_vmwrite(GUEST_IA32_EFER_HIGH, (msr >> 32) & 0xffffffff);
+  cpu_vmwrite(GUEST_IA32_EFER, msr),
 
   cpu_vmwrite(GUEST_ACTIVITY_STATE, 0);
   cpu_vmwrite(GUEST_INTERRUPTIBILITY_INFO, 0);
   cpu_vmwrite(GUEST_PENDING_DBG_EXCEPTIONS, 0);
-  cpu_vmwrite(VMCS_LINK_POINTER, 0xffffffff);
-  cpu_vmwrite(VMCS_LINK_POINTER_HIGH, 0xffffffff);
+  cpu_vmwrite(VMCS_LINK_POINTER, 0xffffffffffffffff);
 
-  cpu_vmwrite(GUEST_IA32_PERF_GLOBAL_CTRL, msr_read(MSR_ADDRESS_IA32_PERF_GLOBAL_CTRL) & 0xffffffff);
-  cpu_vmwrite(GUEST_IA32_PERF_GLOBAL_CTRL_HIGH, msr_read(MSR_ADDRESS_IA32_PERF_GLOBAL_CTRL) >> 32);
+  cpu_vmwrite(GUEST_IA32_PERF_GLOBAL_CTRL, msr_read(MSR_ADDRESS_IA32_PERF_GLOBAL_CTRL));
 
   // Init and compute vmx_preemption_timer_value
   tsc_freq_MHz = ((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
@@ -151,11 +147,9 @@ void vmcs_fill_host_state_fields(void) {
   cpu_vmwrite(HOST_IA32_SYSENTER_CS, msr_read(MSR_ADDRESS_IA32_SYSENTER_CS));
   cpu_vmwrite(HOST_IA32_SYSENTER_ESP, msr_read(MSR_ADDRESS_IA32_SYSENTER_ESP));
   cpu_vmwrite(HOST_IA32_SYSENTER_EIP, msr_read(MSR_ADDRESS_IA32_SYSENTER_EIP));
-  cpu_vmwrite(HOST_IA32_EFER, msr_read(MSR_ADDRESS_IA32_EFER) & 0xffffffff),
-  cpu_vmwrite(HOST_IA32_EFER_HIGH, (msr_read(MSR_ADDRESS_IA32_EFER) >> 32) & 0xffffffff);
+  cpu_vmwrite(HOST_IA32_EFER, msr_read(MSR_ADDRESS_IA32_EFER)),
 
   cpu_vmwrite(HOST_IA32_PERF_GLOBAL_CTRL, 0);
-  cpu_vmwrite(HOST_IA32_PERF_GLOBAL_CTRL_HIGH, 0);
 }
 
 void vmcs_fill_vm_exec_control_fields(void) {
@@ -185,14 +179,11 @@ void vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(PAGE_FAULT_ERROR_CODE_MATCH, 0);
 
   io_bitmap_ptr = io_bitmap_get_ptr_a();
-  cpu_vmwrite(IO_BITMAP_A, io_bitmap_ptr & 0xffffffff);
-  cpu_vmwrite(IO_BITMAP_A_HIGH, (io_bitmap_ptr >> 32) & 0xffffffff);
+  cpu_vmwrite(IO_BITMAP_A, io_bitmap_ptr);
   io_bitmap_ptr = io_bitmap_get_ptr_b();
-  cpu_vmwrite(IO_BITMAP_B, io_bitmap_ptr & 0xffffffff);
-  cpu_vmwrite(IO_BITMAP_B_HIGH, (io_bitmap_ptr >> 32) & 0xffffffff);
+  cpu_vmwrite(IO_BITMAP_B, io_bitmap_ptr);
 
   cpu_vmwrite(TSC_OFFSET, 0);
-  cpu_vmwrite(TSC_OFFSET_HIGH, 0);
 
   // As we are using UNRESTRICTED_GUEST procbased_ctrl, the guest can itself modify CR0.PE and CR0.PG, see doc INTEL vol 3C chap 23.8
   cpu_vmwrite(CR0_GUEST_HOST_MASK, (msr_read(MSR_ADDRESS_VMX_CR0_FIXED0) | (~msr_read(MSR_ADDRESS_VMX_CR0_FIXED1))) & ~(0x80000001));
@@ -207,20 +198,15 @@ void vmcs_fill_vm_exec_control_fields(void) {
   cpu_vmwrite(CR3_TARGET_VALUE3, 0);
 
   msr_bitmap_ptr = msr_bitmap_get_ptr();
-  cpu_vmwrite(MSR_BITMAP, msr_bitmap_ptr & 0xffffffff);
-  cpu_vmwrite(MSR_BITMAP_HIGH, (msr_bitmap_ptr >> 32) & 0xffffffff);
+  cpu_vmwrite(MSR_BITMAP, msr_bitmap_ptr);
 
   eptp = ept_get_eptp();
 
-  cpu_vmwrite(EPT_POINTER, eptp & 0xffffffff);
-  cpu_vmwrite(EPT_POINTER_HIGH, (eptp >> 32) & 0xffffffff);
+  cpu_vmwrite(EPT_POINTER, eptp);
   cpu_vmwrite(VIRTUAL_PROCESSOR_ID, 0x1); // vmcs0 is 1
 
   // XXX TEST virtual APIC
-  cpu_vmwrite(VIRTUAL_APIC_PAGE_ADDR, (((uintptr_t)&vapic[0]) >> 0) &
-      0xffffffff);
-  cpu_vmwrite(VIRTUAL_APIC_PAGE_ADDR_HIGH, (((uintptr_t)&vapic[0]) >> 32) &
-      0xffffffff);
+  cpu_vmwrite(VIRTUAL_APIC_PAGE_ADDR, ((uintptr_t)&vapic[0]));
 }
 
 void vmcs_fill_vm_exit_control_fields(void) {

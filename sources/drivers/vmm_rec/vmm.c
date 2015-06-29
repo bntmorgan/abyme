@@ -63,9 +63,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   nested_recover_state();
 #endif
 
-// XXX BAD TSC OFFSETTING
-//   uint64_t tsca = cpu_read_tsc();
-
 //   if (ns.state == NESTED_GUEST_RUNNING) {
 //     INFO("Guest running\n");
 //   } else if (ns.state == NESTED_HOST_RUNNING) {
@@ -160,8 +157,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   // EPT violation hadling
   if (exit_reason == EXIT_REASON_EPT_VIOLATION) {
     uint64_t guest_physical_addr = cpu_vmread(GUEST_PHYSICAL_ADDRESS);
-    uint64_t eptp = (cpu_vmread(EPT_POINTER_HIGH) << 32) |
-      cpu_vmread(EPT_POINTER);
+    uint64_t eptp = cpu_vmread(EPT_POINTER);
     uint64_t *e;
     uint64_t a;
     uint8_t s;
@@ -405,7 +401,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
           guest_regs.rax = 0;
         }
         guest_regs.rax = (guest_regs.rax & (0xffffffff00000000)) | (cpu_vmread(GUEST_IA32_EFER) & 0xffffffff);
-        guest_regs.rdx = (guest_regs.rdx & (0xffffffff00000000)) | (cpu_vmread(GUEST_IA32_EFER_HIGH) & 0xffffffff);
+        guest_regs.rdx = (guest_regs.rdx & (0xffffffff00000000)) | ((cpu_vmread(GUEST_IA32_EFER) >> 32) & 0xffffffff);
       } else if (guest_regs.rcx > 0xc0001fff || (guest_regs.rcx > 0x1fff && guest_regs.rcx < 0xc0000000)) {
         // Tells the vm that the msr doesn't exist
         uint32_t it_info_field =    (0x1 << 11)     // push error code
@@ -427,8 +423,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     }
     case EXIT_REASON_WRMSR: {
       if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
-        cpu_vmwrite(GUEST_IA32_EFER, guest_regs.rax & 0xffffffff);
-        cpu_vmwrite(GUEST_IA32_EFER_HIGH, guest_regs.rdx & 0xffffffff);
+        cpu_vmwrite(GUEST_IA32_EFER, ((guest_regs.rdx << 32) & 
+              0xffffffff00000000) | (guest_regs.rax & 0xffffffff));
       } else if (is_MTRR(guest_regs.rcx)) {
           __asm__ __volatile__("wrmsr"
             : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
@@ -517,17 +513,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     (hook_post[exit_reason])(&guest_regs);
   }
 
-// XXX BAD TSC OFFSETTING
-//   uint64_t tscd = cpu_read_tsc() - tsca;
-//   uint64_t tsco = ((uint64_t)cpu_vmread(TSC_OFFSET_HIGH) << 32) |
-//     cpu_vmread(TSC_OFFSET);
-//   tsco -= tscd;
-//   cpu_vmwrite(TSC_OFFSET, tsco & 0xffffffff);
-//   cpu_vmwrite(TSC_OFFSET_HIGH, (tsco >> 32) & 0xffffffff);
-//   if (msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE) > 0) {
-//     INFO("tsc deadline 0x%016X\n", msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE));
-//   }
-//   msr_write(MSR_ADDRESS_IA32_TSC_DEADLINE, msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE) + tscd);
   // LEVEL(2, "rip(0x%016X), mode(0x%x), region(0x%016X)\n", cpu_vmread(GUEST_RIP),
   //    cpu_mode, cpu_vmptrst());
 }
