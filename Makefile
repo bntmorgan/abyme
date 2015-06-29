@@ -55,17 +55,17 @@ dir	:= sources
 include	$(dir)/rules.mk
 
 build/%.o: sources/%.s
-	@echo "  [CC]    $< -> $@"
+	@echo "[CC] $< -> $@"
 	@mkdir -p $(dir $@)
 	@$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_TARGET) -o $@ -c $<
 
 build/%.o: sources/%.c
-	@echo "  [CC]    $< -> $@"
+	@echo "[CC] $< -> $@"
 	@mkdir -p $(dir $@)
 	@$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_TARGET) -o $@ -c $<
 
 binary/%.efi: binary/%.elf
-	@echo "  [OC]    $@"
+	@echo "[OC] $@"
 	@objcopy -j .padding_begin -j .text -j .sdata -j .data \
 		-j .dynamic -j .dynsym  -j .rel \
 		-j .rela -j .reloc -j .padding_end \
@@ -74,12 +74,12 @@ binary/%.efi: binary/%.elf
 	@strip $@
 
 binary/%.elf:
-	@echo "  [LD]    $@"
+	@echo "[LD] $@"
 	@mkdir -p $(dir $@)
 	@$(LD) $(LD_FLAGS_ALL) $(LD_OBJECTS) -o $@ $(EFI_LIBS_TARGET) $(EFI_LIBS)
 
 binary/%.a:
-	@echo "  [AR]    $@"
+	@echo "[AR] $@"
 	@mkdir -p $(dir $@)
 	@$(AR) rc $@ $(LD_OBJECTS)
 
@@ -108,55 +108,28 @@ umount:
 	@sudo mkdir -p $(dir $@)
 	@sudo cp $< $@
 
+vmware: all vmware-mount $(patsubst binary/%, /mnt/EFI/%, $(TARGETS)) \
+	shell vmware-umount
+
+vmware-mount:
+	sudo vmware-mount vmware/hv.vmdk /mnt
+
+vmware-umount:
+	sudo vmware-mount -x
+
+vmware-prepare:
+	sudo vmware-modconfig --console --install-all
+	sudo chown root:vmnet /dev/vmnet*
+	sudo chmod g+rw /dev/vmnet*
+
 qemu: launch
 
 pre-launch:
-	rm -fr qemu/hda-contents
-	mkdir qemu/hda-contents
-	cp -r binary/ qemu/hda-contents
-	cp -r sources/shell_scripts/* qemu/hda-contents
-#	rm -rf qemu/roms/*
-#	cp qemu/packages/OVMF-X64-r11337-alpha.zip qemu/roms
-#	cd qemu/roms ; unzip OVMF-X64-r11337-alpha.zip
-#	rm qemu/roms/OVMF-X64-r11337-alpha.zip
-#	mv qemu/roms/CirrusLogic5446.rom qemu/roms/vgabios-cirrus.bin
-#	mv qemu/roms/OVMF.fd qemu/roms/bios.bin
-#	cp qemu/edk2/Build/OvmfX64/DEBUG_GCC46/FV/OVMF.fd qemu/roms/bios.bin
-#	cp /usr/share/qemu/kvmvapic.bin qemu/roms
-#	cp /usr/share/qemu/pxe-rtl8139.rom qemu/roms
+	rm -fr img/hda-contents
+	mkdir img/hda-contents
+	cp -r binary/ img/hda-contents
+	cp -r sources/shell_scripts/* img/hda-contents
 
 launch: pre-launch
 	qemu-system-x86_64 -bios /usr/share/ovmf/ovmf_x64.bin -m 4G \
 		-hda fat:qemu/hda-contents -cpu host -enable-kvm
-
-# 	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
-# 			tcp:localhost:6666 -cpu qemu64,model=6,+vmx -monitor stdio -m 8G \
-			#-enable-kvm
-
-#pre-launch:
-#	rm -rf qemu/roms/*
-#	cp qemu/packages/OVMF-X64-r11337-alpha.zip qemu/roms
-#	cd qemu/roms ; unzip OVMF-X64-r11337-alpha.zip
-#	rm qemu/roms/OVMF-X64-r11337-alpha.zip
-#	mv qemu/roms/CirrusLogic5446.rom qemu/roms/vgabios-cirrus.bin
-#	mv qemu/roms/OVMF.fd qemu/roms/bios.bin
-#	cp /usr/share/qemu/kvmvapic.bin qemu/roms
-#	cp /usr/share/qemu/pxe-rtl8139.rom qemu/roms
-#	cp -r binary/ qemu/hda-contents
-
-#launch: pre-launch
-#	qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
-			tcp:localhost:6666 -cpu qemu64,model=6,+vmx,+pdpe1gb -monitor stdio -S
-# qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
-			tcp:localhost:6666 -cpu qemu64,+sse2 -D /tmp/gg
-# qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
-			tcp:localhost:6666 -cpu qemu64,model=3
-# qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
-			tcp:localhost:6666
-# qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents -gdb \
-			tcp:localhost:6666 -s -S
-# qemu-system-x86_64 -cpu host -L qemu/roms -hda fat:qemu/hda-contents \
-			-monitor telnet:127.0.0.1:5555,server,nowait -gdb tcp::6666 -s -S
-# –monitor telnet:127.0.0.1:5555,server,nowait
-#qemu-system-x86_64 -L qemu/roms -hda fat:qemu/hda-contents
-#qemu-system-x86_64 -L qemu/roms -hda fat:qemu/hda-contents -no-kvm
