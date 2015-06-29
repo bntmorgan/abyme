@@ -5,7 +5,7 @@
 #include "stdio.h"
 
 static struct local_apic *la;
-static struct apic_base_msr apic_base;
+static union apic_base_msr apic_base;
 static uint8_t max_lvt_entry;
 static uint8_t max_phyaddr; // Physical address space
 static uint8_t apic_mode;
@@ -16,21 +16,21 @@ enum apic_mode {
 };
 
 void x2apic_print(void) {
-  struct x2apic_id id = {.raw =
+  union x2apic_id id = {.raw =
     msr_read(MSR_ADDRESS_IA32_X2APIC_APICID)};
-  struct x2apic_version version = {.raw = msr_read(MSR_ADDRESS_IA32_X2APIC_VESION)};
-  struct x2apic_lvt_cmci lvt_cmci = {.raw = msr_read(MSR_ADDRESS_IA32_X2APIC_LVT_CMCI)};
-  struct x2apic_lvt_timer lvt_timer =
+  union x2apic_version version = {.raw = msr_read(MSR_ADDRESS_IA32_X2APIC_VESION)};
+  union x2apic_lvt_cmci lvt_cmci = {.raw = msr_read(MSR_ADDRESS_IA32_X2APIC_LVT_CMCI)};
+  union x2apic_lvt_timer lvt_timer =
     {.raw = msr_read(MSR_ADDRESS_IA32_X2APIC_LVT_TIMER)};
-  struct x2apic_lvt_thermal_sensor lvt_thermal_sensor =
+  union x2apic_lvt_thermal_sensor lvt_thermal_sensor =
     {.raw = msr_read(MSR_ADDRESS_IA32_X2APIC_LVT_THERMAL)};
-  struct x2apic_lvt_performance_mon_counters lvt_performance_mon_counters =
+  union x2apic_lvt_performance_mon_counters lvt_performance_mon_counters =
     {.raw = msr_read(MSR_ADDRESS_IA32_X2APIC_LVT_PMI)};
-  struct x2apic_lvt_lint0 lvt_lint0 =
+  union x2apic_lvt_lint0 lvt_lint0 =
     {.raw = msr_read(MSR_ADDRESS_IA32_X2APIC_LVT_LINT0)};
-  struct x2apic_lvt_lint1 lvt_lint1 =
+  union x2apic_lvt_lint1 lvt_lint1 =
     {.raw = msr_read(MSR_ADDRESS_IA32_X2APIC_LVT_LINT1)};
-  struct x2apic_lvt_error lvt_error =
+  union x2apic_lvt_error lvt_error =
     {.raw = msr_read(MSR_ADDRESS_IA32_X2APIC_LVT_ERROR)};
   INFO("x2APIC ID 0x%08x\n", id.id);
   INFO("x2APIC version 0x%08x\n", version.version);

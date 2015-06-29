@@ -9,8 +9,8 @@ struct memory_range memory_range[MAX_NB_MTRR_RANGES];
 uint8_t nb_memory_range;
 
 /* MSR MTRR corresponding structures */
-struct msr_mtrrcap mtrr_cap;
-struct msr_mtrr_def_type mtrr_def_type;
+union msr_mtrrcap mtrr_cap;
+union msr_mtrr_def_type mtrr_def_type;
 struct msr_mtrr_fixed mtrr_fixed[11] = {
   {.msr= {.address=MSR_ADDRESS_IA32_MTRR_FIX64K_00000}, 0x00000, 0x7ffff, 0x10000},
   {.msr= {.address=MSR_ADDRESS_IA32_MTRR_FIX16K_80000}, 0x80000, 0x9ffff, 0x04000},

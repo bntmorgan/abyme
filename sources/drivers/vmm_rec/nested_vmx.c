@@ -188,7 +188,7 @@ void nested_recover_state(void) {
 
 static uint8_t charged = 0;
 static uint32_t error_code = 0;
-static struct vm_entry_interrupt_info iif;
+static union vm_entry_interrupt_info iif;
 
 void nested_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code) {
   if (charged) {
@@ -633,7 +633,7 @@ void nested_partial_vmresume(struct registers *guest_regs) {
 #endif
 
 void nested_set_vm_succeed(void) {
-  struct rflags rf;
+  union rflags rf;
   rf.raw = cpu_vmread(GUEST_RFLAGS);
   rf.cf = rf.pf = rf.af = rf.zf = rf.sf = rf.of = 0;
   cpu_vmwrite(GUEST_RFLAGS, rf.raw);

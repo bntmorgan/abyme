@@ -17,32 +17,28 @@
 #define MTRR_NOT_SUPPORTED  1
 #define MTRR_DISABLED       2
 
-struct msr_mtrrcap {
-  union {
-    struct {
-      uint64_t vcnt:8;
-      uint64_t fix:1;
-      uint64_t reserved_1:1;
-      uint64_t wc:1;
-      uint64_t smrr:1;
-      uint64_t reserved_2:52;
-    } __attribute__((packed));
-    uint64_t value;
-  } __attribute__((packed));
-};
+union msr_mtrrcap {
+  struct {
+    uint64_t vcnt:8;
+    uint64_t fix:1;
+    uint64_t reserved_1:1;
+    uint64_t wc:1;
+    uint64_t smrr:1;
+    uint64_t reserved_2:52;
+  };
+  uint64_t value;
+} __attribute__((packed));
 
-struct msr_mtrr_def_type {
-  union {
-    struct {
-      uint64_t type:8;
-      uint64_t reserved_1:2;
-      uint64_t fe:1;
-      uint64_t e:1;
-      uint64_t reserved_2:52;
-    } __attribute__((packed));
-    uint64_t value;
-  } __attribute__((packed));
-};
+union msr_mtrr_def_type {
+  struct {
+    uint64_t type:8;
+    uint64_t reserved_1:2;
+    uint64_t fe:1;
+    uint64_t e:1;
+    uint64_t reserved_2:52;
+  };
+  uint64_t value;
+} __attribute__((packed));
 
 struct msr_mtrr_fixed {
   struct {

@@ -8,17 +8,15 @@
 #define IO_APIC_DEFAULT_ADDR            0xfec00000
 #define APIC_DEFAULT_ADDR               0xfee00000
 
-struct apic_base_msr {
-  union {
-    uint64_t raw;
-    struct {
-      uint64_t _r0:8;
-      uint64_t bsp:1; // is current core the bsp
-      uint64_t _r1:1;
-      uint64_t x2APIC_enable:1; // is current core the bsp
-      uint64_t global_enable:1; // is apic enabled
-      uint64_t apic_base:52; // mask with max phyaddr
-    };
+union apic_base_msr {
+  uint64_t raw;
+  struct {
+    uint64_t _r0:8;
+    uint64_t bsp:1; // is current core the bsp
+    uint64_t _r1:1;
+    uint64_t x2APIC_enable:1; // is current core the bsp
+    uint64_t global_enable:1; // is apic enabled
+    uint64_t apic_base:52; // mask with max phyaddr
   };
 };
 
@@ -119,132 +117,114 @@ struct local_apic {
 /**
  * Local APIC x2APIC fields
  */
-struct x2apic_id {
-  union {
-    uint32_t id;
-    uint32_t raw;
-  };
+union x2apic_id {
+  uint32_t id;
+  uint32_t raw;
 };
 
-struct x2apic_version {
-  union{
-    struct {
-      uint32_t version:8;
-      uint32_t _r0:8;
-      uint32_t max_lvt_entry:8;
-      uint32_t eoi_broadcast_suppression:1;
-      uint32_t _r1:7;
-    };
-    uint32_t raw;
+union x2apic_version {
+  struct {
+    uint32_t version:8;
+    uint32_t _r0:8;
+    uint32_t max_lvt_entry:8;
+    uint32_t eoi_broadcast_suppression:1;
+    uint32_t _r1:7;
   };
+  uint32_t raw;
 };
 
-struct x2apic_lvt_cmci {
-  union{
-    struct {
-      uint32_t vector:8;
-      uint32_t delivery_mode:3;
-      uint32_t _r0:1;
-      uint32_t delivery_status:1;
-      uint32_t _r1:3;
-      uint32_t mask:1;
-      uint32_t _r2:15;
-    };
-    uint32_t raw;
+union x2apic_lvt_cmci {
+  struct {
+    uint32_t vector:8;
+    uint32_t delivery_mode:3;
+    uint32_t _r0:1;
+    uint32_t delivery_status:1;
+    uint32_t _r1:3;
+    uint32_t mask:1;
+    uint32_t _r2:15;
   };
+  uint32_t raw;
 };
 
-struct x2apic_lvt_timer {
-  union{
-    struct {
-      uint32_t vector:8;
-      uint32_t _r0:4;
-      uint32_t delivery_status:1;
-      uint32_t _r1:3;
-      uint32_t mask:1;
-      uint32_t mode:2;
-      uint32_t _r2:13;
-    };
-    uint32_t raw;
+union x2apic_lvt_timer {
+  struct {
+    uint32_t vector:8;
+    uint32_t _r0:4;
+    uint32_t delivery_status:1;
+    uint32_t _r1:3;
+    uint32_t mask:1;
+    uint32_t mode:2;
+    uint32_t _r2:13;
   };
+  uint32_t raw;
 };
 
-struct x2apic_lvt_thermal_sensor {
-  union{
-    struct {
-      uint32_t vector:8;
-      uint32_t delivery_mode:3;
-      uint32_t _r0:1;
-      uint32_t delivery_status:1;
-      uint32_t _r1:3;
-      uint32_t mask:1;
-      uint32_t _r2:15;
-    };
-    uint32_t raw;
+union x2apic_lvt_thermal_sensor {
+  struct {
+    uint32_t vector:8;
+    uint32_t delivery_mode:3;
+    uint32_t _r0:1;
+    uint32_t delivery_status:1;
+    uint32_t _r1:3;
+    uint32_t mask:1;
+    uint32_t _r2:15;
   };
+  uint32_t raw;
 };
 
-struct x2apic_lvt_performance_mon_counters {
-  union{
-    struct {
-      uint32_t vector:8;
-      uint32_t delivery_mode:3;
-      uint32_t _r0:1;
-      uint32_t delivery_status:1;
-      uint32_t _r1:3;
-      uint32_t mask:1;
-      uint32_t _r2:15;
-    };
-    uint32_t raw;
+union x2apic_lvt_performance_mon_counters {
+  struct {
+    uint32_t vector:8;
+    uint32_t delivery_mode:3;
+    uint32_t _r0:1;
+    uint32_t delivery_status:1;
+    uint32_t _r1:3;
+    uint32_t mask:1;
+    uint32_t _r2:15;
   };
+  uint32_t raw;
 };
 
-struct x2apic_lvt_lint0 {
-  union{
-    struct {
-      uint32_t vector:8;
-      uint32_t delivery_mode:3;
-      uint32_t _r0:1;
-      uint32_t delivery_status:1;
-      uint32_t interrupt_input_pin_polarity:1;
-      uint32_t remote_irr:1;
-      uint32_t trigger_mode:1;
-      uint32_t mask:1;
-      uint32_t _r2:15;
-    };
-    uint32_t raw;
+union x2apic_lvt_lint0 {
+  struct {
+    uint32_t vector:8;
+    uint32_t delivery_mode:3;
+    uint32_t _r0:1;
+    uint32_t delivery_status:1;
+    uint32_t interrupt_input_pin_polarity:1;
+    uint32_t remote_irr:1;
+    uint32_t trigger_mode:1;
+    uint32_t mask:1;
+    uint32_t _r2:15;
   };
+  uint32_t raw;
 };
 
-struct x2apic_lvt_lint1 {
-  union{
-    struct {
-      uint32_t vector:8;
-      uint32_t delivery_mode:3;
-      uint32_t _r0:1;
-      uint32_t delivery_status:1;
-      uint32_t interrupt_input_pin_polarity:1;
-      uint32_t remote_irr:1;
-      uint32_t trigger_mode:1;
-      uint32_t mask:1;
-      uint32_t _r2:15;
-    };
-    uint32_t raw;
+union x2apic_lvt_lint1 {
+  struct {
+    uint32_t vector:8;
+    uint32_t delivery_mode:3;
+    uint32_t _r0:1;
+    uint32_t delivery_status:1;
+    uint32_t interrupt_input_pin_polarity:1;
+    uint32_t remote_irr:1;
+    uint32_t trigger_mode:1;
+    uint32_t mask:1;
+    uint32_t _r2:15;
   };
+  uint32_t raw;
 };
 
-struct x2apic_lvt_error {
-  union{
-    struct {
-      uint32_t vector:8;
-      uint32_t _r0:4;
-      uint32_t delivery_status:1;
-      uint32_t _r1:3;
-      uint32_t mask:1;
-      uint32_t _r2:15;
-    };
-    uint32_t raw;
+union x2apic_lvt_error {
+  struct {
+    uint32_t vector:8;
+    uint32_t _r0:4;
+    uint32_t delivery_status:1;
+    uint32_t _r1:3;
+    uint32_t mask:1;
+    uint32_t _r2:15;
   };
+  uint32_t raw;
 };
 
 void apic_setup(void);

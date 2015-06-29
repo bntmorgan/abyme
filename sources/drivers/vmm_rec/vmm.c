@@ -128,13 +128,13 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     return;
   } else if (exit_reason == EXIT_REASON_EXTERNAL_INTERRUPT) {
     INFO("External interrupt from 0x%x!\n", ns.nested_level);
-    struct vm_exit_interrupt_info iif = {.raw = cpu_vmread(VM_EXIT_INTR_INFO)};
+    union vm_exit_interrupt_info iif = {.raw = cpu_vmread(VM_EXIT_INTR_INFO)};
     uint32_t error_code = cpu_vmread(VM_EXIT_INTR_ERROR_CODE);
     nested_interrupt_set(iif.vector, iif.type, error_code);
     return;
   } else if (exit_reason == EXIT_REASON_EXCEPTION_OR_NMI) {
     INFO("NMI interrupt from 0x%x!\n", ns.nested_level);
-    struct vm_exit_interrupt_info iif = {.raw = cpu_vmread(VM_EXIT_INTR_INFO)};
+    union vm_exit_interrupt_info iif = {.raw = cpu_vmread(VM_EXIT_INTR_INFO)};
     uint32_t error_code = cpu_vmread(VM_EXIT_INTR_ERROR_CODE);
     nested_interrupt_set(iif.vector, iif.type, error_code);
     return;
@@ -535,7 +535,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 static inline int get_cpu_mode(void) {
   uint64_t cr0 = cpu_vmread(GUEST_CR0);
   uint64_t ia32_efer = cpu_vmread(GUEST_IA32_EFER);
-  struct rflags rf = {.raw = cpu_vmread(GUEST_RFLAGS)};
+  union rflags rf = {.raw = cpu_vmread(GUEST_RFLAGS)};
   if (rf.vm == 1) {
     return MODE_VIRTUAL_8086;
   } else if (!(cr0 & (1 << 0))) {

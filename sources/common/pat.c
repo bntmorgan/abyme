@@ -15,7 +15,7 @@
 #define PAT_MTRR_ENCODING_SIZE 7
 #define PAT_PAT_ENCODING_SIZE 8
 
-struct pat_entries_t pat_entries;
+union pat_entries pat_entries;
 
 void pat_print_entries() {
   INFO("PAT0 0x%02X : %s\n", pat_entries.pat0, PAT_TYPE_STRING(pat_entries.pat0));

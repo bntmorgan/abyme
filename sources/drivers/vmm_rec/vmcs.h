@@ -300,31 +300,27 @@ enum vm_entry_interrupt_type {
   VM_ENTRY_INT_TYPE_OTHER                = 7
 };
 
-struct vm_entry_interrupt_info {
-  union {
-    struct {
-      uint32_t vector:8;
-      uint32_t type:3;
-      uint32_t error_code:1;
-      uint32_t _r0:19;
-      uint32_t valid:1;
-    };
-    uint32_t raw;
+union vm_entry_interrupt_info {
+  struct {
+    uint32_t vector:8;
+    uint32_t type:3;
+    uint32_t error_code:1;
+    uint32_t _r0:19;
+    uint32_t valid:1;
   };
+  uint32_t raw;
 };
 
-struct vm_exit_interrupt_info {
-  union {
-    struct {
-      uint32_t vector:8;
-      uint32_t type:3;
-      uint32_t error_code:1;
-      uint32_t nmi_blocking_due_to_iret:1;
-      uint32_t _r0:18;
-      uint32_t valid:1;
-    };
-    uint32_t raw;
+union vm_exit_interrupt_info {
+  struct {
+    uint32_t vector:8;
+    uint32_t type:3;
+    uint32_t error_code:1;
+    uint32_t nmi_blocking_due_to_iret:1;
+    uint32_t _r0:18;
+    uint32_t valid:1;
   };
+  uint32_t raw;
 };
 
 void vmcs_fill_guest_state_fields(void);

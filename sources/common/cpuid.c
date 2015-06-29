@@ -6,63 +6,55 @@
 #define cpuid(idx, eax, ebx, ecx, edx) \
     __asm__ __volatile__("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(idx))
 
-struct cpuid_80000001_edx {
-  union {
-    struct {
-      uint64_t _undef_1:26;
-      uint64_t page1g:1;
-      uint64_t _undef_2:5;
-    } __attribute__((packed));
-    uint64_t value;
-  };
+union cpuid_80000001_edx {
+  struct {
+    uint64_t _undef_1:26;
+    uint64_t page1g:1;
+    uint64_t _undef_2:5;
+  } __attribute__((packed));
+  uint64_t value;
 };
 
-struct cpuid_80000008_eax {
-  union {
-    struct {
-      uint64_t maxphyaddr:8;
-      uint64_t maxlinaddr:8;
-      uint64_t reserved_1:16;
-    } __attribute__((packed));
-    uint64_t value;
-  };
+union cpuid_80000008_eax {
+  struct {
+    uint64_t maxphyaddr:8;
+    uint64_t maxlinaddr:8;
+    uint64_t reserved_1:16;
+  } __attribute__((packed));
+  uint64_t value;
 };
 
-struct cpuid_00000001_ecx {
-  union {
-    struct {
-      uint64_t _undef_1:5;
-      uint64_t vmx:1;
-      uint64_t _undef_2:15;
-      uint64_t x2APIC:1;
-      uint64_t _undef_3:42;
-    } __attribute__((packed));
-    uint64_t value;
-  };
+union cpuid_00000001_ecx {
+  struct {
+    uint64_t _undef_1:5;
+    uint64_t vmx:1;
+    uint64_t _undef_2:15;
+    uint64_t x2APIC:1;
+    uint64_t _undef_3:42;
+  } __attribute__((packed));
+  uint64_t value;
 };
 
-struct cpuid_00000001_edx {
-  union {
-    struct {
-      uint64_t _undef_1:12;
-      uint64_t mtrr:1;
-      uint64_t _undef_2:51;
-    } __attribute__((packed));
-    uint64_t value;
-  };
+union cpuid_00000001_edx {
+  struct {
+    uint64_t _undef_1:12;
+    uint64_t mtrr:1;
+    uint64_t _undef_2:51;
+  } __attribute__((packed));
+  uint64_t value;
 };
 
 uint32_t cpuid_00000000_ebx;
 uint32_t cpuid_00000000_ecx;
 uint32_t cpuid_00000000_edx;
 
-struct cpuid_00000001_ecx cpuid_00000001_ecx;
-struct cpuid_00000001_edx cpuid_00000001_edx;
+union cpuid_00000001_ecx cpuid_00000001_ecx;
+union cpuid_00000001_edx cpuid_00000001_edx;
 uint32_t cpuid_80000000_eax;
 
-struct cpuid_80000001_edx cpuid_80000001_edx;
+union cpuid_80000001_edx cpuid_80000001_edx;
 
-struct cpuid_80000008_eax cpuid_80000008_eax;
+union cpuid_80000008_eax cpuid_80000008_eax;
 
 uint8_t cpuid_is_x2APIC_supported(void) {
   return cpuid_00000001_ecx.x2APIC;
