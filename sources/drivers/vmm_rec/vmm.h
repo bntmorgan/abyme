@@ -103,6 +103,8 @@ struct vm {
   struct vmcs *vmcs;
 };
 
+#define VM_NB 8
+
 void vmm_vm_exit_handler(void);
 void vmm_init(struct setup_state *state);
 void vmm_adjust_vm_entry_controls(void);

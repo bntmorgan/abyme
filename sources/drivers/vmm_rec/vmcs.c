@@ -8,6 +8,7 @@
 #include "msr_bitmap.h"
 #include "io_bitmap.h"
 #include "paging.h"
+#include "efiw.h"
 
 #include "string.h"
 #include "stdio.h"
@@ -15,12 +16,204 @@
 #include "cpu.h"
 #include "msr.h"
 
-uint8_t vmxon[4096] __attribute((aligned(0x1000)));
+uint8_t *vmxon;
 uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
 uint8_t vapic[4096] __attribute((aligned(0x1000)));
 
+/**
+ * Host vmcs reference
+ */
+struct vmcs *host_vmcs;
+
+/**
+ * VMCS cache pool
+ */
+struct vmcs *vmcs_cache_pool;
+
+/**
+ * VMCS region pool
+ */
+uint8_t **vmcs_region_pool;
+
 static uint16_t tsc_freq_MHz;
 static uint8_t tsc_divider;
+
+void vmcs_encoding_init(void) {
+  uint32_t i;
+  // Execution controls
+  VMCS_ENC(host_vmcs->ctrls.exec, virtual_processor_id, VIRTUAL_PROCESSOR_ID);
+  VMCS_ENC(host_vmcs->ctrls.exec, posted_int_notif_vector, POSTED_INT_NOTIF_VECTOR);
+  VMCS_ENC(host_vmcs->ctrls.exec, eptp_index, EPTP_INDEX);
+  VMCS_ENC(host_vmcs->ctrls.exec, io_bitmap_a, IO_BITMAP_A);
+  VMCS_ENC(host_vmcs->ctrls.exec, io_bitmap_b, IO_BITMAP_B);
+  VMCS_ENC(host_vmcs->ctrls.exec, msr_bitmap, MSR_BITMAP);
+  VMCS_ENC(host_vmcs->ctrls.exec, executive_vmcs_pointer, EXECUTIVE_VMCS_POINTER);
+  VMCS_ENC(host_vmcs->ctrls.exec, tsc_offset, TSC_OFFSET);
+  VMCS_ENC(host_vmcs->ctrls.exec, virtual_apic_page_addr, VIRTUAL_APIC_PAGE_ADDR);
+  VMCS_ENC(host_vmcs->ctrls.exec, apic_access_addr, APIC_ACCESS_ADDR);
+  VMCS_ENC(host_vmcs->ctrls.exec, posted_intr_desc_addr, POSTED_INTR_DESC_ADDR);
+  VMCS_ENC(host_vmcs->ctrls.exec, vm_function_controls, VM_FUNCTION_CONTROLS);
+  VMCS_ENC(host_vmcs->ctrls.exec, ept_pointer, EPT_POINTER);
+  VMCS_ENC(host_vmcs->ctrls.exec, eoi_exit_bitmap_0, EOI_EXIT_BITMAP_0);
+  VMCS_ENC(host_vmcs->ctrls.exec, eoi_exit_bitmap_1, EOI_EXIT_BITMAP_1);
+  VMCS_ENC(host_vmcs->ctrls.exec, eoi_exit_bitmap_2, EOI_EXIT_BITMAP_2);
+  VMCS_ENC(host_vmcs->ctrls.exec, eoi_exit_bitmap_3, EOI_EXIT_BITMAP_3);
+  VMCS_ENC(host_vmcs->ctrls.exec, eptp_list_addr, EPTP_LIST_ADDR);
+  VMCS_ENC(host_vmcs->ctrls.exec, vmread_bitmap_addr, VMREAD_BITMAP_ADDR);
+  VMCS_ENC(host_vmcs->ctrls.exec, vmwrite_bitmap_addr, VMWRITE_BITMAP_ADDR);
+  VMCS_ENC(host_vmcs->ctrls.exec, virt_excep_info_addr, VIRT_EXCEP_INFO_ADDR);
+  VMCS_ENC(host_vmcs->ctrls.exec, xss_exiting_bitmap, XSS_EXITING_BITMAP);
+  VMCS_ENC(host_vmcs->ctrls.exec, pin_based_vm_exec_control, PIN_BASED_VM_EXEC_CONTROL);
+  VMCS_ENC(host_vmcs->ctrls.exec, cpu_based_vm_exec_control, CPU_BASED_VM_EXEC_CONTROL);
+  VMCS_ENC(host_vmcs->ctrls.exec, exception_bitmap, EXCEPTION_BITMAP);
+  VMCS_ENC(host_vmcs->ctrls.exec, page_fault_error_code_mask, PAGE_FAULT_ERROR_CODE_MASK);
+  VMCS_ENC(host_vmcs->ctrls.exec, page_fault_error_code_match, PAGE_FAULT_ERROR_CODE_MATCH);
+  VMCS_ENC(host_vmcs->ctrls.exec, cr3_target_count, CR3_TARGET_COUNT);
+  VMCS_ENC(host_vmcs->ctrls.exec, tpr_threshold, TPR_THRESHOLD);
+  VMCS_ENC(host_vmcs->ctrls.exec, secondary_vm_exec_control, SECONDARY_VM_EXEC_CONTROL);
+  VMCS_ENC(host_vmcs->ctrls.exec, ple_gap, PLE_GAP);
+  VMCS_ENC(host_vmcs->ctrls.exec, ple_window, PLE_WINDOW);
+  VMCS_ENC(host_vmcs->ctrls.exec, cr0_guest_host_mask, CR0_GUEST_HOST_MASK);
+  VMCS_ENC(host_vmcs->ctrls.exec, cr4_guest_host_mask, CR4_GUEST_HOST_MASK);
+  VMCS_ENC(host_vmcs->ctrls.exec, cr0_read_shadow, CR0_READ_SHADOW);
+  VMCS_ENC(host_vmcs->ctrls.exec, cr4_read_shadow, CR4_READ_SHADOW);
+  VMCS_ENC(host_vmcs->ctrls.exec, cr3_target_value0, CR3_TARGET_VALUE0);
+  VMCS_ENC(host_vmcs->ctrls.exec, cr3_target_value1, CR3_TARGET_VALUE1);
+  VMCS_ENC(host_vmcs->ctrls.exec, cr3_target_value2, CR3_TARGET_VALUE2);
+  VMCS_ENC(host_vmcs->ctrls.exec, cr3_target_value3, CR3_TARGET_VALUE3);
+  // Guest state
+  VMCS_ENC(host_vmcs->gs, es_selector, GUEST_ES_SELECTOR);
+  VMCS_ENC(host_vmcs->gs, cs_selector, GUEST_CS_SELECTOR);
+  VMCS_ENC(host_vmcs->gs, ss_selector, GUEST_SS_SELECTOR);
+  VMCS_ENC(host_vmcs->gs, ds_selector, GUEST_DS_SELECTOR);
+  VMCS_ENC(host_vmcs->gs, fs_selector, GUEST_FS_SELECTOR);
+  VMCS_ENC(host_vmcs->gs, gs_selector, GUEST_GS_SELECTOR);
+  VMCS_ENC(host_vmcs->gs, ldtr_selector, GUEST_LDTR_SELECTOR);
+  VMCS_ENC(host_vmcs->gs, tr_selector, GUEST_TR_SELECTOR);
+  VMCS_ENC(host_vmcs->gs, ia32_debugctl, GUEST_IA32_DEBUGCTL);
+  VMCS_ENC(host_vmcs->gs, ia32_pat, GUEST_IA32_PAT);
+  VMCS_ENC(host_vmcs->gs, ia32_efer, GUEST_IA32_EFER);
+  VMCS_ENC(host_vmcs->gs, ia32_perf_global_ctrl, GUEST_IA32_PERF_GLOBAL_CTRL);
+  VMCS_ENC(host_vmcs->gs, pdptr0, GUEST_PDPTR0);
+  VMCS_ENC(host_vmcs->gs, pdptr1, GUEST_PDPTR1);
+  VMCS_ENC(host_vmcs->gs, pdptr2, GUEST_PDPTR2);
+  VMCS_ENC(host_vmcs->gs, pdptr3, GUEST_PDPTR3);
+  VMCS_ENC(host_vmcs->gs, cr0, GUEST_CR0);
+  VMCS_ENC(host_vmcs->gs, cr3, GUEST_CR3);
+  VMCS_ENC(host_vmcs->gs, cr4, GUEST_CR4);
+  VMCS_ENC(host_vmcs->gs, es_base, GUEST_ES_BASE);
+  VMCS_ENC(host_vmcs->gs, cs_base, GUEST_CS_BASE);
+  VMCS_ENC(host_vmcs->gs, ss_base, GUEST_SS_BASE);
+  VMCS_ENC(host_vmcs->gs, ds_base, GUEST_DS_BASE);
+  VMCS_ENC(host_vmcs->gs, fs_base, GUEST_FS_BASE);
+  VMCS_ENC(host_vmcs->gs, gs_base, GUEST_GS_BASE);
+  VMCS_ENC(host_vmcs->gs, ldtr_base, GUEST_LDTR_BASE);
+  VMCS_ENC(host_vmcs->gs, tr_base, GUEST_TR_BASE);
+  VMCS_ENC(host_vmcs->gs, gdtr_base, GUEST_GDTR_BASE);
+  VMCS_ENC(host_vmcs->gs, idtr_base, GUEST_IDTR_BASE);
+  VMCS_ENC(host_vmcs->gs, dr7, GUEST_DR7);
+  VMCS_ENC(host_vmcs->gs, rsp, GUEST_RSP);
+  VMCS_ENC(host_vmcs->gs, rip, GUEST_RIP);
+  VMCS_ENC(host_vmcs->gs, rflags, GUEST_RFLAGS);
+  VMCS_ENC(host_vmcs->gs, pending_dbg_exceptions, GUEST_PENDING_DBG_EXCEPTIONS);
+  VMCS_ENC(host_vmcs->gs, sysenter_esp, GUEST_SYSENTER_ESP);
+  VMCS_ENC(host_vmcs->gs, sysenter_eip, GUEST_SYSENTER_EIP);
+  VMCS_ENC(host_vmcs->gs, es_limit, GUEST_ES_LIMIT);
+  VMCS_ENC(host_vmcs->gs, cs_limit, GUEST_CS_LIMIT);
+  VMCS_ENC(host_vmcs->gs, ss_limit, GUEST_SS_LIMIT);
+  VMCS_ENC(host_vmcs->gs, ds_limit, GUEST_DS_LIMIT);
+  VMCS_ENC(host_vmcs->gs, fs_limit, GUEST_FS_LIMIT);
+  VMCS_ENC(host_vmcs->gs, gs_limit, GUEST_GS_LIMIT);
+  VMCS_ENC(host_vmcs->gs, ldtr_limit, GUEST_LDTR_LIMIT);
+  VMCS_ENC(host_vmcs->gs, tr_limit, GUEST_TR_LIMIT);
+  VMCS_ENC(host_vmcs->gs, gdtr_limit, GUEST_GDTR_LIMIT);
+  VMCS_ENC(host_vmcs->gs, idtr_limit, GUEST_IDTR_LIMIT);
+  VMCS_ENC(host_vmcs->gs, es_ar_bytes, GUEST_ES_AR_BYTES);
+  VMCS_ENC(host_vmcs->gs, cs_ar_bytes, GUEST_CS_AR_BYTES);
+  VMCS_ENC(host_vmcs->gs, ss_ar_bytes, GUEST_SS_AR_BYTES);
+  VMCS_ENC(host_vmcs->gs, ds_ar_bytes, GUEST_DS_AR_BYTES);
+  VMCS_ENC(host_vmcs->gs, fs_ar_bytes, GUEST_FS_AR_BYTES);
+  VMCS_ENC(host_vmcs->gs, gs_ar_bytes, GUEST_GS_AR_BYTES);
+  VMCS_ENC(host_vmcs->gs, ldtr_ar_bytes, GUEST_LDTR_AR_BYTES);
+  VMCS_ENC(host_vmcs->gs, tr_ar_bytes, GUEST_TR_AR_BYTES);
+  VMCS_ENC(host_vmcs->gs, interruptibility_info, GUEST_INTERRUPTIBILITY_INFO);
+  VMCS_ENC(host_vmcs->gs, activity_state, GUEST_ACTIVITY_STATE);
+  VMCS_ENC(host_vmcs->gs, smbase, GUEST_SMBASE);
+  VMCS_ENC(host_vmcs->gs, sysenter_cs, GUEST_SYSENTER_CS);
+  VMCS_ENC(host_vmcs->gs, vmcs_link_pointer, VMCS_LINK_POINTER);
+  VMCS_ENC(host_vmcs->gs, interrupt_status, GUEST_INTERRUPT_STATUS);
+  VMCS_ENC(host_vmcs->gs, vmx_preemption_timer_value, VMX_PREEMPTION_TIMER_VALUE);
+  // Host state
+  VMCS_ENC(host_vmcs->hs, es_selector, HOST_ES_SELECTOR);
+  VMCS_ENC(host_vmcs->hs, cs_selector, HOST_CS_SELECTOR);
+  VMCS_ENC(host_vmcs->hs, ss_selector, HOST_SS_SELECTOR);
+  VMCS_ENC(host_vmcs->hs, ds_selector, HOST_DS_SELECTOR);
+  VMCS_ENC(host_vmcs->hs, fs_selector, HOST_FS_SELECTOR);
+  VMCS_ENC(host_vmcs->hs, gs_selector, HOST_GS_SELECTOR);
+  VMCS_ENC(host_vmcs->hs, tr_selector, HOST_TR_SELECTOR);
+  VMCS_ENC(host_vmcs->hs, ia32_pat, HOST_IA32_PAT);
+  VMCS_ENC(host_vmcs->hs, ia32_efer, HOST_IA32_EFER);
+  VMCS_ENC(host_vmcs->hs, ia32_perf_global_ctrl, HOST_IA32_PERF_GLOBAL_CTRL);
+  VMCS_ENC(host_vmcs->hs, ia32_sysenter_cs, HOST_IA32_SYSENTER_CS);
+  VMCS_ENC(host_vmcs->hs, cr0, HOST_CR0);
+  VMCS_ENC(host_vmcs->hs, cr3, HOST_CR3);
+  VMCS_ENC(host_vmcs->hs, cr4, HOST_CR4);
+  VMCS_ENC(host_vmcs->hs, fs_base, HOST_FS_BASE);
+  VMCS_ENC(host_vmcs->hs, gs_base, HOST_GS_BASE);
+  VMCS_ENC(host_vmcs->hs, tr_base, HOST_TR_BASE);
+  VMCS_ENC(host_vmcs->hs, gdtr_base, HOST_GDTR_BASE);
+  VMCS_ENC(host_vmcs->hs, idtr_base, HOST_IDTR_BASE);
+  VMCS_ENC(host_vmcs->hs, ia32_sysenter_esp, HOST_IA32_SYSENTER_ESP);
+  VMCS_ENC(host_vmcs->hs, ia32_sysenter_eip, HOST_IA32_SYSENTER_EIP);
+  VMCS_ENC(host_vmcs->hs, rsp, HOST_RSP);
+  VMCS_ENC(host_vmcs->hs, rip, HOST_RIP);
+  // Vm exit controls
+  VMCS_ENC(host_vmcs->ctrls.exit, msr_store_addr, VM_EXIT_MSR_STORE_ADDR);
+  VMCS_ENC(host_vmcs->ctrls.exit, msr_load_addr, VM_EXIT_MSR_LOAD_ADDR);
+  VMCS_ENC(host_vmcs->ctrls.exit, controls, VM_EXIT_CONTROLS);
+  VMCS_ENC(host_vmcs->ctrls.exit, msr_store_count, VM_EXIT_MSR_STORE_COUNT);
+  VMCS_ENC(host_vmcs->ctrls.exit, msr_load_count, VM_EXIT_MSR_LOAD_COUNT);
+  // VM entry controls
+  VMCS_ENC(host_vmcs->ctrls.entry, msr_load_addr, VM_ENTRY_MSR_LOAD_ADDR);
+  VMCS_ENC(host_vmcs->ctrls.entry, controls, VM_ENTRY_CONTROLS);
+  VMCS_ENC(host_vmcs->ctrls.entry, msr_load_count, VM_ENTRY_MSR_LOAD_COUNT);
+  VMCS_ENC(host_vmcs->ctrls.entry, intr_info_field, VM_ENTRY_INTR_INFO_FIELD);
+  VMCS_ENC(host_vmcs->ctrls.entry, exception_error_code, VM_ENTRY_EXCEPTION_ERROR_CODE);
+  VMCS_ENC(host_vmcs->ctrls.entry, instruction_len, VM_ENTRY_INSTRUCTION_LEN);
+  // VM exit info
+  VMCS_ENC(host_vmcs->info, guest_physical_address, GUEST_PHYSICAL_ADDRESS);
+  VMCS_ENC(host_vmcs->info, vm_instruction_error, VM_INSTRUCTION_ERROR);
+  VMCS_ENC(host_vmcs->info, reason, VM_EXIT_REASON);
+  VMCS_ENC(host_vmcs->info, intr_info, VM_EXIT_INTR_INFO);
+  VMCS_ENC(host_vmcs->info, intr_error_code, VM_EXIT_INTR_ERROR_CODE);
+  VMCS_ENC(host_vmcs->info, idt_vectoring_info_field, IDT_VECTORING_INFO_FIELD);
+  VMCS_ENC(host_vmcs->info, idt_vectoring_error_code, IDT_VECTORING_ERROR_CODE);
+  VMCS_ENC(host_vmcs->info, instruction_len, VM_EXIT_INSTRUCTION_LEN);
+  VMCS_ENC(host_vmcs->info, vmx_instruction_info, VMX_INSTRUCTION_INFO);
+  VMCS_ENC(host_vmcs->info, qualification, EXIT_QUALIFICATION);
+  VMCS_ENC(host_vmcs->info, io_rcx, IO_RCX);
+  VMCS_ENC(host_vmcs->info, io_rsi, IO_RSI);
+  VMCS_ENC(host_vmcs->info, io_rdi, IO_RDI);
+  VMCS_ENC(host_vmcs->info, io_rip, IO_RIP);
+  VMCS_ENC(host_vmcs->info, guest_linear_address, GUEST_LINEAR_ADDRESS);
+  // Copying the encodings
+  for (i = 0; i < VM_NB; i++) {
+    memcpy(&vmcs_cache_pool[i], host_vmcs, sizeof(struct vmcs));
+  }
+}
+
+void vmcs_init(void) {
+  vmcs_cache_pool = efi_allocate_pool(sizeof(struct vmcs) * VM_NB);
+  vmcs_region_pool = efi_allocate_pages(VM_NB);
+  vmxon = efi_allocate_pages(1);
+  // Initialize VMCS region pool
+  memset(&vmcs_region_pool[0], 0, VM_NB * 0x1000);
+  // Initialize VMCS cache pool
+  memset(&vmcs_cache_pool[0], 0, VM_NB * sizeof(struct vmcs));
+  // Initialize the encodings
+  INFO("Initializing encodings\n");
+  vmcs_encoding_init();
+}
 
 void vmcs_fill_guest_state_fields(void) {
   struct gdt_entry gdt_entry;

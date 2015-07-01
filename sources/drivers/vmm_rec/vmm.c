@@ -6,6 +6,7 @@
 #include "string.h"
 #include <efi.h>
 #include <efilib.h>
+#include "efiw.h"
 
 #include "vmcs.h"
 #include "pci.h"
@@ -21,6 +22,11 @@
 #include "paging.h"
 #include "apic.h"
 #include "hook.h"
+
+/**
+ * VMs pool
+ */
+struct vm *vms;
 
 uint8_t vmm_stack[VMM_STACK_SIZE];
 
@@ -51,9 +57,23 @@ static void vmm_panic(uint8_t core, uint64_t code, uint64_t extra, struct
     registers *guest_regs);
 static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs);
 static inline uint8_t is_MTRR(uint64_t msr_addr);
+void vmm_vms_init(void);
 
 void vmm_init(struct setup_state *state) {
   setup_state = state;
+  vmm_vms_init();
+}
+
+void vmm_vms_init(void) {
+  uint32_t i;
+  vms = efi_allocate_pool(sizeof(struct vm) * VM_NB);
+  WARN("This VMM can handle up to 0x%08x VMs\n", VM_NB);
+  // Initialize VMs pool
+  memset(&vms[0], 0, VM_NB * sizeof(struct vm));
+  for (i = 0; i < VM_NB; i++) {
+    vms[i].vmcs = &vmcs_cache_pool[i];
+    vms[i].vmcs_region = &vmcs_region_pool[i][0];
+  }
 }
 
 void vmm_handle_vm_exit(struct registers guest_regs) {

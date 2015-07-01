@@ -24,6 +24,7 @@ void _stdio_stop(void);
 #define ERROR(...)  PRINTK(1, "[ERROR]",  __VA_ARGS__)
 #define ACTION(...) PRINTK(0, "[ACTION]", __VA_ARGS__)
 #define INFO(...)   PRINTK(0, "[INFO]",   __VA_ARGS__)
+#define WARN(...)   PRINTK(0, "[WARN]",   __VA_ARGS__)
 #ifdef _DEBUG
 #define DBG(...)  PRINTK(0, "[DEBUG]",   __VA_ARGS__)
 #else

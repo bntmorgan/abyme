@@ -4,7 +4,7 @@
 #define VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC 5*1000000
 #define NB_VMCS_FIELDS 185
 
-extern uint8_t vmxon[4096];
+extern uint8_t *vmxon;
 extern uint8_t vmcs0[4096];
 
 enum vmcs_field {                                 // ▼ require support of ▼
@@ -331,10 +331,12 @@ union vm_exit_interrupt_info {
 
 #define VMCS_FIELD(__type__, __name__) __type__ __name__; \
     union vmcs_field_encoding __name__##_enc
-#define VMCS_VMREAD(__vmcs__, __name__) __vmcs__->__name__ = \
-    cpu_vmread(__vmcs__->__name__##_enc)
+#define VMCS_ENC(__vmcs__, __name__, __encoding__) \
+    __vmcs__.__name__##_enc.raw = __encoding__;
+#define VMCS_VMREAD(__vmcs__, __name__) __vmcs__.__name__ = \
+    cpu_vmread(__vmcs__.__name__##_enc)
 #define VMCS_VMWRITE(__vmcs__, __name__) \
-    cpu_vmwrite(__vmcs__->__name__##_enc, __vmcs__->__name__)
+    cpu_vmwrite(__vmcs__.__name__##_enc, __vmcs__.__name__)
 
 union vmcs_field_encoding {
   struct {
@@ -444,7 +446,7 @@ struct vmcs_host_state {
   VMCS_FIELD(uint64_t, ia32_sysenter_eip);
   VMCS_FIELD(uint64_t, rsp);
   VMCS_FIELD(uint64_t, rip);
-};
+} __attribute__((packed));
 
 struct vmcs_vmexit_information {
   // 64-bit fields
@@ -465,7 +467,7 @@ struct vmcs_vmexit_information {
   VMCS_FIELD(uint64_t, io_rdi);
   VMCS_FIELD(uint64_t, io_rip);
   VMCS_FIELD(uint64_t, guest_linear_address);
-};
+} __attribute__((packed));
 
 struct vmcs_execution_controls {
   // 16-bit fields
@@ -512,7 +514,7 @@ struct vmcs_execution_controls {
   VMCS_FIELD(uint32_t, cr3_target_value1);
   VMCS_FIELD(uint32_t, cr3_target_value2);
   VMCS_FIELD(uint32_t, cr3_target_value3);
-};
+} __attribute__((packed));
 
 struct vmcs_exit_controls {
   // 64-bit fields
@@ -522,7 +524,7 @@ struct vmcs_exit_controls {
   VMCS_FIELD(uint32_t, controls);
   VMCS_FIELD(uint32_t, msr_store_count);
   VMCS_FIELD(uint32_t, msr_load_count);
-};
+} __attribute__((packed));
 
 struct vmcs_entry_controls {
   // 64-bit fields
@@ -533,22 +535,22 @@ struct vmcs_entry_controls {
   VMCS_FIELD(uint32_t, intr_info_field);
   VMCS_FIELD(uint32_t, exception_error_code);
   VMCS_FIELD(uint32_t, instruction_len);
-};
+} __attribute__((packed));
 
 struct vmcs_controls {
   struct vmcs_execution_controls exec;
   struct vmcs_exit_controls exit;
   struct vmcs_entry_controls entry;
-};
+} __attribute__((packed));
 
 struct vmcs {
   uint32_t revision_id;
   uint32_t abort;
-  struct vmcs_guest_state guest_state;
-  struct vmcs_host_state host_state;
+  struct vmcs_guest_state gs;
+  struct vmcs_host_state hs;
   struct vmcs_controls ctrls;
-  struct vmcs_vmexit_information vmexit_info;
-};
+  struct vmcs_vmexit_information info;
+} __attribute__((packed));
 
 void vmcs_fill_guest_state_fields(void);
 
@@ -563,5 +565,8 @@ void vmcs_fill_vm_entry_control_fields(void);
 void vmcs_dump_vcpu(void);
 
 void vmcs_set_vmx_preemption_timer_value(uint64_t time_microsec);
+
+extern struct vmcs *vmcs_cache_pool;
+extern uint8_t **vmcs_region_pool;
 
 #endif
