@@ -101,7 +101,6 @@ void debug_server_panic(uint8_t core, uint64_t code, uint64_t extra,
 
 void debug_server_init() {
   /* Init exit reasons for which we need to send a debug message */
-  // memset(&send_debug[0], 1, NB_EXIT_REASONS);
   memset(&send_debug[0], 0, NB_EXIT_REASONS);
   send_debug[EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED] = 1;
   send_debug[EXIT_REASON_VMCALL] = 1;
