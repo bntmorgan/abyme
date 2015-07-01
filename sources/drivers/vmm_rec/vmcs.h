@@ -323,6 +323,233 @@ union vm_exit_interrupt_info {
   uint32_t raw;
 };
 
+/**
+ * VMCS
+ *
+ * VMCS encoding handling has been inspired from ramooflax code
+ */
+
+#define VMCS_FIELD(__type__, __name__) __type__ __name__; \
+    union vmcs_field_encoding __name__##_enc
+#define VMCS_VMREAD(__vmcs__, __name__) __vmcs__->__name__ = \
+    cpu_vmread(__vmcs__->__name__##_enc)
+#define VMCS_VMWRITE(__vmcs__, __name__) \
+    cpu_vmwrite(__vmcs__->__name__##_enc, __vmcs__->__name__)
+
+union vmcs_field_encoding {
+  struct {
+    uint32_t atype:1; // 0: full, 1: high
+    uint32_t index:9; // Index
+    uint32_t type:2; // 0: ctrl, 1: VM-exit info, 2: guest state, 3: host state
+    uint32_t r0:1;
+    uint32_t width:2; // 0: 16-bit, 1: 64-bit, 2: 32-bit, 3: natural width
+    uint32_t r1:17;
+  };
+  uint32_t raw;
+};
+
+struct vmcs_guest_state {
+  // 16-bit fields
+  VMCS_FIELD(uint16_t, es_selector);
+  VMCS_FIELD(uint16_t, cs_selector);
+  VMCS_FIELD(uint16_t, ss_selector);
+  VMCS_FIELD(uint16_t, ds_selector);
+  VMCS_FIELD(uint16_t, fs_selector);
+  VMCS_FIELD(uint16_t, gs_selector);
+  VMCS_FIELD(uint16_t, ldtr_selector);
+  VMCS_FIELD(uint16_t, tr_selector);
+  VMCS_FIELD(uint16_t, interrupt_status);
+  // 64-bit fields
+  VMCS_FIELD(uint64_t, vmcs_link_pointer);
+  VMCS_FIELD(uint64_t, ia32_debugctl);
+  VMCS_FIELD(uint64_t, ia32_pat);
+  VMCS_FIELD(uint64_t, ia32_efer);
+  VMCS_FIELD(uint64_t, ia32_perf_global_ctrl);
+  VMCS_FIELD(uint64_t, pdptr0);
+  VMCS_FIELD(uint64_t, pdptr1);
+  VMCS_FIELD(uint64_t, pdptr2);
+  VMCS_FIELD(uint64_t, pdptr3);
+  // 32-bit fields
+  VMCS_FIELD(uint32_t, es_limit);
+  VMCS_FIELD(uint32_t, cs_limit);
+  VMCS_FIELD(uint32_t, ss_limit);
+  VMCS_FIELD(uint32_t, ds_limit);
+  VMCS_FIELD(uint32_t, fs_limit);
+  VMCS_FIELD(uint32_t, gs_limit);
+  VMCS_FIELD(uint32_t, ldtr_limit);
+  VMCS_FIELD(uint32_t, tr_limit);
+  VMCS_FIELD(uint32_t, gdtr_limit);
+  VMCS_FIELD(uint32_t, idtr_limit);
+  VMCS_FIELD(uint32_t, es_ar_bytes);
+  VMCS_FIELD(uint32_t, cs_ar_bytes);
+  VMCS_FIELD(uint32_t, ss_ar_bytes);
+  VMCS_FIELD(uint32_t, ds_ar_bytes);
+  VMCS_FIELD(uint32_t, fs_ar_bytes);
+  VMCS_FIELD(uint32_t, gs_ar_bytes);
+  VMCS_FIELD(uint32_t, ldtr_ar_bytes);
+  VMCS_FIELD(uint32_t, tr_ar_bytes);
+  VMCS_FIELD(uint32_t, interruptibility_info);
+  VMCS_FIELD(uint32_t, activity_state);
+  VMCS_FIELD(uint32_t, smbase);
+  VMCS_FIELD(uint32_t, sysenter_cs);
+  VMCS_FIELD(uint32_t, vmx_preemption_timer_value);
+  // Natural-width fields
+  VMCS_FIELD(uint64_t, cr0);
+  VMCS_FIELD(uint64_t, cr3);
+  VMCS_FIELD(uint64_t, cr4);
+  VMCS_FIELD(uint64_t, es_base);
+  VMCS_FIELD(uint64_t, cs_base);
+  VMCS_FIELD(uint64_t, ss_base);
+  VMCS_FIELD(uint64_t, ds_base);
+  VMCS_FIELD(uint64_t, fs_base);
+  VMCS_FIELD(uint64_t, gs_base);
+  VMCS_FIELD(uint64_t, ldtr_base);
+  VMCS_FIELD(uint64_t, tr_base);
+  VMCS_FIELD(uint64_t, gdtr_base);
+  VMCS_FIELD(uint64_t, idtr_base);
+  VMCS_FIELD(uint64_t, dr7);
+  VMCS_FIELD(uint64_t, rsp);
+  VMCS_FIELD(uint64_t, rip);
+  VMCS_FIELD(uint64_t, rflags);
+  VMCS_FIELD(uint64_t, pending_dbg_exceptions);
+  VMCS_FIELD(uint64_t, sysenter_esp);
+  VMCS_FIELD(uint64_t, sysenter_eip);
+} __attribute__((packed));
+
+struct vmcs_host_state {
+  // 16-bit fields
+  VMCS_FIELD(uint16_t, es_selector);
+  VMCS_FIELD(uint16_t, cs_selector);
+  VMCS_FIELD(uint16_t, ss_selector);
+  VMCS_FIELD(uint16_t, ds_selector);
+  VMCS_FIELD(uint16_t, fs_selector);
+  VMCS_FIELD(uint16_t, gs_selector);
+  VMCS_FIELD(uint16_t, tr_selector);
+  // 64-bit fields
+  VMCS_FIELD(uint64_t, ia32_pat);
+  VMCS_FIELD(uint64_t, ia32_efer);
+  VMCS_FIELD(uint64_t, ia32_perf_global_ctrl);
+  // 32-bit fields
+  VMCS_FIELD(uint32_t, ia32_sysenter_cs);
+  // Natural-width fields
+  VMCS_FIELD(uint32_t, cr0);
+  VMCS_FIELD(uint32_t, cr3);
+  VMCS_FIELD(uint32_t, cr4);
+  VMCS_FIELD(uint64_t, fs_base);
+  VMCS_FIELD(uint64_t, gs_base);
+  VMCS_FIELD(uint64_t, tr_base);
+  VMCS_FIELD(uint64_t, gdtr_base);
+  VMCS_FIELD(uint64_t, idtr_base);
+  VMCS_FIELD(uint64_t, ia32_sysenter_esp);
+  VMCS_FIELD(uint64_t, ia32_sysenter_eip);
+  VMCS_FIELD(uint64_t, rsp);
+  VMCS_FIELD(uint64_t, rip);
+};
+
+struct vmcs_vmexit_information {
+  // 64-bit fields
+  VMCS_FIELD(uint64_t, guest_physical_address);
+  // 32-bit fields
+  VMCS_FIELD(uint32_t, vm_instruction_error);
+  VMCS_FIELD(uint32_t, reason);
+  VMCS_FIELD(uint32_t, intr_info);
+  VMCS_FIELD(uint32_t, intr_error_code);
+  VMCS_FIELD(uint32_t, idt_vectoring_info_field);
+  VMCS_FIELD(uint32_t, idt_vectoring_error_code);
+  VMCS_FIELD(uint32_t, instruction_len);
+  VMCS_FIELD(uint32_t, vmx_instruction_info);
+  // Natural-width fields
+  VMCS_FIELD(uint64_t, qualification);
+  VMCS_FIELD(uint64_t, io_rcx);
+  VMCS_FIELD(uint64_t, io_rsi);
+  VMCS_FIELD(uint64_t, io_rdi);
+  VMCS_FIELD(uint64_t, io_rip);
+  VMCS_FIELD(uint64_t, guest_linear_address);
+};
+
+struct vmcs_execution_controls {
+  // 16-bit fields
+  VMCS_FIELD(uint16_t, virtual_processor_id);
+  VMCS_FIELD(uint16_t, posted_int_notif_vector);
+  VMCS_FIELD(uint16_t, eptp_index);
+  // 64-bit fields
+  VMCS_FIELD(uint64_t, io_bitmap_a);
+  VMCS_FIELD(uint64_t, io_bitmap_b);
+  VMCS_FIELD(uint64_t, msr_bitmap);
+  VMCS_FIELD(uint64_t, executive_vmcs_pointer);
+  VMCS_FIELD(uint64_t, tsc_offset);
+  VMCS_FIELD(uint64_t, virtual_apic_page_addr);
+  VMCS_FIELD(uint64_t, apic_access_addr);
+  VMCS_FIELD(uint64_t, posted_intr_desc_addr);
+  VMCS_FIELD(uint64_t, vm_function_controls);
+  VMCS_FIELD(uint64_t, ept_pointer);
+  VMCS_FIELD(uint64_t, eoi_exit_bitmap_0);
+  VMCS_FIELD(uint64_t, eoi_exit_bitmap_1);
+  VMCS_FIELD(uint64_t, eoi_exit_bitmap_2);
+  VMCS_FIELD(uint64_t, eoi_exit_bitmap_3);
+  VMCS_FIELD(uint64_t, eptp_list_addr);
+  VMCS_FIELD(uint64_t, vmread_bitmap_addr);
+  VMCS_FIELD(uint64_t, vmwrite_bitmap_addr);
+  VMCS_FIELD(uint64_t, virt_excep_info_addr);
+  VMCS_FIELD(uint64_t, xss_exiting_bitmap);
+  // 32-bit fields
+  VMCS_FIELD(uint32_t, pin_based_vm_exec_control);
+  VMCS_FIELD(uint32_t, cpu_based_vm_exec_control);
+  VMCS_FIELD(uint32_t, exception_bitmap);
+  VMCS_FIELD(uint32_t, page_fault_error_code_mask);
+  VMCS_FIELD(uint32_t, page_fault_error_code_match);
+  VMCS_FIELD(uint32_t, cr3_target_count);
+  VMCS_FIELD(uint32_t, tpr_threshold);
+  VMCS_FIELD(uint32_t, secondary_vm_exec_control);
+  VMCS_FIELD(uint32_t, ple_gap);
+  VMCS_FIELD(uint32_t, ple_window);
+  // Natural-width fields
+  VMCS_FIELD(uint32_t, cr0_guest_host_mask);
+  VMCS_FIELD(uint32_t, cr4_guest_host_mask);
+  VMCS_FIELD(uint32_t, cr0_read_shadow);
+  VMCS_FIELD(uint32_t, cr4_read_shadow);
+  VMCS_FIELD(uint32_t, cr3_target_value0);
+  VMCS_FIELD(uint32_t, cr3_target_value1);
+  VMCS_FIELD(uint32_t, cr3_target_value2);
+  VMCS_FIELD(uint32_t, cr3_target_value3);
+};
+
+struct vmcs_exit_controls {
+  // 64-bit fields
+  VMCS_FIELD(uint64_t, msr_store_addr);
+  VMCS_FIELD(uint64_t, msr_load_addr);
+  // 32-bit fields
+  VMCS_FIELD(uint32_t, controls);
+  VMCS_FIELD(uint32_t, msr_store_count);
+  VMCS_FIELD(uint32_t, msr_load_count);
+};
+
+struct vmcs_entry_controls {
+  // 64-bit fields
+  VMCS_FIELD(uint64_t, msr_load_addr);
+  // 32-bit fields
+  VMCS_FIELD(uint32_t, controls);
+  VMCS_FIELD(uint32_t, msr_load_count);
+  VMCS_FIELD(uint32_t, intr_info_field);
+  VMCS_FIELD(uint32_t, exception_error_code);
+  VMCS_FIELD(uint32_t, instruction_len);
+};
+
+struct vmcs_controls {
+  struct vmcs_execution_controls exec;
+  struct vmcs_exit_controls exit;
+  struct vmcs_entry_controls entry;
+};
+
+struct vmcs {
+  uint32_t revision_id;
+  uint32_t abort;
+  struct vmcs_guest_state guest_state;
+  struct vmcs_host_state host_state;
+  struct vmcs_controls ctrls;
+  struct vmcs_vmexit_information vmexit_info;
+};
+
 void vmcs_fill_guest_state_fields(void);
 
 void vmcs_fill_host_state_fields(void);
