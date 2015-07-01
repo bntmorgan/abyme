@@ -223,6 +223,7 @@
 
 //#define ETH_DEVICE_ID 0x1502 // 82579LM
 #define ETH_DEVICE_ID 0x153A // I217-LM
+// #define ETH_DEVICE_ID 0x100f // VMware : Intel 82545EM
 
 #define RX_DESC_COUNT                   32
 #define TX_DESC_COUNT                   8

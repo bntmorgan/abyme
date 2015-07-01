@@ -59,7 +59,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
 
   // Powerup PIO & MMI_extO
   pci_writew(id, PCI_CONFIG_COMMAND, 0x7);
-  pci_writeb(id, PCI_CONFIG_INTERRUPT_LINE, 0x5);
+  // pci_writeb(id, PCI_CONFIG_INTERRUPT_LINE, 0x5);
   
   INFO("COMMAND 0x%04x\n", pci_readw(id, PCI_CONFIG_COMMAND));
 
@@ -102,13 +102,13 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
       ((uint32_t)(uintptr_t)rom) | 1);
 
   INFO("BAR0 address 0x%08x\n", bar0);
-  dump(bar0, 2, 0x10, (uint32_t)(uintptr_t)bar0, 2); 
+  // dump(bar0, 2, 0x10, (uint32_t)(uintptr_t)bar0, 2); 
   INFO("BAR1 address 0x%08x\n", bar1);
-  dump(bar1, 2, 0x10, (uint32_t)(uintptr_t)bar1, 2); 
+  // dump(bar1, 2, 0x10, (uint32_t)(uintptr_t)bar1, 2); 
   INFO("BAR2 address 0x%08x\n", bar2);
-  dump(bar2, 2, 0x10, (uint32_t)(uintptr_t)bar2, 2); 
+  // dump(bar2, 2, 0x10, (uint32_t)(uintptr_t)bar2, 2); 
   INFO("ROM address 0x%08x\n", rom);
-  dump(rom, 2, 0x10, (uint32_t)(uintptr_t)rom, 2); 
+  // dump(rom, 2, 0x10, (uint32_t)(uintptr_t)rom, 2); 
 
   // Add an unload handler
   status = uefi_call_wrapper(BS->HandleProtocol, 4, &image_handle,
