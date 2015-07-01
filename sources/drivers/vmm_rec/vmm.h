@@ -94,6 +94,15 @@ struct registers {
   uint64_t rip;
 } __attribute__((packed));
 
+struct vm {
+  // Pointer to the VMCS region used for this VM
+  uint8_t *vmcs_region;
+  // Shadow VMCS pointer
+  uint8_t *shadow_ptr;
+  // VMCS cache structure pointer
+  struct vmcs *vmcs;
+};
+
 void vmm_vm_exit_handler(void);
 void vmm_init(struct setup_state *state);
 void vmm_adjust_vm_entry_controls(void);
