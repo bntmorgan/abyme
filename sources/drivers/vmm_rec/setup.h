@@ -13,7 +13,7 @@ void bsp_main(struct setup_state *state);
 
 void vmm_setup(void);
 
-void vmm_create_vmxon_and_vmcs_regions(void);
+void vmm_create_vmxon_region(void);
 
 void vmm_vm_setup_and_launch(struct setup_state *state);
 

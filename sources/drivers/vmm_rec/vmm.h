@@ -101,6 +101,8 @@ struct vm {
   uint8_t *shadow_ptr;
   // VMCS cache structure pointer
   struct vmcs *vmcs;
+  // VM index
+  uint32_t index;
 };
 
 #define VM_NB 8
@@ -108,5 +110,8 @@ struct vm {
 void vmm_vm_exit_handler(void);
 void vmm_init(struct setup_state *state);
 void vmm_adjust_vm_entry_controls(void);
+
+void vm_alloc(struct vm **vm);
+void vm_free(struct vm *vm);
 
 #endif

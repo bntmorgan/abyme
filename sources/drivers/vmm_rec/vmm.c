@@ -26,7 +26,8 @@
 /**
  * VMs pool
  */
-struct vm *vms;
+struct vm *vm_pool;
+uint8_t vm_allocated[VM_NB];
 
 uint8_t vmm_stack[VMM_STACK_SIZE];
 
@@ -64,16 +65,53 @@ void vmm_init(struct setup_state *state) {
   vmm_vms_init();
 }
 
-void vmm_vms_init(void) {
+/**
+ * Return the index of the allocated VM
+ */
+void vm_alloc(struct vm **vm) {
   uint32_t i;
-  vms = efi_allocate_pool(sizeof(struct vm) * VM_NB);
+  for (i = 0; i < VM_NB; i++) {
+    if (vm_allocated[i] == 0) {
+      vm_allocated[i] = 1;
+      *vm = &vm_pool[i];
+      (*vm)->index = i;
+      (*vm)->vmcs_region = &vmcs_region_pool[i][0];
+      INFO("REGION 0x%016X\n", (*vm)->vmcs_region);
+      (*vm)->vmcs = &vmcs_cache_pool[i];
+      (*vm)->shadow_ptr = NULL;
+      return;
+    }
+  }
+  ERROR("Failed to allocate a VM, pool is fully used\n");
+}
+
+/**
+ * Free a VM
+ */
+void vm_free(struct vm *vm) {
+  uint32_t i;
+  if (vm == 0) {
+    ERROR("Bad VM pointer\n");
+  }
+  for (i = 0; i < VM_NB; i++) {
+    if (&vm_pool[i] == vm) {
+      if (vm_allocated[i] == 1) {
+        ERROR("VM wasn't allocated\n");
+      }
+      vm_allocated[i] = 0;
+      return;
+    }
+  }
+  ERROR("Failed to free a VM : not found\n");
+}
+
+void vmm_vms_init(void) {
+  vm_pool = efi_allocate_pool(sizeof(struct vm) * VM_NB);
   WARN("This VMM can handle up to 0x%08x VMs\n", VM_NB);
   // Initialize VMs pool
-  memset(&vms[0], 0, VM_NB * sizeof(struct vm));
-  for (i = 0; i < VM_NB; i++) {
-    vms[i].vmcs = &vmcs_cache_pool[i];
-    vms[i].vmcs_region = &vmcs_region_pool[i][0];
-  }
+  memset(&vm_pool[0], 0, VM_NB * sizeof(struct vm));
+  // Initialize allocation table
+  memset(&vm_allocated[0], 0, VM_NB);
 }
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
@@ -141,7 +179,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   // VMX Specific VMexits that we override
   //
   if (exit_reason == EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED) {
-    vmcs_set_vmx_preemption_timer_value(VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
+    // XXX
+    // vmcs_set_vmx_preemption_timer_value(VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
     return;
   } else if (exit_reason == EXIT_REASON_EXTERNAL_INTERRUPT) {
     INFO("External interrupt from 0x%x!\n", ns.nested_level);

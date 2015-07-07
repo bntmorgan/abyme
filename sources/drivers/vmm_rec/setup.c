@@ -27,9 +27,6 @@
 #include "nested_vmx.h"
 #endif
 
-uint32_t vmcs_revision_identifier;
-uint32_t number_bytes_regions;
-
 void bsp_main(struct setup_state *state) {
 
 #ifdef _DEBUG_SERVER
@@ -105,6 +102,7 @@ void bsp_main(struct setup_state *state) {
   // Wait for the end of APs initialization chain
   // TODO implement
 
+  vmcs_init();
   vmm_init(state);
 
   vmm_setup(/* TODO #core */);
@@ -113,7 +111,7 @@ void bsp_main(struct setup_state *state) {
 }
 
 void vmm_setup() {
-  vmm_create_vmxon_and_vmcs_regions();
+  vmcs_create_vmcs_regions();
   cpu_write_cr0(cpu_adjust64(cpu_read_cr0(), MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1));
   cpu_write_cr4(cpu_adjust64(cpu_read_cr4(), MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
   msr_check_feature_control_msr_lock();
@@ -122,31 +120,23 @@ void vmm_setup() {
   INFO("VMXON DONE\n");
 }
 
-void vmm_create_vmxon_and_vmcs_regions(void) {
-  memset((uint8_t *) &vmxon[0], 0, 0x1000);
-  memset((uint8_t *) &vmcs0[0], 0, 0x1000);
-
-  uint64_t msr_value = msr_read(MSR_ADDRESS_IA32_VMX_BASIC);
-  vmcs_revision_identifier = msr_value & 0xffffffff;
-  number_bytes_regions = (msr_value >> 32) & 0x1fff;
-  if (sizeof(vmxon) < number_bytes_regions || sizeof(vmcs0) < number_bytes_regions) {
-    panic("!#SETUP SZ");
-  }
-  *((uint32_t *) &vmxon[0]) = vmcs_revision_identifier;
-  *((uint32_t *) &vmcs0[0]) = vmcs_revision_identifier;
-}
-
 void vmm_vm_setup_and_launch(struct setup_state *state) {
- INFO("vmclear(0x%016X)\n", (uint64_t)&vmcs0[0]);
- cpu_vmclear((uint8_t *) vmcs0);
- INFO("vmptrld(0x%016X)\n", (uint64_t)&vmcs0[0]);
- cpu_vmptrld((uint8_t *) vmcs0);
- vmcs_fill_host_state_fields();
- vmcs_fill_vm_exit_control_fields();
- vmcs_fill_vm_entry_control_fields();
- vmcs_fill_vm_exec_control_fields();
- vmcs_fill_guest_state_fields();
- INFO("READY TO GO!\n");
+  // XXX notion de VM courante
+  struct vm *vm;
+
+  // Allocate a VM
+  INFO("Allocate the first VM\n");
+  vm_alloc(&vm);
+  INFO("vmclear(0x%016X)\n", (uint64_t)&(vm->vmcs_region)[0]);
+  cpu_vmclear((uint8_t *) (uint64_t)&(vm->vmcs_region)[0]);
+  INFO("vmptrld(0x%016X)\n", (uint64_t)&(vm->vmcs_region)[0]);
+  cpu_vmptrld((uint8_t *) (uint64_t)&(vm->vmcs_region)[0]);
+  INFO("Cloning configuration\n");
+  vmcs_clone(vm->vmcs);
+  INFO("Committing the configuration\n");
+  vmcs_commit(vm->vmcs);
+  INFO("READY TO GO!\n");
+  vmcs_dump(vm->vmcs);
 
   // Call hook main
   hook_main();
