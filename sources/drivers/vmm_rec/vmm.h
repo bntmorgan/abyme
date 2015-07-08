@@ -111,8 +111,9 @@ void vmm_vm_exit_handler(void);
 void vmm_init(struct setup_state *state);
 void vmm_adjust_vm_entry_controls(void);
 
-void vm_alloc(struct vm **vm);
-void vm_free(struct vm *vm);
-void vm_set(struct vm *vm);
+void vm_alloc(struct vm **v);
+void vm_free(struct vm *v);
+void vm_set(struct vm *v);
+void vm_get(struct vm **v);
 
 #endif

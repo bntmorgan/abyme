@@ -122,23 +122,23 @@ void vmm_setup() {
 
 void vmm_vm_setup_and_launch(struct setup_state *state) {
   // XXX notion de VM courante
-  struct vm *vm;
+  struct vm *v;
 
   // Allocate a VM
   INFO("Allocate the first VM\n");
-  vm_alloc(&vm);
+  vm_alloc(&v);
   // Set current VM
-  vm_set(vm);
-  INFO("vmclear(0x%016X)\n", (uint64_t)&(vm->vmcs_region)[0]);
-  cpu_vmclear((uint8_t *) (uint64_t)&(vm->vmcs_region)[0]);
-  INFO("vmptrld(0x%016X)\n", (uint64_t)&(vm->vmcs_region)[0]);
-  cpu_vmptrld((uint8_t *) (uint64_t)&(vm->vmcs_region)[0]);
+  vm_set(v);
+  INFO("vmclear(0x%016X)\n", (uint64_t)&(v->vmcs_region)[0]);
+  cpu_vmclear((uint8_t *) (uint64_t)&(v->vmcs_region)[0]);
+  INFO("vmptrld(0x%016X)\n", (uint64_t)&(v->vmcs_region)[0]);
+  cpu_vmptrld((uint8_t *) (uint64_t)&(v->vmcs_region)[0]);
   INFO("Cloning configuration\n");
-  vmcs_clone(vm->vmcs);
+  vmcs_clone(v->vmcs);
   INFO("Committing the configuration\n");
-  vmcs_commit(vm->vmcs);
+  vmcs_commit(v->vmcs);
   INFO("READY TO GO!\n");
-  vmcs_dump(vm->vmcs);
+  vmcs_dump(v->vmcs);
 
   // Call hook main
   hook_main();

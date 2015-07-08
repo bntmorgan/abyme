@@ -329,26 +329,26 @@ union vm_exit_interrupt_info {
  * VMCS encoding handling has been inspired from ramooflax code
  */
 
-#define VMW(__vmcs__, __name__, __val__) \
-  __vmcs__->__name__##_enc.d = 1; \
-  __vmcs__->__name__ = __val__;
+#define VMW(__name__, __val__) \
+  vmcs->__name__##_enc.d = 1; \
+  vmcs->__name__ = __val__;
 #define VMCSF(__type__, __name__) __type__ __name__; \
     union vmcs_field_encoding __name__##_enc
 #define VMCSE(__vmcs__, __name__, __encoding__) \
     __vmcs__->__name__##_enc.raw = __encoding__;
-#define VMR(__vmcs__, __name__) \
-    if (!__vmcs__->__name__##_enc.r || __vmcs__->__name__##_enc.d) { \
-      __vmcs__->__name__ = cpu_vmread(__vmcs__->__name__##_enc.raw); \
-      __vmcs__->__name__##_enc.r = 1; \
+#define VMR(__name__) \
+    if (!vmcs->__name__##_enc.r || vmcs->__name__##_enc.d) { \
+      vmcs->__name__ = cpu_vmread(vmcs->__name__##_enc.raw); \
+      vmcs->__name__##_enc.r = 1; \
     }
-#define VMR3(__vmcs__, __name__, __to__) \
-    VMR(__vmcs__, __name__) \
-    __to__ = __vmcs__->__name__;
-#define VMF(__vmcs__, __name__) \
-    __vmcs__->__name__##_enc.r = 0; \
-    if (__vmcs__->__name__##_enc.d) { \
-      __vmcs__->__name__##_enc.d = 0; \
-      cpu_vmwrite(__vmcs__->__name__##_enc.raw, __vmcs__->__name__); \
+#define VMR3(__name__, __to__) \
+    VMR(__name__) \
+    __to__ = vmcs->__name__;
+#define VMF(__name__) \
+    vmcs->__name__##_enc.r = 0; \
+    if (vmcs->__name__##_enc.d) { \
+      vmcs->__name__##_enc.d = 0; \
+      cpu_vmwrite(vmcs->__name__##_enc.raw, vmcs->__name__); \
     }
 #define VMP(__vmcs__, __name__) \
     printk("  "#__name__" : 0x%016X\n", __vmcs__->__name__);
@@ -594,5 +594,6 @@ void vmcs_create_vmcs_regions(void);
 
 extern struct vmcs *vmcs_cache_pool;
 extern uint8_t (*vmcs_region_pool)[0x1000];
+extern struct vmcs *vmcs;
 
 #endif

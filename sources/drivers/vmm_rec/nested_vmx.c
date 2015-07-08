@@ -543,7 +543,8 @@ void nested_load_host(void) {
   static uint64_t guest_fields[] = { NESTED_GUEST_FIELDS, VM_ENTRY_CONTROLS /* For IA32E_MODE_GUEST */ };
   static uint64_t host_fields[] = { NESTED_HOST_FIELDS };
   static uint64_t host_fields_dest[] = { NESTED_HOST_FIELDS_DEST };
-  uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
+  uint64_t preempt_timer_value;
+  VMR3(gs.vmx_preemption_timer_value, preempt_timer_value);
 
   // copy all fields updated by vm_exit from guest_vmcs to shadow_vmcs
   READ_VMCS_FIELDS(guest_fields);

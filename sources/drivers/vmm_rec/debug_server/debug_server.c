@@ -168,20 +168,20 @@ void debug_server_handle_memory_write(message_memory_write *mr) {
 }
 
 void debug_server_get_segment_regs(core_regs *regs) {
-  regs->cs = cpu_vmread(GUEST_CS_SELECTOR);
-  regs->ds = cpu_vmread(GUEST_DS_SELECTOR);
-  regs->ss = cpu_vmread(GUEST_SS_SELECTOR);
-  regs->es = cpu_vmread(GUEST_ES_SELECTOR);
-  regs->fs = cpu_vmread(GUEST_FS_SELECTOR);
-  regs->gs = cpu_vmread(GUEST_GS_SELECTOR);
+  VMR3(gs.cs_selector, regs->cs);
+  VMR3(gs.ds_selector, regs->ds);
+  VMR3(gs.ss_selector, regs->ss);
+  VMR3(gs.es_selector, regs->es);
+  VMR3(gs.fs_selector, regs->fs);
+  VMR3(gs.gs_selector, regs->gs);
 }
 
 void debug_server_get_control_regs(core_regs *regs) {
-  regs->cr0 = cpu_vmread(GUEST_CR0);
+  VMR3(gs.cr0, regs->cr0);
   regs->cr1 = 0;
   regs->cr2 = 0;
-  regs->cr3 = cpu_vmread(GUEST_CR3);
-  regs->cr4 = cpu_vmread(GUEST_CR4);
+  VMR3(gs.cr3, regs->cr3);
+  VMR3(gs.cr4, regs->cr4);
 }
 
 void debug_server_handle_core_regs_read(message_core_regs_read *mr, struct registers *regs) {
@@ -404,10 +404,10 @@ uint8_t ismtf(void) {
 void debug_server_mtf(void) {
   // monitor trap flag handling
   if (ismtf()) {
-    cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, cpu_vmread(CPU_BASED_VM_EXEC_CONTROL)
-        | MONITOR_TRAP_FLAG);
+    vmcs->ctrls.ex.cpu_based_vm_exec_control =
+      vmcs->ctrls.ex.cpu_based_vm_exec_control | MONITOR_TRAP_FLAG;
   } else {
-    cpu_vmwrite(CPU_BASED_VM_EXEC_CONTROL, cpu_vmread(CPU_BASED_VM_EXEC_CONTROL)
-        & ~(uint32_t)MONITOR_TRAP_FLAG);
+    vmcs->ctrls.ex.cpu_based_vm_exec_control =
+      vmcs->ctrls.ex.cpu_based_vm_exec_control & ~(uint32_t)MONITOR_TRAP_FLAG;
   }
 }

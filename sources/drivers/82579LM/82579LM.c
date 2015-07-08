@@ -323,8 +323,8 @@ uint32_t eth_recv(void *buf, uint32_t len, uint8_t block) {
 }
 
 int eth_get_device() {
-  return pci_get_device(ETH_VENDOR_ID, ETH_DEVICE_ID, &addr) &&
-    pci_get_device(ETH_VENDOR_ID, 0x100f, &addr) &&
+  return pci_get_device(ETH_VENDOR_ID, 0x100f, &addr) &&
+    pci_get_device(ETH_VENDOR_ID, 0x153A, &addr) &&
     pci_get_device(ETH_VENDOR_ID, 0x1502, &addr);
 }
 

@@ -32,11 +32,14 @@ uint8_t vm_allocated[VM_NB];
  * Current VM running
  */
 struct vm *vmr;
-struct vmcs *vmcs;
 
-void vm_set(struct vm *vm) {
-  vmr = vm;
-  vmcs = vm->vmcs;
+void vm_set(struct vm *v) {
+  vmr = v;
+  vmcs = v->vmcs;
+}
+
+void vm_get(struct vm **v) {
+  *v = vmr;
 }
 
 uint8_t vmm_stack[VMM_STACK_SIZE];
@@ -78,17 +81,17 @@ void vmm_init(struct setup_state *state) {
 /**
  * Return the index of the allocated VM
  */
-void vm_alloc(struct vm **vm) {
+void vm_alloc(struct vm **v) {
   uint32_t i;
   for (i = 0; i < VM_NB; i++) {
     if (vm_allocated[i] == 0) {
       vm_allocated[i] = 1;
-      *vm = &vm_pool[i];
-      (*vm)->index = i;
-      (*vm)->vmcs_region = &vmcs_region_pool[i][0];
-      INFO("REGION 0x%016X\n", (*vm)->vmcs_region);
-      (*vm)->vmcs = &vmcs_cache_pool[i];
-      (*vm)->shadow_ptr = NULL;
+      *v = &vm_pool[i];
+      (*v)->index = i;
+      (*v)->vmcs_region = &vmcs_region_pool[i][0];
+      INFO("REGION 0x%016X\n", (*v)->vmcs_region);
+      (*v)->vmcs = &vmcs_cache_pool[i];
+      (*v)->shadow_ptr = NULL;
       return;
     }
   }
@@ -98,13 +101,13 @@ void vm_alloc(struct vm **vm) {
 /**
  * Free a VM
  */
-void vm_free(struct vm *vm) {
+void vm_free(struct vm *v) {
   uint32_t i;
-  if (vm == 0) {
+  if (v == 0) {
     ERROR("Bad VM pointer\n");
   }
   for (i = 0; i < VM_NB; i++) {
-    if (&vm_pool[i] == vm) {
+    if (&vm_pool[i] == v) {
       if (vm_allocated[i] == 1) {
         ERROR("VM wasn't allocated\n");
       }
@@ -141,14 +144,14 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 
   // LEVEL(1, "Nested state %d\n", ns.state);
 
-  VMR3(vmcs, gs.rsp, guest_regs.rsp);
-  VMR3(vmcs, gs.rip, guest_regs.rip);
+  VMR3(gs.rsp, guest_regs.rsp);
+  VMR3(gs.rip, guest_regs.rip);
 
   // LEVEL(1, "Guest rip 0x%016X\n", guest_regs.rip);
 
-  VMR(vmcs, info.reason);
+  VMR(info.reason);
   uint32_t exit_reason = vmcs->info.reason;
-  VMR(vmcs, info.qualification);
+  VMR(info.qualification);
   uint64_t exit_qualification = vmcs->info.qualification;
   uint8_t cpu_mode = get_cpu_mode();
   uint8_t** instr_param_ptr;
@@ -183,22 +186,22 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   // VMX Specific VMexits that we override
   //
   if (exit_reason == EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED) {
-    // XXX
-    // vmcs_set_vmx_preemption_timer_value(VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
+    vmcs_set_vmx_preemption_timer_value(vmcs,
+        VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
     return;
   } else if (exit_reason == EXIT_REASON_EXTERNAL_INTERRUPT) {
     INFO("External interrupt from 0x%x!\n", ns.nested_level);
-    VMR(vmcs, info.intr_info);
+    VMR(info.intr_info);
     union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info};
-    VMR(vmcs, info.intr_error_code);
+    VMR(info.intr_error_code);
     uint32_t error_code = vmcs->info.intr_error_code;
     nested_interrupt_set(iif.vector, iif.type, error_code);
     return;
   } else if (exit_reason == EXIT_REASON_EXCEPTION_OR_NMI) {
     INFO("NMI interrupt from 0x%x!\n", ns.nested_level);
-    VMR(vmcs, info.intr_info);
+    VMR(info.intr_info);
     union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info};
-    VMR(vmcs, info.intr_error_code);
+    VMR(info.intr_error_code);
     uint32_t error_code = vmcs->info.intr_error_code;
     nested_interrupt_set(iif.vector, iif.type, error_code);
     return;
@@ -223,9 +226,9 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 
   // EPT violation hadling
   if (exit_reason == EXIT_REASON_EPT_VIOLATION) {
-    VMR(vmcs, info.guest_physical_address);
+    VMR(info.guest_physical_address);
     uint64_t guest_physical_addr = vmcs->info.guest_physical_address;
-    VMR(vmcs, ctrls.ex.ept_pointer);
+    VMR(ctrls.ex.ept_pointer);
     uint64_t eptp = vmcs->ctrls.ex.ept_pointer;
     uint64_t *e;
     uint64_t a;
@@ -303,7 +306,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     case EXIT_REASON_INVVPID: {
       uint8_t* desc = get_instr_param_ptr(&guest_regs);
-      VMR(vmcs, info.vmx_instruction_info);
+      VMR(info.vmx_instruction_info);
       uint64_t type = ((uint64_t*)&guest_regs)[(vmcs->info.vmx_instruction_info >> 28) & 0xF];
       // We need to increment the VPID
       ((uint16_t*)desc)[0]++;
@@ -312,7 +315,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     }
     case EXIT_REASON_VMREAD:
     case EXIT_REASON_VMWRITE: {
-      VMR(vmcs, info.vmx_instruction_info);
+      VMR(info.vmx_instruction_info);
       uint8_t operand_in_register = (vmcs->info.vmx_instruction_info >> 10) & 0x1;
       uint64_t field = ((uint64_t*)&guest_regs)[(vmcs->info.vmx_instruction_info >> 28) & 0xF];
       uint64_t* value_ptr = NULL;
@@ -345,9 +348,9 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_IO_INSTRUCTION: {
       io_count++;
       // Checking the privileges
-      VMR(vmcs, gs.cs_ar_bytes);
+      VMR(gs.cs_ar_bytes);
       uint8_t cpl = (vmcs->gs.cs_ar_bytes >> 5) & 3;
-      VMR(vmcs, gs.rflags);
+      VMR(gs.rflags);
       uint8_t iopl = (vmcs->gs.rflags >> 12) & 3;
       if (cpu_mode == MODE_REAL || cpl <= iopl) {
         // REP prefixed || String I/O
@@ -462,7 +465,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
           guest_regs.rdx = 0;
           guest_regs.rax = 0;
         }
-        VMR(vmcs, gs.ia32_efer);
+        VMR(gs.ia32_efer);
         guest_regs.rax = (guest_regs.rax & (0xffffffff00000000)) | (vmcs->gs.ia32_efer & 0xffffffff);
         guest_regs.rdx = (guest_regs.rdx & (0xffffffff00000000)) | ((vmcs->gs.ia32_efer >> 32) & 0xffffffff);
       } else if (guest_regs.rcx > 0xc0001fff || (guest_regs.rcx > 0x1fff && guest_regs.rcx < 0xc0000000)) {
@@ -470,7 +473,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         uint32_t it_info_field =    (0x1 << 11)     // push error code
                                   | (0x3 << 8)      // hardware exception
                                   | 0xd ;           // GP fault
-        cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, it_info_field);
+        VMW(info.intr_info, it_info_field);
       } else {
         __asm__ __volatile__("rdmsr"
           : "=a" (guest_regs.rax), "=b" (guest_regs.rbx), "=c" (guest_regs.rcx), "=d" (guest_regs.rdx)
@@ -486,8 +489,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     }
     case EXIT_REASON_WRMSR: {
       if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
-        cpu_vmwrite(GUEST_IA32_EFER, ((guest_regs.rdx << 32) & 
-              0xffffffff00000000) | (guest_regs.rax & 0xffffffff));
+        VMW(gs.ia32_efer, ((guest_regs.rdx << 32) & 0xffffffff00000000) |
+            (guest_regs.rax & 0xffffffff));
       } else if (is_MTRR(guest_regs.rcx)) {
           __asm__ __volatile__("wrmsr"
             : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
@@ -520,22 +523,23 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       uint64_t value = ((uint64_t*)&guest_regs)[reg_num];
 
       if (cr_num == 0) {
-        cpu_vmwrite(CR0_READ_SHADOW, value);
+        VMW(ctrls.ex.cr0_read_shadow, value);
         return;
       } else if (cr_num == 4) {
-        cpu_vmwrite(CR4_READ_SHADOW, value);
+        VMW(ctrls.ex.cr4_read_shadow, value);
         return;
       } else if (cr_num == 3) {
         cr3_count++;
 #ifdef _DEBUG_SERVER
         // if (debug_server) {
         //   désactivation de l'expérience
-        //   debug_server_log_cr3_add(&guest_regs, cpu_vmread(GUEST_CR3));
+        //   VMR(gs.cr3);
+        //   debug_server_log_cr3_add(&guest_regs, vmcs->gs.cr3);
         // }
 #endif
-        cpu_vmwrite(GUEST_CR3, value);
+        VMW(gs.cr3, value);
         // We need to invalidate TLBs, see doc INTEL vol 3C chap 28.3.3.3
-        VMR(vmcs, ctrls.ex.virtual_processor_id);
+        VMR(ctrls.ex.virtual_processor_id);
         uint8_t invvpid_desc[16] = {vmcs->ctrls.ex.virtual_processor_id};
         __asm__ __volatile__("invvpid %1, %0" : : "r"((uint64_t)3), "m"(*invvpid_desc));
       } else {
@@ -582,11 +586,11 @@ void vmm_vmcs_flush(void) {
 }
 
 static inline int get_cpu_mode(void) {
-  VMR(vmcs, gs.cr0);
+  VMR(gs.cr0);
   uint64_t cr0 = vmcs->gs.cr0;
-  VMR(vmcs, gs.ia32_efer);
+  VMR(gs.ia32_efer);
   uint64_t ia32_efer = vmcs->gs.ia32_efer;
-  VMR(vmcs, gs.rflags);
+  VMR(gs.rflags);
   union rflags rf = {.raw = vmcs->gs.rflags};
   if (rf.vm == 1) {
     return MODE_VIRTUAL_8086;
@@ -621,14 +625,14 @@ static inline uint8_t is_MTRR(uint64_t msr_addr) {
 static inline void* get_instr_param_ptr(struct registers *guest_regs) {
   uint64_t addr_ptr = 0;
   uint8_t i;
-  VMR(vmcs, info.vmx_instruction_info);
+  VMR(info.vmx_instruction_info);
   uint32_t vmx_instr_info = vmcs->info.vmx_instruction_info;
   uint8_t scaling = vmx_instr_info & 0x03;
   uint8_t index_reg_disabled = (vmx_instr_info >> 22) & 0x01;
   uint8_t base_reg_disabled = (vmx_instr_info >> 27) & 0x01;
   uint8_t index_reg = (vmx_instr_info >> 18) & 0x0F;
   uint8_t base_reg = (vmx_instr_info >> 23) & 0x0F;
-  VMR(vmcs, info.qualification);
+  VMR(info.qualification);
   int64_t instruction_displacement_field = vmcs->info.qualification;
 
   if (!index_reg_disabled) {
@@ -646,7 +650,7 @@ static inline void* get_instr_param_ptr(struct registers *guest_regs) {
   uint64_t *e;
   uint64_t a;
   uint8_t s;
-  VMR(vmcs, gs.cr3);
+  VMR(gs.cr3);
   if (paging_walk(vmcs->gs.cr3, addr_ptr, &e, &a, &s)) {
     ERROR("Page walk error\n");
   }
@@ -655,7 +659,7 @@ static inline void* get_instr_param_ptr(struct registers *guest_regs) {
 }
 
 static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs) {
-  VMR(vmcs, info.instruction_len);
+  VMR(info.instruction_len);
   uint32_t exit_instruction_length = vmcs->info.instruction_len;
   // LEVEL(2, "MODE %d, ILength %d\n", cpu_mode, exit_instruction_length);
 
@@ -663,21 +667,22 @@ static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs)
     case MODE_REAL: {
       uint16_t tmp = (uint16_t) guest_regs->rip;
       tmp = tmp + (uint16_t) exit_instruction_length;
-      cpu_vmwrite(GUEST_RIP, (guest_regs->rip & 0xffffffffffff0000) | tmp);
+      VMW(gs.rip, (guest_regs->rip & 0xffffffffffff0000) | tmp);
       break;
     }
     case MODE_PROTECTED: {
       uint32_t tmp = (uint32_t) guest_regs->rip;
       tmp = tmp + (uint32_t) exit_instruction_length;
-      cpu_vmwrite(GUEST_RIP, (guest_regs->rip & 0xffffffff00000000) | tmp);
+      VMW(gs.rip, (guest_regs->rip & 0xffffffff00000000) | tmp);
       break;
     }
     case MODE_LONG: {
       uint64_t tmp = (uint64_t) guest_regs->rip;
       tmp = tmp + (uint64_t) exit_instruction_length;
       // LEVEL(2, "TMP 0x%016X\n", tmp);
-      cpu_vmwrite(GUEST_RIP, (guest_regs->rip & 0x0000000000000000) | tmp);
-      // LEVEL(2, "Post VMCS Guest rip%016X\n", cpu_vmread(GUEST_RIP));
+      VMW(gs.rip, (guest_regs->rip & 0x0000000000000000) | tmp);
+      // VMR(gs.rip);
+      // LEVEL(2, "Post VMCS Guest rip%016X\n", vmcs->gs.rip);
       break;
     }
     default :
@@ -687,19 +692,18 @@ static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs)
 
 void vmm_adjust_vm_entry_controls(void) {
   uint8_t cpu_mode = get_cpu_mode();
-  VMR(vmcs, ctrls.entry.controls);
+  VMR(ctrls.entry.controls);
   uint64_t vm_entry_controls = vmcs->ctrls.entry.controls;
   if (cpu_mode == MODE_LONG) {
     // Guest is in IA32e mode
     // INFO("Setting IA32E_MODE_GUEST\n");
-    cpu_vmwrite(VM_ENTRY_CONTROLS, vm_entry_controls |
+    VMW(ctrls.entry.controls, vm_entry_controls |
         (uint64_t)IA32E_MODE_GUEST);
   } else {
     // Guest is not in IA32e mode
     INFO("Removing IA32E_MODE_GUEST : controls befor adjustments 0x%016X\n",
         vm_entry_controls);
-    cpu_vmwrite(VM_ENTRY_CONTROLS, vm_entry_controls &
-        ~(uint64_t)IA32E_MODE_GUEST);
+    VMW(ctrls.entry.controls, vm_entry_controls & ~(uint64_t)IA32E_MODE_GUEST);
   }
 }
 
