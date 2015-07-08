@@ -76,6 +76,44 @@ static void check_memory_type(uint8_t type) {
   }
 }
 
+int mtrr_read_write_ranges(void) {
+  uint8_t i;
+
+  /* Check if the processor support MTRRs */
+  if (cpuid_are_mtrr_supported() != 1) {
+    return MTRR_NOT_SUPPORTED;
+  }
+
+  /* Retrieve MTRR conf registers */
+  mtrr_cap.value = msr_read(MSR_ADDRESS_IA32_MTRRCAP);
+  mtrr_def_type.value = msr_read(MSR_ADDRESS_IA32_MTRR_DEF_TYPE);
+
+  /* If MTRRs are not enabled we can stop here */
+  if (!mtrr_def_type.e) {
+    return MTRR_DISABLED;
+  }
+
+  /* Retrieve fixed MTRRs corresponding to the range 0x000000:0x100000. */
+  if (mtrr_cap.fix) {
+    for (i = 0; i < 11; i++) {
+      msr_write(mtrr_fixed[i].msr.address, msr_read(mtrr_fixed[i].msr.address));
+    }
+  }
+
+  /* Retrieve variable MTRRs. */
+  if (mtrr_cap.vcnt > MAX_NB_MTRR_VARIABLE) {
+    panic("!#MTRR VCNT [%d]\n", mtrr_cap.vcnt);
+  }
+  for (i = 0; i < mtrr_cap.vcnt; i++) {
+    mtrr_variable[i].msr_base.address = MSR_ADDRESS_IA32_MTRR_PHYSBASE0 + 2*i;
+    mtrr_variable[i].msr_mask.address = MSR_ADDRESS_IA32_MTRR_PHYSBASE0 + 2*i + 1;
+    mtrr_variable[i].msr_base.value = msr_read(mtrr_variable[i].msr_base.address);
+    mtrr_variable[i].msr_mask.value = msr_read(mtrr_variable[i].msr_mask.address);
+    msr_write(mtrr_variable[i].msr_base.address, msr_read(mtrr_variable[i].msr_base.address));
+  }
+  return 0;
+}
+
 uint8_t mtrr_create_ranges(void) {
   uint8_t i;
   uint8_t j;
