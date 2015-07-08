@@ -1,5 +1,6 @@
 .text
 .global vmm_vm_exit_handler
+.global vmm_vmcs_flush
 
 vmm_vm_exit_handler:
   /*
@@ -30,6 +31,10 @@ vmm_vm_exit_handler:
    * It takes the guest general purpose registers as a parameter (see gpr64_t).
    */
   call vmm_handle_vm_exit
+  /*
+   * Flush the current VMCS cache
+   */
+  call vmm_vmcs_flush
 
   /*
    * Restore guest general-purpose registers, possibly modified by our handler.

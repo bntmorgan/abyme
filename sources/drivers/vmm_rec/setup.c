@@ -127,6 +127,8 @@ void vmm_vm_setup_and_launch(struct setup_state *state) {
   // Allocate a VM
   INFO("Allocate the first VM\n");
   vm_alloc(&vm);
+  // Set current VM
+  vm_set(vm);
   INFO("vmclear(0x%016X)\n", (uint64_t)&(vm->vmcs_region)[0]);
   cpu_vmclear((uint8_t *) (uint64_t)&(vm->vmcs_region)[0]);
   INFO("vmptrld(0x%016X)\n", (uint64_t)&(vm->vmcs_region)[0]);

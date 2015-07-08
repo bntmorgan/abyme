@@ -329,20 +329,29 @@ union vm_exit_interrupt_info {
  * VMCS encoding handling has been inspired from ramooflax code
  */
 
-#define VMCW(__vmcs__, __name__, __val__) \
-  __vmcs__.__name__ = __val__;
-#define VMCR(__vmcs__, __name__, __val__) \
-  __vmcs__.__name__;
+#define VMW(__vmcs__, __name__, __val__) \
+  __vmcs__->__name__##_enc.d = 1; \
+  __vmcs__->__name__ = __val__;
 #define VMCSF(__type__, __name__) __type__ __name__; \
     union vmcs_field_encoding __name__##_enc
 #define VMCSE(__vmcs__, __name__, __encoding__) \
-    __vmcs__.__name__##_enc.raw = __encoding__;
-#define VMR(__vmcs__, __name__) __vmcs__.__name__ = \
-    cpu_vmread(__vmcs__.__name__##_enc.raw);
-#define VMW(__vmcs__, __name__) \
-    cpu_vmwrite(__vmcs__.__name__##_enc.raw, __vmcs__.__name__);
+    __vmcs__->__name__##_enc.raw = __encoding__;
+#define VMR(__vmcs__, __name__) \
+    if (!__vmcs__->__name__##_enc.r || __vmcs__->__name__##_enc.d) { \
+      __vmcs__->__name__ = cpu_vmread(__vmcs__->__name__##_enc.raw); \
+      __vmcs__->__name__##_enc.r = 1; \
+    }
+#define VMR3(__vmcs__, __name__, __to__) \
+    VMR(__vmcs__, __name__) \
+    __to__ = __vmcs__->__name__;
+#define VMF(__vmcs__, __name__) \
+    __vmcs__->__name__##_enc.r = 0; \
+    if (__vmcs__->__name__##_enc.d) { \
+      __vmcs__->__name__##_enc.d = 0; \
+      cpu_vmwrite(__vmcs__->__name__##_enc.raw, __vmcs__->__name__); \
+    }
 #define VMP(__vmcs__, __name__) \
-    INFO(#__vmcs__"."#__name__" : 0x%016X\n", __vmcs__.__name__);
+    printk("  "#__name__" : 0x%016X\n", __vmcs__->__name__);
 
 union vmcs_field_encoding {
   struct {
@@ -351,9 +360,14 @@ union vmcs_field_encoding {
     uint32_t type:2; // 0: ctrl, 1: VM-exit info, 2: guest state, 3: host state
     uint32_t r0:1;
     uint32_t width:2; // 0: 16-bit, 1: 64-bit, 2: 32-bit, 3: natural width
-    uint32_t r1:17;
+    uint32_t d:1; // written, needs to be committed
+    uint32_t r:1; // already read
+    uint32_t r1:15;
   };
-  uint32_t raw;
+  struct{
+    uint32_t raw:30;
+    uint32_t meta:2;
+  };
 };
 
 struct vmcs_guest_state {
@@ -558,16 +572,6 @@ struct vmcs {
   struct vmcs_vmexit_information info;
 } __attribute__((packed));
 
-void vmcs_fill_guest_state_fields(void);
-
-void vmcs_fill_host_state_fields(void);
-
-void vmcs_fill_vm_exec_control_fields(void);
-
-void vmcs_fill_vm_exit_control_fields(void);
-
-void vmcs_fill_vm_entry_control_fields(void);
-
 void vmcs_dump_vcpu(void);
 
 void vmcs_set_vmx_preemption_timer_value(struct vmcs *v, uint64_t time_microsec);
@@ -583,6 +587,8 @@ void vmcs_clone(struct vmcs *v);
 void vmcs_commit(struct vmcs *v);
 
 void vmcs_dump(struct vmcs *v);
+
+void vmcs_update(struct vmcs *v);
 
 void vmcs_create_vmcs_regions(void);
 

@@ -113,5 +113,6 @@ void vmm_adjust_vm_entry_controls(void);
 
 void vm_alloc(struct vm **vm);
 void vm_free(struct vm *vm);
+void vm_set(struct vm *vm);
 
 #endif
