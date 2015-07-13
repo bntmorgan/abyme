@@ -123,7 +123,7 @@ void hook_main(void) {
 
   // Protect the memory region we want for every contexts
   uint8_t m;
-  for (m = 0; m < CTXN; m++) {
+  for (m = 0; m < VM_NB; m++) {
     ept_perm(((uint64_t)eric->bar0 & (~(uint64_t)0xfff)), 1, 0x0, m);
   }
 

@@ -329,29 +329,43 @@ union vm_exit_interrupt_info {
  * VMCS encoding handling has been inspired from ramooflax code
  */
 
+#define VMC(__name__, __dst__, __src__) \
+  (__dst__)->__name__##_enc.d = 1; \
+  (__dst__)->__name__ = (__src__)->__name__;
+#define VMC2(__name_dst__, __name_src__, __dst__, __src__) \
+  (__dst__)->__name_dst__##_enc.d = 1; \
+  (__dst__)->__name_dst__ = (__src__)->__name_src__;
 #define VMW(__name__, __val__) \
   vmcs->__name__##_enc.d = 1; \
-  vmcs->__name__ = __val__;
+  vmcs->__name__ = (__val__);
 #define VMCSF(__type__, __name__) __type__ __name__; \
-    union vmcs_field_encoding __name__##_enc
+  union vmcs_field_encoding __name__##_enc
 #define VMCSE(__vmcs__, __name__, __encoding__) \
-    __vmcs__->__name__##_enc.raw = __encoding__;
+  (__vmcs__)->__name__##_enc.raw = __encoding__;
 #define VMR(__name__) \
-    if (!vmcs->__name__##_enc.r || vmcs->__name__##_enc.d) { \
-      vmcs->__name__ = cpu_vmread(vmcs->__name__##_enc.raw); \
-      vmcs->__name__##_enc.r = 1; \
-    }
-#define VMR3(__name__, __to__) \
-    VMR(__name__) \
-    __to__ = vmcs->__name__;
+  if (!vmcs->__name__##_enc.r && !vmcs->__name__##_enc.d) { \
+    vmcs->__name__ = cpu_vmread(vmcs->__name__##_enc.raw); \
+    vmcs->__name__##_enc.r = 1; \
+  }
+#define VMRF(__name__) \
+  vmcs->__name__ = cpu_vmread(vmcs->__name__##_enc.raw); \
+  vmcs->__name__##_enc.r = 1;
+#define VMR2(__name__, __to__) \
+  VMR(__name__) \
+  (__to__) = vmcs->__name__;
 #define VMF(__name__) \
-    vmcs->__name__##_enc.r = 0; \
-    if (vmcs->__name__##_enc.d) { \
-      vmcs->__name__##_enc.d = 0; \
-      cpu_vmwrite(vmcs->__name__##_enc.raw, vmcs->__name__); \
-    }
+  vmcs->__name__##_enc.r = 0; \
+  if (vmcs->__name__##_enc.d) { \
+    vmcs->__name__##_enc.d = 0; \
+    cpu_vmwrite(vmcs->__name__##_enc.raw, vmcs->__name__); \
+  }
 #define VMP(__vmcs__, __name__) \
-    printk("  "#__name__" : 0x%016X\n", __vmcs__->__name__);
+  printk("  "#__name__" : 0x%016X\n", (__vmcs__)->__name__);
+#define VMPF(__vmcs__, __name__) \
+  printk("  "#__name__" : 0x%016X\n", (__vmcs__)->__name__); \
+  printk("  - d(0x%x)\n  - r(0x%x)\n  - enc(0x%08x)\n", \
+      (__vmcs__)->__name__##_enc.d, (__vmcs__)->__name__##_enc.r, \
+      (__vmcs__)->__name__##_enc.raw);
 
 union vmcs_field_encoding {
   struct {
@@ -365,8 +379,8 @@ union vmcs_field_encoding {
     uint32_t r1:15;
   };
   struct{
-    uint32_t raw:30;
-    uint32_t meta:2;
+    uint32_t raw:15;
+    uint32_t meta:17;
   };
 };
 
@@ -584,13 +598,17 @@ void vmcs_free(uint32_t index);
 
 void vmcs_clone(struct vmcs *v);
 
-void vmcs_commit(struct vmcs *v);
+void vmcs_commit();
 
 void vmcs_dump(struct vmcs *v);
 
-void vmcs_update(struct vmcs *v);
+void vmcs_update();
+
+void vmcs_collect_shadow(struct vmcs *gvmcs);
 
 void vmcs_create_vmcs_regions(void);
+
+void vmcs_encoding_init(struct vmcs *v);
 
 extern struct vmcs *vmcs_cache_pool;
 extern uint8_t (*vmcs_region_pool)[0x1000];

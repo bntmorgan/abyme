@@ -9,6 +9,8 @@
 #define VMM_STACK_SIZE 0x400000
 #define NB_EXIT_REASONS 65
 
+#define VM_NB 8
+
 extern uint8_t vmm_stack[VMM_STACK_SIZE];
 
 enum vm_exit_reason {
@@ -99,13 +101,21 @@ struct vm {
   uint8_t *vmcs_region;
   // Shadow VMCS pointer
   uint8_t *shadow_ptr;
+  // Parent shadow VMCS corresponding this region
+  uint8_t *shadow_vmcs;
   // VMCS cache structure pointer
   struct vmcs *vmcs;
   // VM index
   uint32_t index;
+  // State : VMXOFF, HOST, GUEST
+  uint8_t state;
+  // Current running VM when using VMX
+  struct vm *child;
+  // VMs owned by this VM
+  struct vm *childs[VM_NB];
+  // VM level
+  uint8_t level;
 };
-
-#define VM_NB 8
 
 void vmm_vm_exit_handler(void);
 void vmm_init(struct setup_state *state);
@@ -115,5 +125,13 @@ void vm_alloc(struct vm **v);
 void vm_free(struct vm *v);
 void vm_set(struct vm *v);
 void vm_get(struct vm **v);
+void vm_set_root(struct vm *v);
+void vm_child_add(struct vm *pv, struct vm *cv);
+void vm_child_del(struct vm *pv, struct vm *cv);
+void vm_child_shadow_set(struct vm *v);
+void vm_child_shadow_get(struct vm *pv, struct vm **cv);
+
+extern struct vm *vm;
+extern struct vm *rvm;
 
 #endif

@@ -18,61 +18,23 @@
 #include "debug_server/debug_server.h"
 #endif
 
-struct nested_state ns = {
-  NESTED_DISABLED,
-  (uint8_t*)(uint64_t)-1,
-  0,
-  0,
-  {0},
-  0,
-  0,
-  {0}
-};
-
-static uint64_t fields_values[NB_VMCS_FIELDS];
-#define READ_VMCS_FIELDS(fields) \
-  read_vmcs_fields(fields, fields_values, sizeof(fields)/sizeof(uint64_t))
-#define WRITE_VMCS_FIELDS(fields) \
-  write_vmcs_fields(fields, fields_values, sizeof(fields)/sizeof(uint64_t))
-
-static inline void read_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields);
-static inline void write_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields);
+// Current level
+uint8_t level;
 
 void nested_set_vm_succeed(void);
+
+// Shadow VMCS cache
+static struct vmcs svmcs = {};
 
 #ifdef _VMCS_SHADOWING
 uint8_t vmread_bitmap [4096] __attribute__((aligned(0x1000)));
 uint8_t vmwrite_bitmap[4096] __attribute__((aligned(0x1000)));
 #endif
 
-enum shadow_err_code {
-  SHADOW_OK,
-  SHADOW_NO_SPACE,
-  SHADOW_NOT_FOUND
-};
-
-/**
- * Gestion des VMCS GUEST
- */
-uint8_t guest_vmcs[GVMCS_NB][4096] __attribute((aligned(0x1000)));
-
-static int shadow_add(uint8_t *ptr, uint32_t *idx, uint64_t rip) {
-  if (ns.guest_vmcs_idx >= GVMCS_NB) {
-    return SHADOW_NO_SPACE;
-  }
-  ns.shadow_vmcs_ptr[ns.guest_vmcs_idx] = ptr;
-  if (idx != NULL) {
-    *idx = ns.guest_vmcs_idx;
-  }
-  ns.guest_vmcs_idx++;
-  return SHADOW_OK;
-}
-
 #ifdef _VMCS_SHADOWING
 static void shadow_bitmap_read_set_field(uint64_t field) {
   vmread_bitmap[(field & 0x7fff) >> 3] |= (1 << ((field & 0x7fff) & 0x7));
 }
-
 
 void nested_vmx_shadow_bitmap_init(void) {
   static uint64_t fields[] = {NESTED_READ_ONLY_DATA_FIELDS};
@@ -82,103 +44,6 @@ void nested_vmx_shadow_bitmap_init(void) {
   for (i = 0; i < sizeof(fields) / sizeof(uint64_t); i++) {
     shadow_bitmap_read_set_field(fields[i]);
   }
-}
-#endif
-
-static int shadow_init(uint32_t idx) {
-  // init guest VMCS
-  memset((uint8_t *) &guest_vmcs[idx][0], 0, 0x1000);
-  *(uint32_t*)&guest_vmcs[idx][0] = *(uint32_t*)&vmcs0[0];
-  cpu_vmclear(&guest_vmcs[idx][0]);
-  return SHADOW_OK;
-}
-
-// Get guest vmcs index from shadow
-static int shadow_get_idx(uint8_t *ptr, uint32_t *idx) {
-  uint32_t i;
-  for (i = 0; i < ns.guest_vmcs_idx; i++) {
-    if (ns.shadow_vmcs_ptr[i] == ptr) {
-      if (idx != NULL) {
-        *idx = i;
-      }
-      return SHADOW_OK;
-    }
-  }
-  return SHADOW_NOT_FOUND;
-}
-
-// Get guest vmcs index from guest vmcs pointer
-#ifdef _PARTIAL_VMX
-static int guest_vmcs_get_idx(uint8_t *ptr, uint32_t *idx) {
-  uint32_t i;
-  for (i = 0; i < ns.guest_vmcs_idx; i++) {
-    if ((uint8_t *)&guest_vmcs[i] == ptr) {
-      if (idx != NULL) {
-        *idx = i;
-      }
-      return SHADOW_OK;
-    }
-  }
-  return SHADOW_NOT_FOUND;
-}
-#endif
-
-static int shadow_new(uint8_t *ptr, uint64_t rip) {
-  uint32_t idx;
-  if (!shadow_add(ptr, &idx, rip)) {
-    shadow_init(idx);
-  } else {
-    ERROR("No more space for VMCS\n");
-  }
-  ns.shadow_idx = idx;
-  // Set the level of virtualization
-  ns.nested_level = idx + 2; // vmcs0 is already 1
-  return SHADOW_OK;
-}
-
-static int shadow_set(uint8_t *ptr) {
-  uint32_t idx;
-  if (shadow_get_idx(ptr, &idx) == SHADOW_NOT_FOUND) {
-    ERROR("VMCSs not found... (0x%016X)\n", ptr);
-  }
-  ns.shadow_idx = idx;
-  // Set the level of virtualization
-  ns.nested_level = idx + 2; // vmcs0 is already 1
-  return SHADOW_OK;
-}
-
-/**
- * VMM state recovery in case of partial VMX
- */
-#ifdef _PARTIAL_VMX
-void nested_recover_state(void) {
-  uint8_t *region = cpu_vmptrst();
-  uint32_t shadow_idx;
-  uint32_t nested_level = 0;
-  uint8_t state = NESTED_DISABLED;
-  // If the running guest is vmcs0
-  if (ns.guest_vmx_operation == 0) {
-    state = NESTED_DISABLED;
-    nested_level = 1;
-  } else if (region == &vmcs0[0]) {
-    state = NESTED_HOST_RUNNING;
-    nested_level = 1;
-  } else {
-    state = NESTED_GUEST_RUNNING;
-    if(guest_vmcs_get_idx(region, &shadow_idx)) {
-      ERROR("Guest VMCS not found...\n");
-    }
-    nested_level = shadow_idx + 2;
-  }
-  ns.state = state;
-  ns.shadow_idx = shadow_idx;
-  ns.nested_level = nested_level;
-  if (state != ns.state || (state == NESTED_GUEST_RUNNING && shadow_idx !=
-      ns.shadow_idx)) {
-    ERROR("New information not corresponding...\n");
-  }
-  LEVEL(1, "state(0x%x), shadow_idx(0x%x), nested_level(0x%x)\n", ns.state,
-      ns.shadow_idx, ns.nested_level);
 }
 #endif
 
@@ -212,7 +77,7 @@ void nested_interrupt_inject(void) {
     if (iif.error_code) {
       cpu_vmwrite(VM_ENTRY_EXCEPTION_ERROR_CODE, error_code);
     }
-    INFO("Event Injection in 0x%x!\n", ns.nested_level);
+    INFO("Event Injection in 0x%x!\n", level);
   }
 }
 
@@ -238,84 +103,64 @@ static void set_vmcs_link_pointer(uint8_t *shadow_vmcs) {
 #endif
 
 void nested_vmxon(uint8_t *vmxon_guest) {
-  if (ns.state != NESTED_DISABLED) {
+  if (vm->state != NESTED_DISABLED) {
     panic("#!NESTED_VMXON not disabled\n");
   }
   // Notify the success
   nested_set_vm_succeed();
 
-  // XXX ESXI
-//   cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x8);
-//   cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x4);
-// 
-//   INFO("IA32 TSC deadline 0x%016X : tsc 0x%016X\n",
-//       msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE), cpu_read_tsc());
-
   // check if vmcs addr is aligned on 4Ko and check rev identifier
   if (((uint64_t)vmxon_guest & 0xfff) != 0){
     panic("#!NESTED_VMXON addr is not 4k aligned\n");
     // (1 << 32) ignore if our VMCS is a shadow...
-  } else if (((*(uint32_t*)vmxon_guest) & ~(1 << 31)) != (*(uint32_t*)vmcs0 & ~(1 << 31))) {
+  } else if (((*(uint32_t*)vmxon_guest) & ~(1 << 31)) != (*(uint32_t*)vm->vmcs_region & ~(1 << 31))) {
     panic("#!NESTED_VMXON rev identifier is not valid\n");
   }
 
-  ns.state = NESTED_HOST_RUNNING;
-  ns.guest_vmx_operation = 1;
+  vm->state = NESTED_HOST_RUNNING;
+
+  DBG("This is the VMXON dudes\n");
 }
 
 void nested_vmclear(uint8_t *shadow_vmcs) {
   cpu_vmclear(shadow_vmcs);
   // set guest carry and zero flag to 0
   nested_set_vm_succeed();
-  // cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
+  DBG("This is the VMCLEAR dudes\n");
 }
-
-// No emulation, just keep the pointer
-#ifdef _PARTIAL_VMX
-void nested_guest_vmptrld(uint8_t *shadow_vmcs, struct registers *gr) {
-  if (ns.state == NESTED_HOST_RUNNING) {
-    ns.guest_shadow_vmcs_ptr[0] = shadow_vmcs;
-  } else {
-    ns.guest_shadow_vmcs_ptr[ns.shadow_idx + 1] = shadow_vmcs;
-  }
-}
-#endif
 
 void nested_vmptrld(uint8_t *shadow_vmcs, struct registers *gr) {
 
   // Remember the current shadow VMCS
-  ns.shadow_ptr = shadow_vmcs;
+  rvm->shadow_ptr = shadow_vmcs;
 
   if (shadow_vmcs == 0x0) {
     ERROR("Shadow VMCS pointer is null\n");
   }
-  // set guest carry and zero flag to 0
+
   nested_set_vm_succeed();
-  // cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
 
 #ifdef _VMCS_SHADOWING
   set_vmcs_link_pointer(shadow_vmcs);
 #endif
+  // DBG("This is the VMPTRLD dudes\n");
 }
 
 void nested_vmptrst(uint8_t **shadow_vmcs, struct registers *gr) {
-
   // Give back the shadow ptr to the guest
-  *shadow_vmcs = ns.shadow_ptr;
+  *shadow_vmcs = rvm->shadow_ptr;
 
-  // set guest carry and zero flag to 0
-  // cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
   nested_set_vm_succeed();
 }
 
 #ifdef _NESTED_EPT
-void nested_smap_build(void) {
+void nested_smap_build(uint32_t index) {
   uint64_t start, end;
   uint64_t ta = 0;
   uint8_t in = 0;
   uint8_t max_phyaddr = cpuid_get_maxphyaddr();
   // XXX already done in shadow to guest
-  cpu_vmptrld(ns.shadow_ptr);
+  cpu_vmptrld(rvm->shadow_ptr);
   // Private callback for chunk detection
   int cb(uint64_t *e, uint64_t a, uint8_t s) {
     if (in == 0) {
@@ -327,9 +172,9 @@ void nested_smap_build(void) {
       if ((*e & 0x7) != 0) {
         end = a; 
         // Add the detected memory chunk to the smap
-        INFO("chunk(0x%x, 0x%016X, 0x%016X)\n", ns.shadow_idx, start, (end -
+        INFO("chunk(0x%x, 0x%016X, 0x%016X)\n", index, start, (end -
               start) >> 12);
-        ept_perm(start, ((end - start) >> 12), 0x0, ns.shadow_idx + 1);
+        ept_perm(start, ((end - start) >> 12), 0x0, index);
         in = 0;
       }
     }
@@ -353,6 +198,7 @@ void nested_smap_build(void) {
       return 1;
     }
   }
+  // TODO XXX
   uint64_t eptp = ((cpu_vmread(EPT_POINTER_HIGH) << 32) |
     cpu_vmread(EPT_POINTER)) & ~((uint64_t)0xfff);
   INFO("EPTP 0x%016X\n", eptp);
@@ -362,52 +208,127 @@ void nested_smap_build(void) {
 }
 #endif
 
-void nested_shadow_to_guest(void) {
-  static uint64_t guest_fields[] = { NESTED_COPY_FROM_SHADOW };
-  cpu_vmptrld(ns.shadow_ptr);
-  READ_VMCS_FIELDS(guest_fields);
+/**
+ * Applies a fully collected shadow VMCS cache to the nvm VMCS cache
+ */
+void nested_guest_shadow_apply(struct vmcs *svmcs, struct vm *nvm) {
+  struct vmcs *bvmcs = vmcs;
+  vmcs = nvm->vmcs;
+  // Guest state
+  VMC(gs.es_selector, nvm->vmcs, svmcs);
+  VMC(gs.cs_selector, nvm->vmcs, svmcs);
+  VMC(gs.ss_selector, nvm->vmcs, svmcs);
+  VMC(gs.ds_selector, nvm->vmcs, svmcs);
+  VMC(gs.fs_selector, nvm->vmcs, svmcs);
+  VMC(gs.gs_selector, nvm->vmcs, svmcs);
+  VMC(gs.ldtr_selector, nvm->vmcs, svmcs);
+  VMC(gs.tr_selector, nvm->vmcs, svmcs);
+  VMC(gs.ia32_debugctl, nvm->vmcs, svmcs);
+  VMC(gs.ia32_pat, nvm->vmcs, svmcs);
+  VMC(gs.ia32_efer, nvm->vmcs, svmcs);
+  VMC(gs.ia32_perf_global_ctrl, nvm->vmcs, svmcs);
+  VMC(gs.pdptr0, nvm->vmcs, svmcs);
+  VMC(gs.pdptr1, nvm->vmcs, svmcs);
+  VMC(gs.pdptr2, nvm->vmcs, svmcs);
+  VMC(gs.pdptr3, nvm->vmcs, svmcs);
+  VMC(gs.cr0, nvm->vmcs, svmcs);
+  VMC(gs.cr3, nvm->vmcs, svmcs);
+  VMC(gs.cr4, nvm->vmcs, svmcs);
+  VMC(gs.es_base, nvm->vmcs, svmcs);
+  VMC(gs.cs_base, nvm->vmcs, svmcs);
+  VMC(gs.ss_base, nvm->vmcs, svmcs);
+  VMC(gs.ds_base, nvm->vmcs, svmcs);
+  VMC(gs.fs_base, nvm->vmcs, svmcs);
+  VMC(gs.gs_base, nvm->vmcs, svmcs);
+  VMC(gs.ldtr_base, nvm->vmcs, svmcs);
+  VMC(gs.tr_base, nvm->vmcs, svmcs);
+  VMC(gs.gdtr_base, nvm->vmcs, svmcs);
+  VMC(gs.idtr_base, nvm->vmcs, svmcs);
+  VMC(gs.dr7, nvm->vmcs, svmcs);
+  VMC(gs.rsp, nvm->vmcs, svmcs);
+  VMC(gs.rip, nvm->vmcs, svmcs);
+  VMC(gs.rflags, nvm->vmcs, svmcs);
+  VMC(gs.pending_dbg_exceptions, nvm->vmcs, svmcs);
+  VMC(gs.sysenter_esp, nvm->vmcs, svmcs);
+  VMC(gs.sysenter_eip, nvm->vmcs, svmcs);
+  VMC(gs.es_limit, nvm->vmcs, svmcs);
+  VMC(gs.cs_limit, nvm->vmcs, svmcs);
+  VMC(gs.ss_limit, nvm->vmcs, svmcs);
+  VMC(gs.ds_limit, nvm->vmcs, svmcs);
+  VMC(gs.fs_limit, nvm->vmcs, svmcs);
+  VMC(gs.gs_limit, nvm->vmcs, svmcs);
+  VMC(gs.ldtr_limit, nvm->vmcs, svmcs);
+  VMC(gs.tr_limit, nvm->vmcs, svmcs);
+  VMC(gs.gdtr_limit, nvm->vmcs, svmcs);
+  VMC(gs.idtr_limit, nvm->vmcs, svmcs);
+  VMC(gs.es_ar_bytes, nvm->vmcs, svmcs);
+  VMC(gs.cs_ar_bytes, nvm->vmcs, svmcs);
+  VMC(gs.ss_ar_bytes, nvm->vmcs, svmcs);
+  VMC(gs.ds_ar_bytes, nvm->vmcs, svmcs);
+  VMC(gs.fs_ar_bytes, nvm->vmcs, svmcs);
+  VMC(gs.gs_ar_bytes, nvm->vmcs, svmcs);
+  VMC(gs.ldtr_ar_bytes, nvm->vmcs, svmcs);
+  VMC(gs.tr_ar_bytes, nvm->vmcs, svmcs);
+  VMC(gs.interruptibility_info, nvm->vmcs, svmcs);
+  VMC(gs.activity_state, nvm->vmcs, svmcs);
+  VMC(gs.smbase, nvm->vmcs, svmcs);
+  VMC(gs.sysenter_cs, nvm->vmcs, svmcs);
+  VMC(gs.vmcs_link_pointer, nvm->vmcs, svmcs);
+  VMC(gs.interrupt_status, nvm->vmcs, svmcs);
+  // Other control fields
+  VMC(ctrls.entry.controls, nvm->vmcs, svmcs);
+  VMC(ctrls.entry.intr_info_field, nvm->vmcs, svmcs);
+  VMC(ctrls.ex.cr0_read_shadow, nvm->vmcs, svmcs);
+  VMC(ctrls.ex.cr4_read_shadow, nvm->vmcs, svmcs);
+  VMC(ctrls.ex.vmread_bitmap_addr, nvm->vmcs, svmcs);
+  VMC(ctrls.ex.vmwrite_bitmap_addr, nvm->vmcs, svmcs);
+  VMC(ctrls.ex.secondary_vm_exec_control, nvm->vmcs, svmcs);
 #ifdef _VMCS_SHADOWING
   // !!! With VMCS shadowing write exits are bypassed !!!
   // Copy the Shadowing configuration from the shadow
-  uint64_t sec_ctrl = cpu_vmread(SECONDARY_VM_EXEC_CONTROL) & VMCS_SHADOWING;
-  uint64_t bit31 = *(uint32_t *)ns.shadow_ptr & (1 << 31);
-#endif
-  cpu_vmptrld(guest_vmcs[ns.shadow_idx]);
-  WRITE_VMCS_FIELDS(guest_fields);
-  // clear the RFLAGS.IF if this is a VMM
-
-#ifdef _VMCS_SHADOWING
+  uint64_t sec_ctrl = svmcs->ctrls.ex.secondary_vm_exec_control &
+    VMCS_SHADOWING;
+  uint64_t bit31 = *(uint32_t *)rvm->shadow_ptr & (1 << 31);
   // Activate VMCS shadowing if any
   if (sec_ctrl) {
-    cpu_vmwrite(SECONDARY_VM_EXEC_CONTROL, cpu_vmread(SECONDARY_VM_EXEC_CONTROL)
-        | VMCS_SHADOWING);
+    VMW(crtls.ex.secondary_vm_exec_control,
+        vmcs->crtls.ex.secondary_vm_exec_control | VMCS_SHADOWING);
   } else {
-    cpu_vmwrite(SECONDARY_VM_EXEC_CONTROL, cpu_vmread(SECONDARY_VM_EXEC_CONTROL)
-        & ~VMCS_SHADOWING);
+    VMW(crtls.ex.secondary_vm_exec_control,
+        vmcs->crtls.ex.secondary_vm_exec_control & ~VMCS_SHADOWING);
   }
   // Set the type of the shadow_vmcs
   if (bit31) {
-    *(uint32_t *)ns.shadow_ptr |= (1 << 31);
+    *(uint32_t *)rvm->shadow_ptr |= (1 << 31);
   } else {
-    *(uint32_t *)ns.shadow_ptr &= ~(1 << 31);
+    *(uint32_t *)rvm->shadow_ptr &= ~(1 << 31);
   }
 #endif
+  vmcs = bvmcs;
 }
 
-void nested_cpu_vmresume(struct registers *guest_regs) {
-  /* Correct rbp */
-  __asm__ __volatile__("mov %0, %%rbp" : : "m" (guest_regs->rbp));
-  /* Launch the vm */
-  __asm__ __volatile__("vmresume;"
-                       /* everything after should not be executed */
-                       "setc %al;"
-                       "setz %dl;"
-                       "mov %eax, %edi;"
-                       "mov %edx, %esi;"
-                       "call vmx_transition_display_error");
+void nested_shadow_collect(struct vmcs *svmcs) {
+  struct vmcs *bvmcs = vmcs;
+  vmcs = svmcs;
+  vmcs_update();
+  vmcs = bvmcs;
+}
+
+void nested_shadow_to_guest(struct vm *nvm) {
+  // Clone encodings with field dirtyness
+  vmcs_clone(&svmcs);
+  cpu_vmptrld(rvm->shadow_ptr);
+  // Collect vmcs shadow fields
+  nested_shadow_collect(&svmcs);
+  // Apply shadow to nvm vmcs cache
+  nested_guest_shadow_apply(&svmcs, nvm);
+  // Finally loads nvm VMCS region
+  cpu_vmptrld(nvm->vmcs_region);
 }
 
 void nested_cpu_vmlaunch(struct registers *guest_regs) {
+  // Commit the VMCS
+  vmcs_commit();
   /* Correct rbp */
   __asm__ __volatile__("mov %0, %%rbp" : : "m" (guest_regs->rbp));
   /* Launch the vm */
@@ -421,84 +342,85 @@ void nested_cpu_vmlaunch(struct registers *guest_regs) {
 }
 
 void nested_vmresume(struct registers *guest_regs) {
-  // Current shadow VMCS will be executed !
-  shadow_set(ns.shadow_ptr);
-#ifdef _NESTED_EPT
-  ept_set_ctx(ns.shadow_idx + 1); // 0 is for vmcs0
-  uint64_t desc2[2] = {
-    0x0000000000000000,
-    0x000000000000ffff | 0x0000
-  };
-  uint64_t type2 = 0x2;
-  __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
-#endif
+  // DBG("This is the VMRESUME DUDES\n");
+
+  // Change the current vm current child
+  vm_child_shadow_set(vm);
   // Copy exec controls from vmcs0
   // uint32_t pinbased_ctls = cpu_vmread(PIN_BASED_VM_EXEC_CONTROL);
   nested_load_guest();
-  // Handle all interrupts of the virtualized VMMs to reroute them into linux
-  if (is_top_guest()) {
-    // Inject protential previous event into the top guest
-    nested_interrupt_inject();
-  } else {
-    // pinbased_ctls |= NMI_EXITING | EXT_INTR_EXITING;
-  }
-  // cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, pinbased_ctls);
-}
 
-void nested_vmlaunch(struct registers *guest_regs) {
-  static uint64_t ctrl_host_fields[] = { NESTED_CTRL_FIELDS, NESTED_HOST_FIELDS };
-  uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
+// XXX TODO see after
+//  // Handle all interrupts of the virtualized VMMs to reroute them into linux
+//  if (is_top_guest()) {
+//    // Inject protential previous event into the top guest
+//    nested_interrupt_inject();
+//  } else {
+//    // pinbased_ctls |= NMI_EXITING | EXT_INTR_EXITING;
+//  }
+//  // cpu_vmwrite(PIN_BASED_VM_EXEC_CONTROL, pinbased_ctls);
 
-  // Current shadow VMCS will be really executed, we allocate a VMCS for it
-  shadow_new(ns.shadow_ptr, guest_regs->rip);
-
-  // copy ctrl fields + host fields from vmcs0 to guest_vmcs
-  READ_VMCS_FIELDS(ctrl_host_fields);
-  cpu_vmptrld(guest_vmcs[ns.shadow_idx]);
-  WRITE_VMCS_FIELDS(ctrl_host_fields);
+  // Set the current level
+  level = vm->level;
 
 #ifdef _NESTED_EPT
-  ept_set_ctx(ns.shadow_idx + 1); // 0 is for vmcs0
+  // Set the mapping !
+  ept_set_ctx(vm->index);
   uint64_t desc2[2] = {
     0x0000000000000000,
     0x000000000000ffff | 0x0000
   };
   uint64_t type2 = 0x2;
   __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
-  nested_smap_build();
+#endif
+}
+
+void nested_vmlaunch(struct registers *guest_regs) {
+  uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
+  struct vm *nvm;
+
+  // Current shadow VMCS will be really executed, we allocate a VM for it
+  vm_alloc(&nvm);
+
+  // copy ctrl fields + host fields from host configuration to the nvm
+  vmcs_clone(nvm->vmcs);
+
+#ifdef _NESTED_EPT
+  nested_smap_build(nvm->index);
+  // Set the mapping !
+  ept_set_ctx(nvm->index);
+  uint64_t desc2[2] = {
+    0x0000000000000000,
+    0x000000000000ffff | 0x0000
+  };
+  uint64_t type2 = 0x2;
+  __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
 #endif
 
-  nested_shadow_to_guest();
-
+  // Copy the shadow to the guest
+  nested_shadow_to_guest(nvm);
+  // Change the state of the root VM
+  rvm->state = NESTED_GUEST_RUNNING;
+  // Add it to the current parent as a child
+  vm_child_add(vm, nvm);
+  // Set the VM as the current child
+  vm->child = nvm;
+  // Set the child VM level
+  nvm->level = vm->level + 1;
+  // Set the current level
+  level = nvm->level;
+  // Set the corresponding shadow_vmcs
+  nvm->shadow_vmcs = rvm->shadow_ptr;
+  // Set the new VM as the current VM
+  vm_set(nvm);
   // Write the right VPID
-  cpu_vmwrite(VIRTUAL_PROCESSOR_ID, ns.shadow_idx + 2); // vmcs0 is 1
-
+  VMW(ctrls.ex.virtual_processor_id, nvm->index + 1); // VPIDs starts at 0
   // update vmx preemption timer
-  cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, preempt_timer_value);
-
-  ns.state = NESTED_GUEST_RUNNING;
-
+  VMW(gs.vmx_preemption_timer_value, preempt_timer_value);
   // Adjust vm entry controls
-  INFO("rFAGZ 0x%016X\n", cpu_vmread(GUEST_RFLAGS));
   vmm_adjust_vm_entry_controls();
 
-  // XXX
-  // Adjust Unrestricted Guest
-  cpu_vmptrld(ns.shadow_ptr);
-  uint32_t procbased_ctls_2 = cpu_vmread(SECONDARY_VM_EXEC_CONTROL);
-  uint32_t procbased_ctls = cpu_vmread(CPU_BASED_VM_EXEC_CONTROL);
-  uint32_t pinbased_ctls = cpu_vmread(PIN_BASED_VM_EXEC_CONTROL);
-  cpu_vmptrld(guest_vmcs[ns.shadow_idx]);
-  INFO("Pinbased controls 0x%016X\n", pinbased_ctls);
-  INFO("Procbased controls 0x%016X\n", procbased_ctls);
-  INFO("Seconary procbased controls 0x%016X\n", procbased_ctls_2);
-  if (procbased_ctls_2 & (uint32_t)UNRESTRICTED_GUEST) {
-    INFO("Unrestricted guest\n");
-  } else {
-    INFO("Normal guest\n");
-  }
-
-  // XXX 
+  // DBG("This is the VMLAUNCH dudes\n");
 
   nested_cpu_vmlaunch(guest_regs);
 }
@@ -508,57 +430,171 @@ uint64_t nested_vmread(uint64_t field) {
 
   // Reading ro_data fields is done in guest_vmcs instead of shadow_vmcs
   if (((field >> 10) & 0x3) == 0x1) { // ro_data fields
-    uint32_t idx;
-    if (shadow_get_idx(ns.shadow_ptr, &idx) == SHADOW_NOT_FOUND) {
-      INFO("vmread: shadow VMCS(0x%016X) is not launched, loading it\n");
+    struct vm *v;
+    vm_child_shadow_get(rvm, &v);
+    if (v == NULL) {
+      // The shadow has not been launched !
+      cpu_vmptrld(rvm->shadow_ptr);
+    } else {
+      cpu_vmptrld(v->vmcs_region);
     }
-    cpu_vmptrld(guest_vmcs[idx]);
   } else {
-    cpu_vmptrld(ns.shadow_ptr);
+    cpu_vmptrld(rvm->shadow_ptr);
   }
 
   value = cpu_vmread(field);
 
-  cpu_vmptrld(vmcs0);
+  cpu_vmptrld(vm->vmcs_region);
 
-  // XXX We assume that everything went good : CF and ZF = 0
-  // cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
   nested_set_vm_succeed();
 
+  // DBG("This is the VMREAD dudes\n");
   return value;
 }
 
 void nested_vmwrite(uint64_t field, uint64_t value) {
-  cpu_vmptrld(ns.shadow_ptr);
+  cpu_vmptrld(rvm->shadow_ptr);
   cpu_vmwrite(field, value);
+  cpu_vmptrld(vm->vmcs_region);
 
-  cpu_vmptrld(vmcs0);
-
-  // XXX We assume that everything went good : CF and ZF = 0
-  // cpu_vmwrite(GUEST_RFLAGS, cpu_vmread(GUEST_RFLAGS) & ~(uint64_t)0x21);
   nested_set_vm_succeed();
+  // DBG("This is the VMWRITE dudes : rip(0x%016X), encoding(0x%08x, 0x%016X)\n", cpu_vmread(GUEST_RIP), field, value);
+}
+
+/**
+ * Apply the changes of a fully collected running VMCS to a shadow VMCS
+ */
+void nested_shadow_update(struct vmcs *svmcs, struct vm *vm) {
+  // Guest state
+  VMC(gs.es_selector, svmcs, vm->vmcs);
+  VMC(gs.cs_selector, svmcs, vm->vmcs);
+  VMC(gs.ss_selector, svmcs, vm->vmcs);
+  VMC(gs.ds_selector, svmcs, vm->vmcs);
+  VMC(gs.fs_selector, svmcs, vm->vmcs);
+  VMC(gs.gs_selector, svmcs, vm->vmcs);
+  VMC(gs.ldtr_selector, svmcs, vm->vmcs);
+  VMC(gs.tr_selector, svmcs, vm->vmcs);
+  VMC(gs.ia32_debugctl, svmcs, vm->vmcs);
+  VMC(gs.ia32_pat, svmcs, vm->vmcs);
+  VMC(gs.ia32_efer, svmcs, vm->vmcs);
+  VMC(gs.ia32_perf_global_ctrl, svmcs, vm->vmcs);
+  VMC(gs.pdptr0, svmcs, vm->vmcs);
+  VMC(gs.pdptr1, svmcs, vm->vmcs);
+  VMC(gs.pdptr2, svmcs, vm->vmcs);
+  VMC(gs.pdptr3, svmcs, vm->vmcs);
+  VMC(gs.cr0, svmcs, vm->vmcs);
+  VMC(gs.cr3, svmcs, vm->vmcs);
+  VMC(gs.cr4, svmcs, vm->vmcs);
+  VMC(gs.es_base, svmcs, vm->vmcs);
+  VMC(gs.cs_base, svmcs, vm->vmcs);
+  VMC(gs.ss_base, svmcs, vm->vmcs);
+  VMC(gs.ds_base, svmcs, vm->vmcs);
+  VMC(gs.fs_base, svmcs, vm->vmcs);
+  VMC(gs.gs_base, svmcs, vm->vmcs);
+  VMC(gs.ldtr_base, svmcs, vm->vmcs);
+  VMC(gs.tr_base, svmcs, vm->vmcs);
+  VMC(gs.gdtr_base, svmcs, vm->vmcs);
+  VMC(gs.idtr_base, svmcs, vm->vmcs);
+  VMC(gs.dr7, svmcs, vm->vmcs);
+  VMC(gs.rsp, svmcs, vm->vmcs);
+  VMC(gs.rip, svmcs, vm->vmcs);
+  VMC(gs.rflags, svmcs, vm->vmcs);
+  VMC(gs.pending_dbg_exceptions, svmcs, vm->vmcs);
+  VMC(gs.sysenter_esp, svmcs, vm->vmcs);
+  VMC(gs.sysenter_eip, svmcs, vm->vmcs);
+  VMC(gs.es_limit, svmcs, vm->vmcs);
+  VMC(gs.cs_limit, svmcs, vm->vmcs);
+  VMC(gs.ss_limit, svmcs, vm->vmcs);
+  VMC(gs.ds_limit, svmcs, vm->vmcs);
+  VMC(gs.fs_limit, svmcs, vm->vmcs);
+  VMC(gs.gs_limit, svmcs, vm->vmcs);
+  VMC(gs.ldtr_limit, svmcs, vm->vmcs);
+  VMC(gs.tr_limit, svmcs, vm->vmcs);
+  VMC(gs.gdtr_limit, svmcs, vm->vmcs);
+  VMC(gs.idtr_limit, svmcs, vm->vmcs);
+  VMC(gs.es_ar_bytes, svmcs, vm->vmcs);
+  VMC(gs.cs_ar_bytes, svmcs, vm->vmcs);
+  VMC(gs.ss_ar_bytes, svmcs, vm->vmcs);
+  VMC(gs.ds_ar_bytes, svmcs, vm->vmcs);
+  VMC(gs.fs_ar_bytes, svmcs, vm->vmcs);
+  VMC(gs.gs_ar_bytes, svmcs, vm->vmcs);
+  VMC(gs.ldtr_ar_bytes, svmcs, vm->vmcs);
+  VMC(gs.tr_ar_bytes, svmcs, vm->vmcs);
+  VMC(gs.interruptibility_info, svmcs, vm->vmcs);
+  VMC(gs.activity_state, svmcs, vm->vmcs);
+  VMC(gs.smbase, svmcs, vm->vmcs);
+  VMC(gs.sysenter_cs, svmcs, vm->vmcs);
+  VMC(gs.vmcs_link_pointer, svmcs, vm->vmcs);
+  VMC(gs.interrupt_status, svmcs, vm->vmcs);
+  // Other control fields
+  VMC(ctrls.entry.controls, svmcs, vm->vmcs);
+}
+
+void nested_host_shadow_apply(struct vmcs *svmcs, struct vm *vm) {
+  // Guest state
+  VMC2(gs.es_selector, hs.es_selector, vm->vmcs, svmcs);
+  VMC2(gs.cs_selector, hs.cs_selector, vm->vmcs, svmcs);
+  VMC2(gs.ss_selector, hs.ss_selector, vm->vmcs, svmcs);
+  VMC2(gs.ds_selector, hs.ds_selector, vm->vmcs, svmcs);
+  VMC2(gs.fs_selector, hs.fs_selector, vm->vmcs, svmcs);
+  VMC2(gs.gs_selector, hs.gs_selector, vm->vmcs, svmcs);
+  VMC2(gs.tr_selector, hs.tr_selector, vm->vmcs, svmcs);
+  VMC2(gs.ia32_pat, hs.ia32_pat, vm->vmcs, svmcs);
+  VMC2(gs.ia32_efer, hs.ia32_efer, vm->vmcs, svmcs);
+  VMC2(gs.ia32_perf_global_ctrl, hs.ia32_perf_global_ctrl, vm->vmcs, svmcs);
+  VMC2(gs.cr0, hs.cr0, vm->vmcs, svmcs);
+  VMC2(gs.cr3, hs.cr3, vm->vmcs, svmcs);
+  VMC2(gs.cr4, hs.cr4, vm->vmcs, svmcs);
+  VMC2(gs.fs_base, hs.fs_base, vm->vmcs, svmcs);
+  VMC2(gs.gs_base, hs.gs_base, vm->vmcs, svmcs);
+  VMC2(gs.tr_base, hs.tr_base, vm->vmcs, svmcs);
+  VMC2(gs.gdtr_base, hs.gdtr_base, vm->vmcs, svmcs);
+  VMC2(gs.idtr_base, hs.idtr_base, vm->vmcs, svmcs);
+  VMC2(gs.sysenter_esp, hs.ia32_sysenter_esp, vm->vmcs, svmcs);
+  VMC2(gs.sysenter_eip, hs.ia32_sysenter_eip, vm->vmcs, svmcs);
+  VMC2(gs.sysenter_cs, hs.ia32_sysenter_cs, vm->vmcs, svmcs);
+  VMC2(gs.rsp, hs.rsp, vm->vmcs, svmcs);
+  VMC2(gs.rip, hs.rip, vm->vmcs, svmcs);
 }
 
 void nested_load_host(void) {
-  static uint64_t guest_fields[] = { NESTED_GUEST_FIELDS, VM_ENTRY_CONTROLS /* For IA32E_MODE_GUEST */ };
-  static uint64_t host_fields[] = { NESTED_HOST_FIELDS };
-  static uint64_t host_fields_dest[] = { NESTED_HOST_FIELDS_DEST };
   uint64_t preempt_timer_value;
-  VMR3(gs.vmx_preemption_timer_value, preempt_timer_value);
 
+  // DBG("HOST LOADING DUDES\n");
+
+  // Update the shadow VMCS with the new guest state
+  
+  // Save preemption timer
+  VMR2(gs.vmx_preemption_timer_value, preempt_timer_value);
+
+  // Init a VMCS encodings
+  vmcs_encoding_init(&svmcs);
+  // Collect every filds of the current VMCS
+  vmcs_update();
   // copy all fields updated by vm_exit from guest_vmcs to shadow_vmcs
-  READ_VMCS_FIELDS(guest_fields);
-  cpu_vmptrld(ns.shadow_ptr);
-  WRITE_VMCS_FIELDS(guest_fields);
+  nested_shadow_update(&svmcs, vm);
+  // Set the shadow as the current vmcs
+  vmcs = &svmcs;
+  cpu_vmptrld(rvm->shadow_ptr);
+  vmcs_commit();
+
+  // Copy the host part from the shadow VMCS and set it as the guest
+  //
+  // Reset the shadow vmcs
+  vmcs_encoding_init(&svmcs);
+  // Collect every shadow vmcs fields
+  vmcs_update();
+  // Copy host fields from the shadow VMCS to the guest part of the VMCS
+  nested_host_shadow_apply(&svmcs, rvm);
+  // load host VMCS
+  cpu_vmptrld(rvm->vmcs_region);
+  // Set the root VM as the current running VM
+  vm_set(rvm);
 
   // restore host fields from shadow_vmcs to vmcs0
-  READ_VMCS_FIELDS(host_fields);
-  cpu_vmptrld(vmcs0);
-  WRITE_VMCS_FIELDS(host_fields_dest);
-
 #ifdef _NESTED_EPT
   // Restore ept mapping
-  ept_set_ctx(0); // 0 is for vmcs0
+  ept_set_ctx(rvm->index);
   uint64_t desc2[2] = {
     0x0000000000000000,
     0x000000000000ffff | 0x0000
@@ -568,13 +604,15 @@ void nested_load_host(void) {
 #endif
 
   // update vmx preemption timer
-  cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, preempt_timer_value);
+  VMW(gs.vmx_preemption_timer_value, preempt_timer_value);
+  // Write the right VPID
+  VMW(ctrls.ex.virtual_processor_id, rvm->index + 1); // VPIDs starts at 0
 
-  ns.state = NESTED_HOST_RUNNING;
-  ns.nested_level = 1;
+  vm->state = NESTED_HOST_RUNNING;
+  level = rvm->level;
 
-  // handle Monitor trap flag
 #ifdef _DEBUG_SERVER
+  // handle Monitor trap flag
   debug_server_mtf();
 #endif
 }
@@ -582,74 +620,26 @@ void nested_load_host(void) {
 void nested_load_guest(void) {
   uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
 
-  nested_shadow_to_guest();
+  nested_shadow_to_guest(vm->child);
 
   // update vmx preemption timer
   cpu_vmwrite(VMX_PREEMPTION_TIMER_VALUE, preempt_timer_value);
 
-  ns.state = NESTED_GUEST_RUNNING;
+  rvm->state = NESTED_GUEST_RUNNING;
 
-  // handle Monitor trap flag
+  // Set the current child VM as the current running VM
+  vm_set(vm->child);
+
 #ifdef _DEBUG_SERVER
+  // handle Monitor trap flag
   debug_server_mtf();
 #endif
 }
 
-#ifdef _PARTIAL_VMX
-void nested_partial_vmresume(struct registers *guest_regs) {
-  // Get the cnsh shadow ptr where we need to copy
-  ns.shadow_ptr = ns.guest_shadow_vmcs_ptr[ns.shadow_idx + 1];
-
-  INFO("SHADOW courante de l'hyperviseur 0x%02x : 0x%016X\n", ns.nested_level,
-      ns.shadow_ptr);
-
-  // XXX lol because of the effect of the partial vmx for resume we just need to
-  // increment the shadow idx index
-  ns.shadow_idx++;
-  ns.nested_level = ns.shadow_idx + 2; // vmcs0 is already 1
-
-  // Copy shadow 
-  nested_load_guest();
-  uint64_t grip  = cpu_vmread(GUEST_RIP);
-  INFO("New rip 0x%016X\n", grip);
-
-  // Change the current shadow
-  ns.shadow_ptr = ns.shadow_vmcs_ptr[ns.shadow_idx];
-  INFO("New shadow ptr 0x%016X\n", ns.shadow_ptr);
-
-  // Set the mapping !
-#ifdef _NESTED_EPT
-  ept_set_ctx(ns.shadow_idx + 1); // 0 is for vmcs0
-  uint64_t desc2[2] = {
-    0x0000000000000000,
-    0x000000000000ffff | 0x0000
-  };
-  uint64_t type2 = 0x2;
-  __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
-#endif
-
-  debug_server_panic(ns.state, 0, 0, guest_regs);
-  // Let it go !
-}
-#endif
-
 void nested_set_vm_succeed(void) {
   union rflags rf;
-  rf.raw = cpu_vmread(GUEST_RFLAGS);
+  VMR(gs.rflags);
+  rf.raw = vmcs->gs.rflags;
   rf.cf = rf.pf = rf.af = rf.zf = rf.sf = rf.of = 0;
-  cpu_vmwrite(GUEST_RFLAGS, rf.raw);
-}
-
-static inline void read_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields) {
-  int i;
-  for (i = 0; i < nb_fields ; i++) {
-    values[i] = cpu_vmread(fields[i]);
-  }
-}
-
-static inline void write_vmcs_fields(uint64_t* fields, uint64_t* values, uint8_t nb_fields) {
-  int i;
-  for (i = 0; i < nb_fields ; i++) {
-    cpu_vmwrite(fields[i], values[i]);
-  }
+  VMW(gs.rflags, rf.raw);
 }

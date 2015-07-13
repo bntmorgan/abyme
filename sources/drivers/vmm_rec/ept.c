@@ -10,6 +10,7 @@
 #include "paging.h"
 #include "efiw.h"
 #include "msr.h"
+#include "vmm.h"
 
 struct ept_tables {
   uint64_t PML4[512]                                 __attribute__((aligned(0x1000)));
@@ -18,9 +19,9 @@ struct ept_tables {
   // 2 MB mapped over 4 giga bytes
   uint64_t PML40_PDPT_PD[512 - EPTN][512]            __attribute__((aligned(0x1000)));
   // 4 KB mapped under EPTN giga bytes
-  // CTXN number of contexts under EPTN GB
-  uint64_t PML40_PDPT0_N_PD[CTXN][EPTN][512]         __attribute__((aligned(0x1000)));
-  uint64_t PML40_PDPT0_N_PD_PT[CTXN][EPTN][512][512] __attribute__((aligned(0x1000)));
+  // VM_NB number of contexts under EPTN GB
+  uint64_t PML40_PDPT0_N_PD[VM_NB][EPTN][512]         __attribute__((aligned(0x1000)));
+  uint64_t PML40_PDPT0_N_PD_PT[VM_NB][EPTN][512][512] __attribute__((aligned(0x1000)));
 } __attribute__((aligned(8)));
 
 
@@ -30,8 +31,8 @@ inline static uint16_t get_PD_offset(uint64_t addr);
 inline static uint16_t get_PT_offset(uint64_t addr);
 static struct ept_tables *ept_tables;
 
-uint8_t trap_pci[0x1000] __attribute__((aligned(0x1000)));
-uint8_t trap_bar[0x1000] __attribute__((aligned(0x1000)));
+uint8_t *trap_pci;
+uint8_t *trap_bar;
   
 static const struct memory_range *memory_range;
 
@@ -93,14 +94,14 @@ void ept_remap(uint64_t virt, uint64_t phy, uint8_t rights, uint8_t c) {
 void ept_set_ctx(uint8_t c) {
   uint64_t j; // PTPT
   ctx = c;
-  if (c >= CTXN) {
+  if (c >= VM_NB) {
     ERROR("Invalid context number\n");
   }
   for (j = 0; j < EPTN; j++) {
     ept_tables->PML4_PDPT[0][j] = 
       ((uint64_t) &ept_tables->PML40_PDPT0_N_PD[ctx][j][0]) | 0x07;
   }
-//   INFO("CTX 0x%x set\n", ctx);
+  // DBG("CTX 0x%x set\n", ctx);
 }
 
 void ept_perm(uint64_t address, uint32_t pages, uint8_t rights, uint8_t c) {
@@ -173,7 +174,7 @@ void ept_cache(void) {
           if (j < EPTN) {
             for (l = 0; l < 512; l++) {
               address = (j << 30) | (k << 21) | (l << 12);
-              for (m = 0; m < CTXN; m++) {
+              for (m = 0; m < VM_NB; m++) {
                 set_memory_type(&ept_tables->PML40_PDPT0_N_PD_PT[m][j][k][l],
                     address, 0x1000, max_phyaddr);
               }
@@ -210,6 +211,8 @@ void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
   }
 
   ept_tables = efi_allocate_pages(sizeof(struct ept_tables) >> 12);
+  trap_pci = efi_allocate_pages(1);
+  trap_bar = efi_allocate_pages(1);
 
   uint64_t max_addr = ((uint64_t)1 << cpuid_get_maxphyaddr());
 
@@ -232,7 +235,7 @@ void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
           if (j < EPTN) {
             // Under EPTN giga bytes : 4 kB mapped
             // Link context 0
-            for (m = 0; m < CTXN; m++) {
+            for (m = 0; m < VM_NB; m++) {
               ept_tables->PML40_PDPT0_N_PD[m][j][k] = ((uint64_t)
                   &ept_tables->PML40_PDPT0_N_PD_PT[m][j][k][0]) | 0x07;
               for (l = 0; l < 512; l++) {
@@ -273,7 +276,7 @@ void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
 
   // Protect the VMM memory space
   // Map 4kB pages for all contexts
-  for (m = 0; m < CTXN; m++) {
+  for (m = 0; m < VM_NB; m++) {
     // XXX !
     ept_perm(p_begin + 0x1000, (p_end - p_begin) >> 12, 0x0, m);
   }
@@ -330,7 +333,7 @@ void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
 
     // XXX For the moment the VMs can use the network card with the UEFI driver
     // for debug purpose
-    for (m = 0; m < CTXN; m++) {
+    for (m = 0; m < VM_NB; m++) {
       ept_remap(base_addr, (uint64_t)&trap_pci[0], 0x7, m);
       // XXX We only hide bar0 which is not use anymore by the network driver
       ept_remap(eth->bar0, (uint64_t)&trap_bar[0], 0x7, m);

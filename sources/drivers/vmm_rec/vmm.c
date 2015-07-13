@@ -28,18 +28,35 @@
  */
 struct vm *vm_pool;
 uint8_t vm_allocated[VM_NB];
+
 /**
  * Current VM running
  */
-struct vm *vmr;
+struct vm *vm;
+
+/**
+ * Root VM
+ */
+struct vm *rvm;
 
 void vm_set(struct vm *v) {
-  vmr = v;
+  vm = v;
   vmcs = v->vmcs;
 }
 
+void vm_set_root(struct vm *v) {
+  rvm = v;
+  rvm->level = 1;
+}
+
 void vm_get(struct vm **v) {
-  *v = vmr;
+  *v = vm;
+}
+
+void vm_print(struct vm *v) {
+
+  INFO("VM : Index(0x%x), child(@0x%x), level(0x%x)\n",
+      v->index, v->child, v->level);
 }
 
 uint8_t vmm_stack[VMM_STACK_SIZE];
@@ -87,11 +104,12 @@ void vm_alloc(struct vm **v) {
     if (vm_allocated[i] == 0) {
       vm_allocated[i] = 1;
       *v = &vm_pool[i];
+      // Reset the VM
+      memset(*v, 0, sizeof(struct vm));
       (*v)->index = i;
       (*v)->vmcs_region = &vmcs_region_pool[i][0];
       INFO("REGION 0x%016X\n", (*v)->vmcs_region);
       (*v)->vmcs = &vmcs_cache_pool[i];
-      (*v)->shadow_ptr = NULL;
       return;
     }
   }
@@ -118,6 +136,66 @@ void vm_free(struct vm *v) {
   ERROR("Failed to free a VM : not found\n");
 }
 
+/**
+ * Handle child VMs
+ */
+void vm_child_add(struct vm *pv, struct vm *cv) {
+  uint32_t i;
+  for (i = 0; i < VM_NB; i++) {
+    if (pv->childs[i] == NULL) {
+      pv->childs[i] = cv; 
+      return;
+    }
+  }
+  ERROR("Max child VM number reached\n");
+}
+
+void vm_child_del(struct vm *pv, struct vm *cv) {
+  uint32_t i;
+  for (i = 0; i < VM_NB; i++) {
+    if (pv->childs[i] == cv) {
+      pv->childs[i] = NULL; 
+      return;
+    }
+  }
+  ERROR("Child VM not found\n");
+}
+
+/**
+ * Find a child curresponding to the current shadow_ptr
+ * and set it as the current child
+ */
+void vm_child_shadow_set(struct vm *v) {
+  uint32_t i;
+  for (i = 0; i < VM_NB; i++) {
+    if (v->childs[i]->shadow_vmcs == v->shadow_ptr) {
+      v->child = v->childs[i];
+      return;
+    }
+  }
+  ERROR("Current shadow VMCS is not found nor running\n");
+}
+
+/**
+ * Find a child curresponding to the current shadow_ptr
+ */
+void vm_child_shadow_get(struct vm *pv, struct vm **cv) {
+  // DBG("shadow_ptr(@0x%016X), index(0x%x)\n", pv->shadow_ptr, pv->index); 
+  uint32_t i;
+  for (i = 0; i < VM_NB; i++) {
+    if (pv->childs[i] != NULL) {
+      // DBG("child : index(0x%x), shadow_vmcs(@0x%016X), vmcs_region(0x%016X)\n",
+          // pv->childs[i]->index, pv->childs[i]->shadow_vmcs,
+          // pv->childs[i]->vmcs_region); 
+      if (pv->childs[i]->shadow_vmcs == pv->shadow_ptr) {
+        *cv = pv->childs[i];
+        return;
+      }
+    }
+  }
+  *cv = NULL;
+}
+
 void vmm_vms_init(void) {
   vm_pool = efi_allocate_pool(sizeof(struct vm) * VM_NB);
   WARN("This VMM can handle up to 0x%08x VMs\n", VM_NB);
@@ -130,24 +208,8 @@ void vmm_vms_init(void) {
 void vmm_handle_vm_exit(struct registers guest_regs) {
   uint8_t hook_override = 0;
 
-#ifdef _PARTIAL_VMX
-  nested_recover_state();
-#endif
-
-//   if (ns.state == NESTED_GUEST_RUNNING) {
-//     INFO("Guest running\n");
-//   } else if (ns.state == NESTED_HOST_RUNNING) {
-//     INFO("Host running\n");
-//   } else {
-//     INFO("Not nested\n");
-//   }
-
-  // LEVEL(1, "Nested state %d\n", ns.state);
-
-  VMR3(gs.rsp, guest_regs.rsp);
-  VMR3(gs.rip, guest_regs.rip);
-
-  // LEVEL(1, "Guest rip 0x%016X\n", guest_regs.rip);
+  VMR2(gs.rsp, guest_regs.rsp);
+  VMR2(gs.rip, guest_regs.rip);
 
   VMR(info.reason);
   uint32_t exit_reason = vmcs->info.reason;
@@ -157,18 +219,14 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint8_t** instr_param_ptr;
 
   // check VMX abort
-  uint32_t vmx_abort = (ns.state != NESTED_GUEST_RUNNING)
-                        ? ((uint32_t*)vmcs0)[1]
-                        : ((uint32_t*)guest_vmcs[0])[1];
+  uint32_t vmx_abort = ((uint32_t*)vm->vmcs_region)[1];
   if (vmx_abort) {
     printk("VMX abort detected : %d\n", vmx_abort);
-    vmm_panic(ns.state, 0, 0, &guest_regs);
+    vmm_panic(rvm->state, 0, 0, &guest_regs);
   }
 
 #ifdef _DEBUG_SERVER
-  if (debug_server/* && ns.nested_level == 3*/) {
-    debug_server_vmexit(ns.nested_level, exit_reason, &guest_regs);
-  }
+  debug_server_vmexit(level, exit_reason, &guest_regs);
 #endif
 
   // Boot hook
@@ -190,7 +248,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
     return;
   } else if (exit_reason == EXIT_REASON_EXTERNAL_INTERRUPT) {
-    INFO("External interrupt from 0x%x!\n", ns.nested_level);
+    INFO("External interrupt from 0x%x!\n", level);
     VMR(info.intr_info);
     union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info};
     VMR(info.intr_error_code);
@@ -198,7 +256,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     nested_interrupt_set(iif.vector, iif.type, error_code);
     return;
   } else if (exit_reason == EXIT_REASON_EXCEPTION_OR_NMI) {
-    INFO("NMI interrupt from 0x%x!\n", ns.nested_level);
+    INFO("NMI interrupt from 0x%x!\n", level);
     VMR(info.intr_info);
     union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info};
     VMR(info.intr_error_code);
@@ -208,21 +266,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   } else if (exit_reason == EXIT_REASON_MONITOR_TRAP_FLAG) {
     return;
   }
-
-#ifdef _PARTIAL_VMX
-  nested_recover_state();
-  // Get every shadow VMCS ptr for every vmm of the stack
-  if (ns.state == NESTED_GUEST_RUNNING && exit_reason == EXIT_REASON_VMPTRLD) {
-    instr_param_ptr = get_instr_param_ptr(&guest_regs);
-    nested_guest_vmptrld(*instr_param_ptr, &guest_regs);
-  } else if (ns.state == NESTED_GUEST_RUNNING && exit_reason ==
-      EXIT_REASON_VMRESUME) {
-    INFO("PARTIAL VMX YOLO !\n");
-    // THE BRAND NEW EXTREM' FEATURE
-    nested_partial_vmresume(&guest_regs);
-    return;
-  }
-#endif
 
   // EPT violation hadling
   if (exit_reason == EXIT_REASON_EPT_VIOLATION) {
@@ -249,18 +292,18 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     }
   }
 
-  if (ns.state == NESTED_GUEST_RUNNING) {
+  if (rvm->state == NESTED_GUEST_RUNNING) {
     //if (debug_server_level == 1) {
       // static uint32_t lol = 0;
       // if (lol < 2) {
-      //  LEVEL(1, "state %d, shadow_idx %d, nested_level %d, grip 0x%016X\n", ns.state,
-      //      ns.shadow_idx, ns.nested_level, guest_regs.rip);
+      //  LEVEL(1, "state %d, shadow_idx %d, nested_level %d, grip 0x%016X\n", rvm->state,
+      //      ns.shadow_idx, level, guest_regs.rip);
       //  lol++;
       // } else {
       // ERROR("Here we are\n");
       // }
     //}
-    // Forward to L2 host
+    // Forward to L1 host
     nested_load_host();
     return;
   }
@@ -341,7 +384,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       if (cpu_mode == MODE_LONG) {
         __asm__ __volatile__("xsetbv" : : "a"(guest_regs.rax), "c"(guest_regs.rcx), "d"(guest_regs.rdx));
       } else {
-        vmm_panic(ns.state, VMM_PANIC_XSETBV, 0, &guest_regs);
+        vmm_panic(rvm->state, VMM_PANIC_XSETBV, 0, &guest_regs);
       }
       break;
     }
@@ -355,7 +398,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       if (cpu_mode == MODE_REAL || cpl <= iopl) {
         // REP prefixed || String I/O
         if ((exit_qualification & 0x20) || (exit_qualification & 0x10)) {
-          vmm_panic(ns.state, VMM_PANIC_IO, 0, &guest_regs);
+          vmm_panic(rvm->state, VMM_PANIC_IO, 0, &guest_regs);
         }
         uint8_t direction = exit_qualification & 8;
         uint8_t size = exit_qualification & 7;
@@ -365,7 +408,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 
         // Unsupported
         if (rep || string) {
-          vmm_panic(ns.state, VMM_PANIC_IO, 4, &guest_regs);
+          vmm_panic(rvm->state, VMM_PANIC_IO, 4, &guest_regs);
         }
 
         // out
@@ -379,7 +422,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
             } else if (size == 3) {
               __asm__ __volatile__("out %%eax, %%dx" : : "a"(v), "d"(port));
             } else {
-              vmm_panic(ns.state, VMM_PANIC_IO, 1, &guest_regs);
+              vmm_panic(rvm->state, VMM_PANIC_IO, 1, &guest_regs);
             }
           }
         // in
@@ -395,7 +438,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
               __asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port));
               guest_regs.rax = (guest_regs.rax & 0xffffffff00000000) | (v & 0xffffffff);
             } else {
-              vmm_panic(ns.state, VMM_PANIC_IO, port, &guest_regs);
+              vmm_panic(rvm->state, VMM_PANIC_IO, port, &guest_regs);
             }
           } else {
             INFO("NIC I/O config space block\n");
@@ -406,13 +449,13 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
             } else if (size == 3) {
               guest_regs.rax = guest_regs.rax | 0xffffffff;
             } else {
-              vmm_panic(ns.state, VMM_PANIC_IO, 2, &guest_regs);
+              vmm_panic(rvm->state, VMM_PANIC_IO, 2, &guest_regs);
             }
           }
         }
       // Unsufficient privileges
       } else {
-        vmm_panic(ns.state, VMM_PANIC_IO, 3, &guest_regs);
+        vmm_panic(rvm->state, VMM_PANIC_IO, 3, &guest_regs);
       }
       break;
     }
@@ -431,7 +474,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         guest_regs.rbx = io_count;
         guest_regs.rcx = cr3_count;
       } else if (guest_regs.rax == 0x99999999) {
-        vmm_panic(ns.state, VMM_PANIC_RDMSR, 1234, &guest_regs);
+        vmm_panic(rvm->state, VMM_PANIC_RDMSR, 1234, &guest_regs);
       } else if (guest_regs.rax == 0x5) {
         // On intel platform, mwait is used instead of halt for cpu idle
         // and mwait instruction is able to change processor c-state.
@@ -506,7 +549,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
           INFO("Writing in apic base msr!\n"); 
           apic_setup();
       } else {
-        vmm_panic(ns.state, VMM_PANIC_WRMSR, 0, &guest_regs);
+        vmm_panic(rvm->state, VMM_PANIC_WRMSR, 0, &guest_regs);
       }
       break;
     }
@@ -517,7 +560,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 
       if (access_type != 0) {
         INFO("Unsupported : access type != mov to CR\n");
-        vmm_panic(ns.state, VMM_PANIC_CR_ACCESS, 0, &guest_regs);
+        vmm_panic(rvm->state, VMM_PANIC_CR_ACCESS, 0, &guest_regs);
       }
 
       uint64_t value = ((uint64_t*)&guest_regs)[reg_num];
@@ -543,7 +586,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         uint8_t invvpid_desc[16] = {vmcs->ctrls.ex.virtual_processor_id};
         __asm__ __volatile__("invvpid %1, %0" : : "r"((uint64_t)3), "m"(*invvpid_desc));
       } else {
-        vmm_panic(ns.state, VMM_PANIC_CR_ACCESS, 0, &guest_regs);
+        vmm_panic(rvm->state, VMM_PANIC_CR_ACCESS, 0, &guest_regs);
       }
       break;
     }
@@ -558,12 +601,12 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       printk("rax = %016X\n",guest_regs.rax);
       break;
     case EXIT_REASON_TRIPLE_FAULT:
-      vmm_panic(ns.state, 0,0,&guest_regs);
+      vmm_panic(rvm->state, 0,0,&guest_regs);
       break;
     default: {
 #ifdef _DEBUG_SERVER
       if (debug_server) {
-        debug_server_vmexit(ns.nested_level, exit_reason, &guest_regs);
+        debug_server_vmexit(level, exit_reason, &guest_regs);
       }
 #endif
     }
@@ -582,7 +625,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
  */
 void vmm_vmcs_flush(void) {
   // Flush the current vmcs
-  vmcs_commit(vmcs);
+  vmcs_commit();
 }
 
 static inline int get_cpu_mode(void) {
@@ -686,7 +729,7 @@ static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs)
       break;
     }
     default :
-      vmm_panic(ns.state, VMM_PANIC_UNKNOWN_CPU_MODE, 0, guest_regs);
+      vmm_panic(rvm->state, VMM_PANIC_UNKNOWN_CPU_MODE, 0, guest_regs);
   }
 }
 

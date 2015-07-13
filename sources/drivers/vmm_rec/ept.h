@@ -10,11 +10,6 @@
  */
 #define EPTN 4
 
-/**
- * < 4GB pool context size
- */
-#define CTXN 9
-
 enum ept_error {
   EPT_OK,
   EPT_E_BAD_PARAMETER,

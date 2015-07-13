@@ -17,7 +17,6 @@
 #include "msr.h"
 
 uint8_t *vmxon;
-uint8_t vmcs0[4096] __attribute((aligned(0x1000)));
 uint8_t vapic[4096] __attribute((aligned(0x1000)));
 
 /**
@@ -220,50 +219,170 @@ void vmcs_dump(struct vmcs *v) {
 }
 
 /**
- * VMREAD every fields of the VMCS
+ * Forced VMREAD every fields of the VMCS
  */
 void vmcs_update(struct vmcs *v) {
   // Execution controls
-  VMR(ctrls.ex.virtual_processor_id);
-  VMR(ctrls.ex.posted_int_notif_vector);
-  VMR(ctrls.ex.eptp_index);
-  VMR(ctrls.ex.io_bitmap_a);
-  VMR(ctrls.ex.io_bitmap_b);
-  VMR(ctrls.ex.msr_bitmap);
-  VMR(ctrls.ex.executive_vmcs_pointer);
-  VMR(ctrls.ex.tsc_offset);
-  VMR(ctrls.ex.virtual_apic_page_addr);
-  VMR(ctrls.ex.apic_access_addr);
-  VMR(ctrls.ex.posted_intr_desc_addr);
-  VMR(ctrls.ex.vm_function_controls);
-  VMR(ctrls.ex.ept_pointer);
-  VMR(ctrls.ex.eoi_exit_bitmap_0);
-  VMR(ctrls.ex.eoi_exit_bitmap_1);
-  VMR(ctrls.ex.eoi_exit_bitmap_2);
-  VMR(ctrls.ex.eoi_exit_bitmap_3);
-  VMR(ctrls.ex.eptp_list_addr);
-  VMR(ctrls.ex.vmread_bitmap_addr);
-  VMR(ctrls.ex.vmwrite_bitmap_addr);
-  VMR(ctrls.ex.virt_excep_info_addr);
-  VMR(ctrls.ex.xss_exiting_bitmap);
-  VMR(ctrls.ex.pin_based_vm_exec_control);
-  VMR(ctrls.ex.cpu_based_vm_exec_control);
-  VMR(ctrls.ex.exception_bitmap);
-  VMR(ctrls.ex.page_fault_error_code_mask);
-  VMR(ctrls.ex.page_fault_error_code_match);
-  VMR(ctrls.ex.cr3_target_count);
-  VMR(ctrls.ex.tpr_threshold);
-  VMR(ctrls.ex.secondary_vm_exec_control);
-  VMR(ctrls.ex.ple_gap);
-  VMR(ctrls.ex.ple_window);
-  VMR(ctrls.ex.cr0_guest_host_mask);
-  VMR(ctrls.ex.cr4_guest_host_mask);
-  VMR(ctrls.ex.cr0_read_shadow);
-  VMR(ctrls.ex.cr4_read_shadow);
-  VMR(ctrls.ex.cr3_target_value0);
-  VMR(ctrls.ex.cr3_target_value1);
-  VMR(ctrls.ex.cr3_target_value2);
-  VMR(ctrls.ex.cr3_target_value3);
+  VMRF(ctrls.ex.virtual_processor_id);
+  VMRF(ctrls.ex.posted_int_notif_vector);
+  VMRF(ctrls.ex.eptp_index);
+  VMRF(ctrls.ex.io_bitmap_a);
+  VMRF(ctrls.ex.io_bitmap_b);
+  VMRF(ctrls.ex.msr_bitmap);
+  VMRF(ctrls.ex.executive_vmcs_pointer);
+  VMRF(ctrls.ex.tsc_offset);
+  VMRF(ctrls.ex.virtual_apic_page_addr);
+  VMRF(ctrls.ex.apic_access_addr);
+  VMRF(ctrls.ex.posted_intr_desc_addr);
+  VMRF(ctrls.ex.vm_function_controls);
+  VMRF(ctrls.ex.ept_pointer);
+  VMRF(ctrls.ex.eoi_exit_bitmap_0);
+  VMRF(ctrls.ex.eoi_exit_bitmap_1);
+  VMRF(ctrls.ex.eoi_exit_bitmap_2);
+  VMRF(ctrls.ex.eoi_exit_bitmap_3);
+  VMRF(ctrls.ex.eptp_list_addr);
+  VMRF(ctrls.ex.vmread_bitmap_addr);
+  VMRF(ctrls.ex.vmwrite_bitmap_addr);
+  VMRF(ctrls.ex.virt_excep_info_addr);
+  VMRF(ctrls.ex.xss_exiting_bitmap);
+  VMRF(ctrls.ex.pin_based_vm_exec_control);
+  VMRF(ctrls.ex.cpu_based_vm_exec_control);
+  VMRF(ctrls.ex.exception_bitmap);
+  VMRF(ctrls.ex.page_fault_error_code_mask);
+  VMRF(ctrls.ex.page_fault_error_code_match);
+  VMRF(ctrls.ex.cr3_target_count);
+  VMRF(ctrls.ex.tpr_threshold);
+  VMRF(ctrls.ex.secondary_vm_exec_control);
+  VMRF(ctrls.ex.ple_gap);
+  VMRF(ctrls.ex.ple_window);
+  VMRF(ctrls.ex.cr0_guest_host_mask);
+  VMRF(ctrls.ex.cr4_guest_host_mask);
+  VMRF(ctrls.ex.cr0_read_shadow);
+  VMRF(ctrls.ex.cr4_read_shadow);
+  VMRF(ctrls.ex.cr3_target_value0);
+  VMRF(ctrls.ex.cr3_target_value1);
+  VMRF(ctrls.ex.cr3_target_value2);
+  VMRF(ctrls.ex.cr3_target_value3);
+  // Guest state
+  VMRF(gs.es_selector);
+  VMRF(gs.cs_selector);
+  VMRF(gs.ss_selector);
+  VMRF(gs.ds_selector);
+  VMRF(gs.fs_selector);
+  VMRF(gs.gs_selector);
+  VMRF(gs.ldtr_selector);
+  VMRF(gs.tr_selector);
+  VMRF(gs.ia32_debugctl);
+  VMRF(gs.ia32_pat);
+  VMRF(gs.ia32_efer);
+  VMRF(gs.ia32_perf_global_ctrl);
+  VMRF(gs.pdptr0);
+  VMRF(gs.pdptr1);
+  VMRF(gs.pdptr2);
+  VMRF(gs.pdptr3);
+  VMRF(gs.cr0);
+  VMRF(gs.cr3);
+  VMRF(gs.cr4);
+  VMRF(gs.es_base);
+  VMRF(gs.cs_base);
+  VMRF(gs.ss_base);
+  VMRF(gs.ds_base);
+  VMRF(gs.fs_base);
+  VMRF(gs.gs_base);
+  VMRF(gs.ldtr_base);
+  VMRF(gs.tr_base);
+  VMRF(gs.gdtr_base);
+  VMRF(gs.idtr_base);
+  VMRF(gs.dr7);
+  VMRF(gs.rsp);
+  VMRF(gs.rip);
+  VMRF(gs.rflags);
+  VMRF(gs.pending_dbg_exceptions);
+  VMRF(gs.sysenter_esp);
+  VMRF(gs.sysenter_eip);
+  VMRF(gs.es_limit);
+  VMRF(gs.cs_limit);
+  VMRF(gs.ss_limit);
+  VMRF(gs.ds_limit);
+  VMRF(gs.fs_limit);
+  VMRF(gs.gs_limit);
+  VMRF(gs.ldtr_limit);
+  VMRF(gs.tr_limit);
+  VMRF(gs.gdtr_limit);
+  VMRF(gs.idtr_limit);
+  VMRF(gs.es_ar_bytes);
+  VMRF(gs.cs_ar_bytes);
+  VMRF(gs.ss_ar_bytes);
+  VMRF(gs.ds_ar_bytes);
+  VMRF(gs.fs_ar_bytes);
+  VMRF(gs.gs_ar_bytes);
+  VMRF(gs.ldtr_ar_bytes);
+  VMRF(gs.tr_ar_bytes);
+  VMRF(gs.interruptibility_info);
+  VMRF(gs.activity_state);
+  VMRF(gs.smbase);
+  VMRF(gs.sysenter_cs);
+  VMRF(gs.vmcs_link_pointer);
+  VMRF(gs.interrupt_status);
+  VMRF(gs.vmx_preemption_timer_value);
+  // Host state
+  VMRF(hs.es_selector);
+  VMRF(hs.cs_selector);
+  VMRF(hs.ss_selector);
+  VMRF(hs.ds_selector);
+  VMRF(hs.fs_selector);
+  VMRF(hs.gs_selector);
+  VMRF(hs.tr_selector);
+  VMRF(hs.ia32_pat);
+  VMRF(hs.ia32_efer);
+  VMRF(hs.ia32_perf_global_ctrl);
+  VMRF(hs.ia32_sysenter_cs);
+  VMRF(hs.cr0);
+  VMRF(hs.cr3);
+  VMRF(hs.cr4);
+  VMRF(hs.fs_base);
+  VMRF(hs.gs_base);
+  VMRF(hs.tr_base);
+  VMRF(hs.gdtr_base);
+  VMRF(hs.idtr_base);
+  VMRF(hs.ia32_sysenter_esp);
+  VMRF(hs.ia32_sysenter_eip);
+  VMRF(hs.rsp);
+  VMRF(hs.rip);
+  // Vm exit controls
+  VMRF(ctrls.exit.msr_store_addr);
+  VMRF(ctrls.exit.msr_load_addr);
+  VMRF(ctrls.exit.controls);
+  VMRF(ctrls.exit.msr_store_count);
+  VMRF(ctrls.exit.msr_load_count);
+  // VM entry controls
+  VMRF(ctrls.entry.msr_load_addr);
+  VMRF(ctrls.entry.controls);
+  VMRF(ctrls.entry.msr_load_count);
+  VMRF(ctrls.entry.intr_info_field);
+  VMRF(ctrls.entry.exception_error_code);
+  VMRF(ctrls.entry.instruction_len);
+  // VM exit info
+  VMRF(info.guest_physical_address);
+  VMRF(info.vm_instruction_error);
+  VMRF(info.reason);
+  VMRF(info.intr_info);
+  VMRF(info.intr_error_code);
+  VMRF(info.idt_vectoring_info_field);
+  VMRF(info.idt_vectoring_error_code);
+  VMRF(info.instruction_len);
+  VMRF(info.vmx_instruction_info);
+  VMRF(info.qualification);
+  VMRF(info.io_rcx);
+  VMRF(info.io_rsi);
+  VMRF(info.io_rdi);
+  VMRF(info.io_rip);
+  VMRF(info.guest_linear_address);
+}
+
+void vmcs_collect_shadow(struct vmcs *gvmcs) {
+  struct vmcs *bvmcs = vmcs;
+  vmcs = gvmcs;
   // Guest state
   VMR(gs.es_selector);
   VMR(gs.cs_selector);
@@ -325,66 +444,20 @@ void vmcs_update(struct vmcs *v) {
   VMR(gs.sysenter_cs);
   VMR(gs.vmcs_link_pointer);
   VMR(gs.interrupt_status);
-  VMR(gs.vmx_preemption_timer_value);
-  // Host state
-  VMR(hs.es_selector);
-  VMR(hs.cs_selector);
-  VMR(hs.ss_selector);
-  VMR(hs.ds_selector);
-  VMR(hs.fs_selector);
-  VMR(hs.gs_selector);
-  VMR(hs.tr_selector);
-  VMR(hs.ia32_pat);
-  VMR(hs.ia32_efer);
-  VMR(hs.ia32_perf_global_ctrl);
-  VMR(hs.ia32_sysenter_cs);
-  VMR(hs.cr0);
-  VMR(hs.cr3);
-  VMR(hs.cr4);
-  VMR(hs.fs_base);
-  VMR(hs.gs_base);
-  VMR(hs.tr_base);
-  VMR(hs.gdtr_base);
-  VMR(hs.idtr_base);
-  VMR(hs.ia32_sysenter_esp);
-  VMR(hs.ia32_sysenter_eip);
-  VMR(hs.rsp);
-  VMR(hs.rip);
-  // Vm exit controls
-  VMR(ctrls.exit.msr_store_addr);
-  VMR(ctrls.exit.msr_load_addr);
-  VMR(ctrls.exit.controls);
-  VMR(ctrls.exit.msr_store_count);
-  VMR(ctrls.exit.msr_load_count);
-  // VM entry controls
-  VMR(ctrls.entry.msr_load_addr);
+  // Other control fields
   VMR(ctrls.entry.controls);
-  VMR(ctrls.entry.msr_load_count);
   VMR(ctrls.entry.intr_info_field);
-  VMR(ctrls.entry.exception_error_code);
-  VMR(ctrls.entry.instruction_len);
-  // VM exit info
-  VMR(info.guest_physical_address);
-  VMR(info.vm_instruction_error);
-  VMR(info.reason);
-  VMR(info.intr_info);
-  VMR(info.intr_error_code);
-  VMR(info.idt_vectoring_info_field);
-  VMR(info.idt_vectoring_error_code);
-  VMR(info.instruction_len);
-  VMR(info.vmx_instruction_info);
-  VMR(info.qualification);
-  VMR(info.io_rcx);
-  VMR(info.io_rsi);
-  VMR(info.io_rdi);
-  VMR(info.io_rip);
-  VMR(info.guest_linear_address);
+  VMR(ctrls.ex.cr0_read_shadow);
+  VMR(ctrls.ex.cr4_read_shadow);
+  VMR(ctrls.ex.vmread_bitmap_addr);
+  VMR(ctrls.ex.vmwrite_bitmap_addr);
+  vmcs = bvmcs;
 }
 
 /**
  * VMWRITE every modified field of the VMCS
  */
-void vmcs_commit(struct vmcs *v) {
+void vmcs_commit() {
   // Execution controls
   VMF(ctrls.ex.virtual_processor_id);
   VMF(ctrls.ex.posted_int_notif_vector);
@@ -543,168 +616,164 @@ void vmcs_commit(struct vmcs *v) {
   VMF(info.guest_linear_address);
 }
 
-void vmcs_encoding_init(void) {
-  uint32_t i;
+void vmcs_encoding_init(struct vmcs *v) {
+  memset(v, 0, sizeof(struct vmcs));
   // Execution controls
-  VMCSE(hc, ctrls.ex.virtual_processor_id, VIRTUAL_PROCESSOR_ID);
-  VMCSE(hc, ctrls.ex.posted_int_notif_vector, POSTED_INT_NOTIF_VECTOR);
-  VMCSE(hc, ctrls.ex.eptp_index, EPTP_INDEX);
-  VMCSE(hc, ctrls.ex.io_bitmap_a, IO_BITMAP_A);
-  VMCSE(hc, ctrls.ex.io_bitmap_b, IO_BITMAP_B);
-  VMCSE(hc, ctrls.ex.msr_bitmap, MSR_BITMAP);
-  VMCSE(hc, ctrls.ex.executive_vmcs_pointer, EXECUTIVE_VMCS_POINTER);
-  VMCSE(hc, ctrls.ex.tsc_offset, TSC_OFFSET);
-  VMCSE(hc, ctrls.ex.virtual_apic_page_addr, VIRTUAL_APIC_PAGE_ADDR);
-  VMCSE(hc, ctrls.ex.apic_access_addr, APIC_ACCESS_ADDR);
-  VMCSE(hc, ctrls.ex.posted_intr_desc_addr, POSTED_INTR_DESC_ADDR);
-  VMCSE(hc, ctrls.ex.vm_function_controls, VM_FUNCTION_CONTROLS);
-  VMCSE(hc, ctrls.ex.ept_pointer, EPT_POINTER);
-  VMCSE(hc, ctrls.ex.eoi_exit_bitmap_0, EOI_EXIT_BITMAP_0);
-  VMCSE(hc, ctrls.ex.eoi_exit_bitmap_1, EOI_EXIT_BITMAP_1);
-  VMCSE(hc, ctrls.ex.eoi_exit_bitmap_2, EOI_EXIT_BITMAP_2);
-  VMCSE(hc, ctrls.ex.eoi_exit_bitmap_3, EOI_EXIT_BITMAP_3);
-  VMCSE(hc, ctrls.ex.eptp_list_addr, EPTP_LIST_ADDR);
-  VMCSE(hc, ctrls.ex.vmread_bitmap_addr, VMREAD_BITMAP_ADDR);
-  VMCSE(hc, ctrls.ex.vmwrite_bitmap_addr, VMWRITE_BITMAP_ADDR);
-  VMCSE(hc, ctrls.ex.virt_excep_info_addr, VIRT_EXCEP_INFO_ADDR);
-  VMCSE(hc, ctrls.ex.xss_exiting_bitmap, XSS_EXITING_BITMAP);
-  VMCSE(hc, ctrls.ex.pin_based_vm_exec_control, PIN_BASED_VM_EXEC_CONTROL);
-  VMCSE(hc, ctrls.ex.cpu_based_vm_exec_control, CPU_BASED_VM_EXEC_CONTROL);
-  VMCSE(hc, ctrls.ex.exception_bitmap, EXCEPTION_BITMAP);
-  VMCSE(hc, ctrls.ex.page_fault_error_code_mask, PAGE_FAULT_ERROR_CODE_MASK);
-  VMCSE(hc, ctrls.ex.page_fault_error_code_match, PAGE_FAULT_ERROR_CODE_MATCH);
-  VMCSE(hc, ctrls.ex.cr3_target_count, CR3_TARGET_COUNT);
-  VMCSE(hc, ctrls.ex.tpr_threshold, TPR_THRESHOLD);
-  VMCSE(hc, ctrls.ex.secondary_vm_exec_control, SECONDARY_VM_EXEC_CONTROL);
-  VMCSE(hc, ctrls.ex.ple_gap, PLE_GAP);
-  VMCSE(hc, ctrls.ex.ple_window, PLE_WINDOW);
-  VMCSE(hc, ctrls.ex.cr0_guest_host_mask, CR0_GUEST_HOST_MASK);
-  VMCSE(hc, ctrls.ex.cr4_guest_host_mask, CR4_GUEST_HOST_MASK);
-  VMCSE(hc, ctrls.ex.cr0_read_shadow, CR0_READ_SHADOW);
-  VMCSE(hc, ctrls.ex.cr4_read_shadow, CR4_READ_SHADOW);
-  VMCSE(hc, ctrls.ex.cr3_target_value0, CR3_TARGET_VALUE0);
-  VMCSE(hc, ctrls.ex.cr3_target_value1, CR3_TARGET_VALUE1);
-  VMCSE(hc, ctrls.ex.cr3_target_value2, CR3_TARGET_VALUE2);
-  VMCSE(hc, ctrls.ex.cr3_target_value3, CR3_TARGET_VALUE3);
+  VMCSE(v, ctrls.ex.virtual_processor_id, VIRTUAL_PROCESSOR_ID);
+  VMCSE(v, ctrls.ex.posted_int_notif_vector, POSTED_INT_NOTIF_VECTOR);
+  VMCSE(v, ctrls.ex.eptp_index, EPTP_INDEX);
+  VMCSE(v, ctrls.ex.io_bitmap_a, IO_BITMAP_A);
+  VMCSE(v, ctrls.ex.io_bitmap_b, IO_BITMAP_B);
+  VMCSE(v, ctrls.ex.msr_bitmap, MSR_BITMAP);
+  VMCSE(v, ctrls.ex.executive_vmcs_pointer, EXECUTIVE_VMCS_POINTER);
+  VMCSE(v, ctrls.ex.tsc_offset, TSC_OFFSET);
+  VMCSE(v, ctrls.ex.virtual_apic_page_addr, VIRTUAL_APIC_PAGE_ADDR);
+  VMCSE(v, ctrls.ex.apic_access_addr, APIC_ACCESS_ADDR);
+  VMCSE(v, ctrls.ex.posted_intr_desc_addr, POSTED_INTR_DESC_ADDR);
+  VMCSE(v, ctrls.ex.vm_function_controls, VM_FUNCTION_CONTROLS);
+  VMCSE(v, ctrls.ex.ept_pointer, EPT_POINTER);
+  VMCSE(v, ctrls.ex.eoi_exit_bitmap_0, EOI_EXIT_BITMAP_0);
+  VMCSE(v, ctrls.ex.eoi_exit_bitmap_1, EOI_EXIT_BITMAP_1);
+  VMCSE(v, ctrls.ex.eoi_exit_bitmap_2, EOI_EXIT_BITMAP_2);
+  VMCSE(v, ctrls.ex.eoi_exit_bitmap_3, EOI_EXIT_BITMAP_3);
+  VMCSE(v, ctrls.ex.eptp_list_addr, EPTP_LIST_ADDR);
+  VMCSE(v, ctrls.ex.vmread_bitmap_addr, VMREAD_BITMAP_ADDR);
+  VMCSE(v, ctrls.ex.vmwrite_bitmap_addr, VMWRITE_BITMAP_ADDR);
+  VMCSE(v, ctrls.ex.virt_excep_info_addr, VIRT_EXCEP_INFO_ADDR);
+  VMCSE(v, ctrls.ex.xss_exiting_bitmap, XSS_EXITING_BITMAP);
+  VMCSE(v, ctrls.ex.pin_based_vm_exec_control, PIN_BASED_VM_EXEC_CONTROL);
+  VMCSE(v, ctrls.ex.cpu_based_vm_exec_control, CPU_BASED_VM_EXEC_CONTROL);
+  VMCSE(v, ctrls.ex.exception_bitmap, EXCEPTION_BITMAP);
+  VMCSE(v, ctrls.ex.page_fault_error_code_mask, PAGE_FAULT_ERROR_CODE_MASK);
+  VMCSE(v, ctrls.ex.page_fault_error_code_match, PAGE_FAULT_ERROR_CODE_MATCH);
+  VMCSE(v, ctrls.ex.cr3_target_count, CR3_TARGET_COUNT);
+  VMCSE(v, ctrls.ex.tpr_threshold, TPR_THRESHOLD);
+  VMCSE(v, ctrls.ex.secondary_vm_exec_control, SECONDARY_VM_EXEC_CONTROL);
+  VMCSE(v, ctrls.ex.ple_gap, PLE_GAP);
+  VMCSE(v, ctrls.ex.ple_window, PLE_WINDOW);
+  VMCSE(v, ctrls.ex.cr0_guest_host_mask, CR0_GUEST_HOST_MASK);
+  VMCSE(v, ctrls.ex.cr4_guest_host_mask, CR4_GUEST_HOST_MASK);
+  VMCSE(v, ctrls.ex.cr0_read_shadow, CR0_READ_SHADOW);
+  VMCSE(v, ctrls.ex.cr4_read_shadow, CR4_READ_SHADOW);
+  VMCSE(v, ctrls.ex.cr3_target_value0, CR3_TARGET_VALUE0);
+  VMCSE(v, ctrls.ex.cr3_target_value1, CR3_TARGET_VALUE1);
+  VMCSE(v, ctrls.ex.cr3_target_value2, CR3_TARGET_VALUE2);
+  VMCSE(v, ctrls.ex.cr3_target_value3, CR3_TARGET_VALUE3);
   // Guest state
-  VMCSE(hc, gs.es_selector, GUEST_ES_SELECTOR);
-  VMCSE(hc, gs.cs_selector, GUEST_CS_SELECTOR);
-  VMCSE(hc, gs.ss_selector, GUEST_SS_SELECTOR);
-  VMCSE(hc, gs.ds_selector, GUEST_DS_SELECTOR);
-  VMCSE(hc, gs.fs_selector, GUEST_FS_SELECTOR);
-  VMCSE(hc, gs.gs_selector, GUEST_GS_SELECTOR);
-  VMCSE(hc, gs.ldtr_selector, GUEST_LDTR_SELECTOR);
-  VMCSE(hc, gs.tr_selector, GUEST_TR_SELECTOR);
-  VMCSE(hc, gs.ia32_debugctl, GUEST_IA32_DEBUGCTL);
-  VMCSE(hc, gs.ia32_pat, GUEST_IA32_PAT);
-  VMCSE(hc, gs.ia32_efer, GUEST_IA32_EFER);
-  VMCSE(hc, gs.ia32_perf_global_ctrl, GUEST_IA32_PERF_GLOBAL_CTRL);
-  VMCSE(hc, gs.pdptr0, GUEST_PDPTR0);
-  VMCSE(hc, gs.pdptr1, GUEST_PDPTR1);
-  VMCSE(hc, gs.pdptr2, GUEST_PDPTR2);
-  VMCSE(hc, gs.pdptr3, GUEST_PDPTR3);
-  VMCSE(hc, gs.cr0, GUEST_CR0);
-  VMCSE(hc, gs.cr3, GUEST_CR3);
-  VMCSE(hc, gs.cr4, GUEST_CR4);
-  VMCSE(hc, gs.es_base, GUEST_ES_BASE);
-  VMCSE(hc, gs.cs_base, GUEST_CS_BASE);
-  VMCSE(hc, gs.ss_base, GUEST_SS_BASE);
-  VMCSE(hc, gs.ds_base, GUEST_DS_BASE);
-  VMCSE(hc, gs.fs_base, GUEST_FS_BASE);
-  VMCSE(hc, gs.gs_base, GUEST_GS_BASE);
-  VMCSE(hc, gs.ldtr_base, GUEST_LDTR_BASE);
-  VMCSE(hc, gs.tr_base, GUEST_TR_BASE);
-  VMCSE(hc, gs.gdtr_base, GUEST_GDTR_BASE);
-  VMCSE(hc, gs.idtr_base, GUEST_IDTR_BASE);
-  VMCSE(hc, gs.dr7, GUEST_DR7);
-  VMCSE(hc, gs.rsp, GUEST_RSP);
-  VMCSE(hc, gs.rip, GUEST_RIP);
-  VMCSE(hc, gs.rflags, GUEST_RFLAGS);
-  VMCSE(hc, gs.pending_dbg_exceptions, GUEST_PENDING_DBG_EXCEPTIONS);
-  VMCSE(hc, gs.sysenter_esp, GUEST_SYSENTER_ESP);
-  VMCSE(hc, gs.sysenter_eip, GUEST_SYSENTER_EIP);
-  VMCSE(hc, gs.es_limit, GUEST_ES_LIMIT);
-  VMCSE(hc, gs.cs_limit, GUEST_CS_LIMIT);
-  VMCSE(hc, gs.ss_limit, GUEST_SS_LIMIT);
-  VMCSE(hc, gs.ds_limit, GUEST_DS_LIMIT);
-  VMCSE(hc, gs.fs_limit, GUEST_FS_LIMIT);
-  VMCSE(hc, gs.gs_limit, GUEST_GS_LIMIT);
-  VMCSE(hc, gs.ldtr_limit, GUEST_LDTR_LIMIT);
-  VMCSE(hc, gs.tr_limit, GUEST_TR_LIMIT);
-  VMCSE(hc, gs.gdtr_limit, GUEST_GDTR_LIMIT);
-  VMCSE(hc, gs.idtr_limit, GUEST_IDTR_LIMIT);
-  VMCSE(hc, gs.es_ar_bytes, GUEST_ES_AR_BYTES);
-  VMCSE(hc, gs.cs_ar_bytes, GUEST_CS_AR_BYTES);
-  VMCSE(hc, gs.ss_ar_bytes, GUEST_SS_AR_BYTES);
-  VMCSE(hc, gs.ds_ar_bytes, GUEST_DS_AR_BYTES);
-  VMCSE(hc, gs.fs_ar_bytes, GUEST_FS_AR_BYTES);
-  VMCSE(hc, gs.gs_ar_bytes, GUEST_GS_AR_BYTES);
-  VMCSE(hc, gs.ldtr_ar_bytes, GUEST_LDTR_AR_BYTES);
-  VMCSE(hc, gs.tr_ar_bytes, GUEST_TR_AR_BYTES);
-  VMCSE(hc, gs.interruptibility_info, GUEST_INTERRUPTIBILITY_INFO);
-  VMCSE(hc, gs.activity_state, GUEST_ACTIVITY_STATE);
-  VMCSE(hc, gs.smbase, GUEST_SMBASE);
-  VMCSE(hc, gs.sysenter_cs, GUEST_SYSENTER_CS);
-  VMCSE(hc, gs.vmcs_link_pointer, VMCS_LINK_POINTER);
-  VMCSE(hc, gs.interrupt_status, GUEST_INTERRUPT_STATUS);
-  VMCSE(hc, gs.vmx_preemption_timer_value, VMX_PREEMPTION_TIMER_VALUE);
+  VMCSE(v, gs.es_selector, GUEST_ES_SELECTOR);
+  VMCSE(v, gs.cs_selector, GUEST_CS_SELECTOR);
+  VMCSE(v, gs.ss_selector, GUEST_SS_SELECTOR);
+  VMCSE(v, gs.ds_selector, GUEST_DS_SELECTOR);
+  VMCSE(v, gs.fs_selector, GUEST_FS_SELECTOR);
+  VMCSE(v, gs.gs_selector, GUEST_GS_SELECTOR);
+  VMCSE(v, gs.ldtr_selector, GUEST_LDTR_SELECTOR);
+  VMCSE(v, gs.tr_selector, GUEST_TR_SELECTOR);
+  VMCSE(v, gs.ia32_debugctl, GUEST_IA32_DEBUGCTL);
+  VMCSE(v, gs.ia32_pat, GUEST_IA32_PAT);
+  VMCSE(v, gs.ia32_efer, GUEST_IA32_EFER);
+  VMCSE(v, gs.ia32_perf_global_ctrl, GUEST_IA32_PERF_GLOBAL_CTRL);
+  VMCSE(v, gs.pdptr0, GUEST_PDPTR0);
+  VMCSE(v, gs.pdptr1, GUEST_PDPTR1);
+  VMCSE(v, gs.pdptr2, GUEST_PDPTR2);
+  VMCSE(v, gs.pdptr3, GUEST_PDPTR3);
+  VMCSE(v, gs.cr0, GUEST_CR0);
+  VMCSE(v, gs.cr3, GUEST_CR3);
+  VMCSE(v, gs.cr4, GUEST_CR4);
+  VMCSE(v, gs.es_base, GUEST_ES_BASE);
+  VMCSE(v, gs.cs_base, GUEST_CS_BASE);
+  VMCSE(v, gs.ss_base, GUEST_SS_BASE);
+  VMCSE(v, gs.ds_base, GUEST_DS_BASE);
+  VMCSE(v, gs.fs_base, GUEST_FS_BASE);
+  VMCSE(v, gs.gs_base, GUEST_GS_BASE);
+  VMCSE(v, gs.ldtr_base, GUEST_LDTR_BASE);
+  VMCSE(v, gs.tr_base, GUEST_TR_BASE);
+  VMCSE(v, gs.gdtr_base, GUEST_GDTR_BASE);
+  VMCSE(v, gs.idtr_base, GUEST_IDTR_BASE);
+  VMCSE(v, gs.dr7, GUEST_DR7);
+  VMCSE(v, gs.rsp, GUEST_RSP);
+  VMCSE(v, gs.rip, GUEST_RIP);
+  VMCSE(v, gs.rflags, GUEST_RFLAGS);
+  VMCSE(v, gs.pending_dbg_exceptions, GUEST_PENDING_DBG_EXCEPTIONS);
+  VMCSE(v, gs.sysenter_esp, GUEST_SYSENTER_ESP);
+  VMCSE(v, gs.sysenter_eip, GUEST_SYSENTER_EIP);
+  VMCSE(v, gs.es_limit, GUEST_ES_LIMIT);
+  VMCSE(v, gs.cs_limit, GUEST_CS_LIMIT);
+  VMCSE(v, gs.ss_limit, GUEST_SS_LIMIT);
+  VMCSE(v, gs.ds_limit, GUEST_DS_LIMIT);
+  VMCSE(v, gs.fs_limit, GUEST_FS_LIMIT);
+  VMCSE(v, gs.gs_limit, GUEST_GS_LIMIT);
+  VMCSE(v, gs.ldtr_limit, GUEST_LDTR_LIMIT);
+  VMCSE(v, gs.tr_limit, GUEST_TR_LIMIT);
+  VMCSE(v, gs.gdtr_limit, GUEST_GDTR_LIMIT);
+  VMCSE(v, gs.idtr_limit, GUEST_IDTR_LIMIT);
+  VMCSE(v, gs.es_ar_bytes, GUEST_ES_AR_BYTES);
+  VMCSE(v, gs.cs_ar_bytes, GUEST_CS_AR_BYTES);
+  VMCSE(v, gs.ss_ar_bytes, GUEST_SS_AR_BYTES);
+  VMCSE(v, gs.ds_ar_bytes, GUEST_DS_AR_BYTES);
+  VMCSE(v, gs.fs_ar_bytes, GUEST_FS_AR_BYTES);
+  VMCSE(v, gs.gs_ar_bytes, GUEST_GS_AR_BYTES);
+  VMCSE(v, gs.ldtr_ar_bytes, GUEST_LDTR_AR_BYTES);
+  VMCSE(v, gs.tr_ar_bytes, GUEST_TR_AR_BYTES);
+  VMCSE(v, gs.interruptibility_info, GUEST_INTERRUPTIBILITY_INFO);
+  VMCSE(v, gs.activity_state, GUEST_ACTIVITY_STATE);
+  VMCSE(v, gs.smbase, GUEST_SMBASE);
+  VMCSE(v, gs.sysenter_cs, GUEST_SYSENTER_CS);
+  VMCSE(v, gs.vmcs_link_pointer, VMCS_LINK_POINTER);
+  VMCSE(v, gs.interrupt_status, GUEST_INTERRUPT_STATUS);
+  VMCSE(v, gs.vmx_preemption_timer_value, VMX_PREEMPTION_TIMER_VALUE);
   // Host state
-  VMCSE(hc, hs.es_selector, HOST_ES_SELECTOR);
-  VMCSE(hc, hs.cs_selector, HOST_CS_SELECTOR);
-  VMCSE(hc, hs.ss_selector, HOST_SS_SELECTOR);
-  VMCSE(hc, hs.ds_selector, HOST_DS_SELECTOR);
-  VMCSE(hc, hs.fs_selector, HOST_FS_SELECTOR);
-  VMCSE(hc, hs.gs_selector, HOST_GS_SELECTOR);
-  VMCSE(hc, hs.tr_selector, HOST_TR_SELECTOR);
-  VMCSE(hc, hs.ia32_pat, HOST_IA32_PAT);
-  VMCSE(hc, hs.ia32_efer, HOST_IA32_EFER);
-  VMCSE(hc, hs.ia32_perf_global_ctrl, HOST_IA32_PERF_GLOBAL_CTRL);
-  VMCSE(hc, hs.ia32_sysenter_cs, HOST_IA32_SYSENTER_CS);
-  VMCSE(hc, hs.cr0, HOST_CR0);
-  VMCSE(hc, hs.cr3, HOST_CR3);
-  VMCSE(hc, hs.cr4, HOST_CR4);
-  VMCSE(hc, hs.fs_base, HOST_FS_BASE);
-  VMCSE(hc, hs.gs_base, HOST_GS_BASE);
-  VMCSE(hc, hs.tr_base, HOST_TR_BASE);
-  VMCSE(hc, hs.gdtr_base, HOST_GDTR_BASE);
-  VMCSE(hc, hs.idtr_base, HOST_IDTR_BASE);
-  VMCSE(hc, hs.ia32_sysenter_esp, HOST_IA32_SYSENTER_ESP);
-  VMCSE(hc, hs.ia32_sysenter_eip, HOST_IA32_SYSENTER_EIP);
-  VMCSE(hc, hs.rsp, HOST_RSP);
-  VMCSE(hc, hs.rip, HOST_RIP);
+  VMCSE(v, hs.es_selector, HOST_ES_SELECTOR);
+  VMCSE(v, hs.cs_selector, HOST_CS_SELECTOR);
+  VMCSE(v, hs.ss_selector, HOST_SS_SELECTOR);
+  VMCSE(v, hs.ds_selector, HOST_DS_SELECTOR);
+  VMCSE(v, hs.fs_selector, HOST_FS_SELECTOR);
+  VMCSE(v, hs.gs_selector, HOST_GS_SELECTOR);
+  VMCSE(v, hs.tr_selector, HOST_TR_SELECTOR);
+  VMCSE(v, hs.ia32_pat, HOST_IA32_PAT);
+  VMCSE(v, hs.ia32_efer, HOST_IA32_EFER);
+  VMCSE(v, hs.ia32_perf_global_ctrl, HOST_IA32_PERF_GLOBAL_CTRL);
+  VMCSE(v, hs.ia32_sysenter_cs, HOST_IA32_SYSENTER_CS);
+  VMCSE(v, hs.cr0, HOST_CR0);
+  VMCSE(v, hs.cr3, HOST_CR3);
+  VMCSE(v, hs.cr4, HOST_CR4);
+  VMCSE(v, hs.fs_base, HOST_FS_BASE);
+  VMCSE(v, hs.gs_base, HOST_GS_BASE);
+  VMCSE(v, hs.tr_base, HOST_TR_BASE);
+  VMCSE(v, hs.gdtr_base, HOST_GDTR_BASE);
+  VMCSE(v, hs.idtr_base, HOST_IDTR_BASE);
+  VMCSE(v, hs.ia32_sysenter_esp, HOST_IA32_SYSENTER_ESP);
+  VMCSE(v, hs.ia32_sysenter_eip, HOST_IA32_SYSENTER_EIP);
+  VMCSE(v, hs.rsp, HOST_RSP);
+  VMCSE(v, hs.rip, HOST_RIP);
   // Vm exit controls
-  VMCSE(hc, ctrls.exit.msr_store_addr, VM_EXIT_MSR_STORE_ADDR);
-  VMCSE(hc, ctrls.exit.msr_load_addr, VM_EXIT_MSR_LOAD_ADDR);
-  VMCSE(hc, ctrls.exit.controls, VM_EXIT_CONTROLS);
-  VMCSE(hc, ctrls.exit.msr_store_count, VM_EXIT_MSR_STORE_COUNT);
-  VMCSE(hc, ctrls.exit.msr_load_count, VM_EXIT_MSR_LOAD_COUNT);
+  VMCSE(v, ctrls.exit.msr_store_addr, VM_EXIT_MSR_STORE_ADDR);
+  VMCSE(v, ctrls.exit.msr_load_addr, VM_EXIT_MSR_LOAD_ADDR);
+  VMCSE(v, ctrls.exit.controls, VM_EXIT_CONTROLS);
+  VMCSE(v, ctrls.exit.msr_store_count, VM_EXIT_MSR_STORE_COUNT);
+  VMCSE(v, ctrls.exit.msr_load_count, VM_EXIT_MSR_LOAD_COUNT);
   // VM entry controls
-  VMCSE(hc, ctrls.entry.msr_load_addr, VM_ENTRY_MSR_LOAD_ADDR);
-  VMCSE(hc, ctrls.entry.controls, VM_ENTRY_CONTROLS);
-  VMCSE(hc, ctrls.entry.msr_load_count, VM_ENTRY_MSR_LOAD_COUNT);
-  VMCSE(hc, ctrls.entry.intr_info_field, VM_ENTRY_INTR_INFO_FIELD);
-  VMCSE(hc, ctrls.entry.exception_error_code, VM_ENTRY_EXCEPTION_ERROR_CODE);
-  VMCSE(hc, ctrls.entry.instruction_len, VM_ENTRY_INSTRUCTION_LEN);
+  VMCSE(v, ctrls.entry.msr_load_addr, VM_ENTRY_MSR_LOAD_ADDR);
+  VMCSE(v, ctrls.entry.controls, VM_ENTRY_CONTROLS);
+  VMCSE(v, ctrls.entry.msr_load_count, VM_ENTRY_MSR_LOAD_COUNT);
+  VMCSE(v, ctrls.entry.intr_info_field, VM_ENTRY_INTR_INFO_FIELD);
+  VMCSE(v, ctrls.entry.exception_error_code, VM_ENTRY_EXCEPTION_ERROR_CODE);
+  VMCSE(v, ctrls.entry.instruction_len, VM_ENTRY_INSTRUCTION_LEN);
   // VM exit info
-  VMCSE(hc, info.guest_physical_address, GUEST_PHYSICAL_ADDRESS);
-  VMCSE(hc, info.vm_instruction_error, VM_INSTRUCTION_ERROR);
-  VMCSE(hc, info.reason, VM_EXIT_REASON);
-  VMCSE(hc, info.intr_info, VM_EXIT_INTR_INFO);
-  VMCSE(hc, info.intr_error_code, VM_EXIT_INTR_ERROR_CODE);
-  VMCSE(hc, info.idt_vectoring_info_field, IDT_VECTORING_INFO_FIELD);
-  VMCSE(hc, info.idt_vectoring_error_code, IDT_VECTORING_ERROR_CODE);
-  VMCSE(hc, info.instruction_len, VM_EXIT_INSTRUCTION_LEN);
-  VMCSE(hc, info.vmx_instruction_info, VMX_INSTRUCTION_INFO);
-  VMCSE(hc, info.qualification, EXIT_QUALIFICATION);
-  VMCSE(hc, info.io_rcx, IO_RCX);
-  VMCSE(hc, info.io_rsi, IO_RSI);
-  VMCSE(hc, info.io_rdi, IO_RDI);
-  VMCSE(hc, info.io_rip, IO_RIP);
-  VMCSE(hc, info.guest_linear_address, GUEST_LINEAR_ADDRESS);
-  // Copying the encodings
-  for (i = 0; i < VM_NB; i++) {
-    memcpy(&vmcs_cache_pool[i], hc, sizeof(struct vmcs));
-  }
+  VMCSE(v, info.guest_physical_address, GUEST_PHYSICAL_ADDRESS);
+  VMCSE(v, info.vm_instruction_error, VM_INSTRUCTION_ERROR);
+  VMCSE(v, info.reason, VM_EXIT_REASON);
+  VMCSE(v, info.intr_info, VM_EXIT_INTR_INFO);
+  VMCSE(v, info.intr_error_code, VM_EXIT_INTR_ERROR_CODE);
+  VMCSE(v, info.idt_vectoring_info_field, IDT_VECTORING_INFO_FIELD);
+  VMCSE(v, info.idt_vectoring_error_code, IDT_VECTORING_ERROR_CODE);
+  VMCSE(v, info.instruction_len, VM_EXIT_INSTRUCTION_LEN);
+  VMCSE(v, info.vmx_instruction_info, VMX_INSTRUCTION_INFO);
+  VMCSE(v, info.qualification, EXIT_QUALIFICATION);
+  VMCSE(v, info.io_rcx, IO_RCX);
+  VMCSE(v, info.io_rsi, IO_RSI);
+  VMCSE(v, info.io_rdi, IO_RDI);
+  VMCSE(v, info.io_rip, IO_RIP);
+  VMCSE(v, info.guest_linear_address, GUEST_LINEAR_ADDRESS);
 }
 
 void vmcs_host_config_host_state_fields(void) {
@@ -940,6 +1009,7 @@ void vmcs_host_config_configure(void) {
 }
 
 void vmcs_init(void) {
+  uint32_t i;
   // Allocate VMCS cache for host configuration
   hc = efi_allocate_pool(sizeof(struct vmcs));
   vmcs_cache_pool = efi_allocate_pool(sizeof(struct vmcs) * VM_NB);
@@ -951,7 +1021,11 @@ void vmcs_init(void) {
   memset(&vmcs_cache_pool[0], 0, VM_NB * sizeof(struct vmcs));
   // Initialize the encodings
   INFO("Initializing encodings\n");
-  vmcs_encoding_init();
+  vmcs_encoding_init(hc);
+  // Copying the encodings
+  for (i = 0; i < VM_NB; i++) {
+    memcpy(&vmcs_cache_pool[i], hc, sizeof(struct vmcs));
+  }
   INFO("Fills l0 host state and execution controls\n");
   vmcs_host_config_configure();
 }

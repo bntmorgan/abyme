@@ -58,7 +58,6 @@ void bsp_main(struct setup_state *state) {
   nested_vmx_shadow_bitmap_init();
 #endif
 
-  INFO("VMCS addresses 0x%X 0x%X\n", vmxon, vmcs0);
   INFO("protected_begin 0x%X\n", state->protected_begin);
   INFO("protected_end 0x%X\n", state->protected_end);
 
@@ -129,6 +128,8 @@ void vmm_vm_setup_and_launch(struct setup_state *state) {
   vm_alloc(&v);
   // Set current VM
   vm_set(v);
+  // Root VM
+  vm_set_root(v);
   INFO("vmclear(0x%016X)\n", (uint64_t)&(v->vmcs_region)[0]);
   cpu_vmclear((uint8_t *) (uint64_t)&(v->vmcs_region)[0]);
   INFO("vmptrld(0x%016X)\n", (uint64_t)&(v->vmcs_region)[0]);
@@ -136,9 +137,8 @@ void vmm_vm_setup_and_launch(struct setup_state *state) {
   INFO("Cloning configuration\n");
   vmcs_clone(v->vmcs);
   INFO("Committing the configuration\n");
-  vmcs_commit(v->vmcs);
+  vmcs_commit();
   INFO("READY TO GO!\n");
-  vmcs_dump(v->vmcs);
 
   // Call hook main
   hook_main();
