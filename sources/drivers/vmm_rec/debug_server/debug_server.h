@@ -9,9 +9,9 @@ uint32_t debug_server_recv(void *buf, uint32_t len);
 void debug_server_putc(uint8_t value);
 void debug_server_enable_putc();
 void debug_server_disable_putc();
-void debug_server_vmexit(uint8_t core, uint32_t exit_reason,
+void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
     struct registers *guest_regs);
-void debug_server_panic(uint8_t core, uint64_t code, uint64_t extra,
+void debug_server_panic(uint8_t vmid, uint64_t code, uint64_t extra,
     struct registers *guest_regs);
 
 extern uint8_t debug_server;
@@ -90,92 +90,92 @@ typedef struct _core_regs {
 
 typedef struct _message {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
 } __attribute__((packed)) message;
 
 typedef struct _message_vmexit {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
   uint32_t exit_reason;
 } __attribute__((packed)) message_vmexit;
 
 typedef struct _message_memory_read {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
   uint64_t address;
   uint64_t length;
 } __attribute__((packed)) message_memory_read;
 
 typedef struct _message_memory_data {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
   uint64_t address;
   uint64_t length;
 } __attribute__((packed)) message_memory_data;
 
 typedef struct _message_memory_write {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
   uint64_t address;
   uint64_t length;
 } __attribute__((packed)) message_memory_write;
 
 typedef struct _message_commit {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
   uint8_t ok;
 } __attribute__((packed)) message_commit;
 
 typedef struct _message_core_regs_read {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
 } __attribute__((packed)) message_core_regs_read;
 
 typedef struct _message_core_regs_data {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
   // Registers
   core_regs regs;
 } __attribute__((packed)) message_core_regs_data;
 
 typedef struct _message_vmcs_read {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
 } __attribute__((packed)) message_vmcs_read;
 
 typedef struct _message_vmcs_data {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
 } __attribute__((packed)) message_vmcs_data;
 
 typedef struct _message_vmm_panic {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
   uint64_t code;
   uint64_t extra;
 } __attribute__((packed)) message_vmm_panic;
 
 typedef struct _message_vmcs_write {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
 } __attribute__((packed)) message_vmcs_write;
 
 typedef struct _message_user_defined {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
   uint16_t user_type;
   uint64_t length;
 } __attribute__((packed)) message_user_defined;
 
 typedef struct _message_send_debug {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
   uint8_t send_debug[NB_EXIT_REASONS];
 } __attribute__((packed)) message_send_debug;
 
 typedef struct _message_info {
   uint8_t type;
-  uint8_t core;
+  uint8_t vmid;
   uint64_t length;
   uint32_t level; // for recursive debug purpose, we put the level of VMM
 } __attribute__((packed)) message_info;

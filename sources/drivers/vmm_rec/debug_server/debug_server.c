@@ -37,7 +37,7 @@ void debug_server_log_cr3_flush(struct registers *regs) {
   message_user_defined *m = (message_user_defined *)&b[0];
   uint8_t *data = b + sizeof(message_user_defined);
   m->type = MESSAGE_USER_DEFINED;
-  m->core = debug_server_get_core();
+  m->vmid = debug_server_get_core();
   m->user_type = USER_DEFINED_LOG_CR3;
   m->length = DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t);
   for (i = 0; i < DEBUG_SERVER_CR3_SIZE / DEBUG_SERVER_CR3_PER_MESSAGE; i++) {
@@ -70,12 +70,12 @@ void debug_server_log_cr3_add(struct registers *regs, uint64_t cr3) {
   log_cr3_index++;
 }
 
-void debug_server_vmexit(uint8_t core, uint32_t exit_reason,
+void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
     struct registers *guest_regs) {
   if (send_debug[exit_reason]) {
     message_vmexit ms = {
       MESSAGE_VMEXIT,
-      core,
+      vmid,
       exit_reason
     };
     debug_server_send(&ms, sizeof(ms));
@@ -83,11 +83,11 @@ void debug_server_vmexit(uint8_t core, uint32_t exit_reason,
   }
 }
 
-void debug_server_panic(uint8_t core, uint64_t code, uint64_t extra,
+void debug_server_panic(uint8_t vmid, uint64_t code, uint64_t extra,
     struct registers *guest_regs) {
   message_vmm_panic m = {
     MESSAGE_VMM_PANIC,
-    core,
+    vmid,
     code,
     extra
   };
@@ -142,7 +142,7 @@ void debug_server_handle_memory_read(message_memory_read *mr) {
   uint8_t b[length + sizeof(message_memory_data)];
   message_memory_data *r = (message_memory_data *)b;
   r->type = MESSAGE_MEMORY_DATA;
-  r->core = debug_server_get_core();
+  r->vmid = debug_server_get_core();
   r->address = mr->address;
   r->length = length;
   uint8_t *buf = (uint8_t *)&b[0] + sizeof(message_memory_data);
@@ -227,7 +227,7 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   uint8_t *buf = &b[0];
   uint64_t v = 0;
   message_vmcs_data *m = (message_vmcs_data *)&buf[0];
-  m->core = debug_server_get_core();
+  m->vmid = debug_server_get_core();
   m->type = MESSAGE_VMCS_DATA;
   buf = (uint8_t *)buf + sizeof(message_vmcs_data);
   // Size
@@ -378,7 +378,7 @@ void debug_server_putc(uint8_t value) {
 
   if (value == '\n' || current_size == MAX_INFO_SIZE) {
     m->type = MESSAGE_INFO;
-    m->core = debug_server_get_core();
+    m->vmid = debug_server_get_core();
     m->length = current_size;
     m->level = debug_server_level;
     eth->send(b, current_size + sizeof(message_info), EFI_82579LM_API_BLOCK);
