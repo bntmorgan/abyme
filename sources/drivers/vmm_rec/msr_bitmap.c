@@ -4,35 +4,34 @@
 #include "string.h"
 #include "mtrr.h"
 #include "msr.h"
+#include "vmm.h"
+#include "efiw.h"
 
-struct msr_bitmap {
-  uint8_t low_msrs_read_bitmap[0x400];
-  uint8_t high_msrs_read_bitmap[0x400];
-  uint8_t low_msrs_write_bitmap[0x400];
-  uint8_t high_msrs_write_bitmap[0x400];
-} __attribute__((packed));
-
-struct msr_bitmap msr_bitmap __attribute__((aligned(0x1000)));
+struct msr_bitmap *msr_bitmap;
+struct msr_bitmap *msr_bitmap_pool;
 
 void msr_bitmap_setup(void) {
-  memset(&msr_bitmap, 0, sizeof(msr_bitmap));
+  msr_bitmap = efi_allocate_pages(1);
+  msr_bitmap_pool = efi_allocate_pages(VM_NB);
+  memset(msr_bitmap, 0, sizeof(msr_bitmap));
+  memset(msr_bitmap_pool, 0, sizeof(msr_bitmap) * VM_NB);
 }
 
 void msr_bitmap_set_read(uint64_t msr) {
   if (msr <= 0x00001fff) {
-    msr_bitmap.low_msrs_read_bitmap[msr / 8] |= (1 << (msr % 8));
+    msr_bitmap->low_msrs_read_bitmap[msr / 8] |= (1 << (msr % 8));
   } else {
     uint64_t msr_index = msr - 0xc0000000;
-    msr_bitmap.high_msrs_read_bitmap[msr_index / 8] |= (1 << (msr_index % 8));
+    msr_bitmap->high_msrs_read_bitmap[msr_index / 8] |= (1 << (msr_index % 8));
   }
 }
 
 void msr_bitmap_set_write(uint64_t msr) {
   if (msr <= 0x00001fff) {
-    msr_bitmap.low_msrs_write_bitmap[msr / 8] |= (1 << (msr % 8));
+    msr_bitmap->low_msrs_write_bitmap[msr / 8] |= (1 << (msr % 8));
   } else {
     uint64_t msr_index = msr - 0xc0000000;
-    msr_bitmap.high_msrs_write_bitmap[msr_index / 8] |= (1 << (msr_index % 8));
+    msr_bitmap->high_msrs_write_bitmap[msr_index / 8] |= (1 << (msr_index % 8));
   }
 }
 
@@ -62,6 +61,20 @@ void msr_bitmap_set_for_mtrr(void) {
   msr_bitmap_set_write(MSR_ADDRESS_IA32_MTRR_FIX4K_F8000);
 }
 
-uint64_t msr_bitmap_get_ptr(void) {
-  return (uint64_t) &msr_bitmap;
+/**
+ * Initialise the mrst bitmap with the host configuration
+ */
+void msr_bitmap_clone(uint8_t *b) {
+  memcpy(b, msr_bitmap, 0x1000);
+}
+
+/**
+ * Create an executive msr bitmap with the host configuration and the
+ * virtualized hypervisor bitmap
+ */
+void msr_bitmap_or(uint8_t *b_dst, uint8_t *b_src) {
+  uint32_t i;
+  for (i = 0; i < 0x1000; i++) {
+    b_dst[i] = ((uint8_t *)msr_bitmap)[i] | b_src[i];
+  }
 }

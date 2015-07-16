@@ -14,6 +14,8 @@
 #include "msr.h"
 #include "cpu.h"
 #include "level.h"
+#include "io_bitmap.h"
+#include "msr_bitmap.h"
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
@@ -417,6 +419,14 @@ void nested_vmlaunch(struct registers *guest_regs) {
   VMW(ctrls.ex.virtual_processor_id, nvm->index + 1); // VPIDs starts at 0
   // update vmx preemption timer
   VMW(gs.vmx_preemption_timer_value, preempt_timer_value);
+  // Setting executive I/O bitmaps
+  io_bitmap_clone_a_b(&io_bitmap_a_pool[nvm->index][0],
+      &io_bitmap_b_pool[nvm->index][0]);
+  VMW(ctrls.ex.io_bitmap_a, (uint64_t)&io_bitmap_a_pool[nvm->index][0]);
+  VMW(ctrls.ex.io_bitmap_b, (uint64_t)&io_bitmap_b_pool[nvm->index][0]);
+  // Setting executive msr bitmap
+  msr_bitmap_clone((uint8_t *)&msr_bitmap_pool[nvm->index]);
+  VMW(ctrls.ex.msr_bitmap, (uint64_t)&msr_bitmap_pool[nvm->index]);
   // Adjust vm entry controls
   vmm_adjust_vm_entry_controls();
 
@@ -619,6 +629,7 @@ void nested_load_host(void) {
 
 void nested_load_guest(void) {
   uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
+  uint8_t *io_bitmap_a, *io_bitmap_b, *msr_bitmap;
 
   nested_shadow_to_guest(vm->child);
 
@@ -629,6 +640,16 @@ void nested_load_guest(void) {
 
   // Set the current child VM as the current running VM
   vm_set(vm->child);
+
+  // XXX Shadow vmcs is already loaded
+  // Update executive io bitmap
+  io_bitmap_a = (uint8_t*)svmcs.ctrls.ex.io_bitmap_a;
+  io_bitmap_b = (uint8_t*)svmcs.ctrls.ex.io_bitmap_b;
+  io_bitmap_or(&io_bitmap_a_pool[vm->index][0], &io_bitmap_b_pool[vm->index][0],
+      io_bitmap_a, io_bitmap_b);
+  // Update executive io bitmap
+  msr_bitmap = (uint8_t*)svmcs.ctrls.ex.msr_bitmap;
+  msr_bitmap_or((uint8_t *)&msr_bitmap_pool[vm->index], msr_bitmap);
 
 #ifdef _DEBUG_SERVER
   // handle Monitor trap flag

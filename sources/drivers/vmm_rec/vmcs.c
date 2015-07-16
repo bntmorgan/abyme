@@ -17,7 +17,7 @@
 #include "msr.h"
 
 uint8_t *vmxon;
-uint8_t vapic[4096] __attribute((aligned(0x1000)));
+uint8_t (*vapic)[0x1000];
 
 /**
  * Host vmcs configuration reference
@@ -823,9 +823,7 @@ void vmcs_host_config_vm_exec_control_fields(void) {
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST |
       ENABLE_RDTSCP;
                              
-  uint64_t msr_bitmap_ptr;
   uint64_t eptp;
-  uint64_t io_bitmap_ptr;
   uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER | NMI_EXITING;
 
   VMW(ctrls.ex.pin_based_vm_exec_control,
@@ -851,11 +849,6 @@ void vmcs_host_config_vm_exec_control_fields(void) {
   VMW(ctrls.ex.page_fault_error_code_mask, 0);
   VMW(ctrls.ex.page_fault_error_code_match, 0);
 
-  io_bitmap_ptr = io_bitmap_get_ptr_a();
-  VMW(ctrls.ex.io_bitmap_a, io_bitmap_ptr);
-  io_bitmap_ptr = io_bitmap_get_ptr_b();
-  VMW(ctrls.ex.io_bitmap_b, io_bitmap_ptr);
-
   VMW(ctrls.ex.tsc_offset, 0);
 
   // As we are using UNRESTRICTED_GUEST procbased_ctrl, the guest can itself
@@ -873,9 +866,6 @@ void vmcs_host_config_vm_exec_control_fields(void) {
   VMW(ctrls.ex.cr3_target_value1, 0);
   VMW(ctrls.ex.cr3_target_value2, 0);
   VMW(ctrls.ex.cr3_target_value3, 0);
-
-  msr_bitmap_ptr = msr_bitmap_get_ptr();
-  VMW(ctrls.ex.msr_bitmap, msr_bitmap_ptr);
 
   eptp = ept_get_eptp();
   VMW(ctrls.ex.ept_pointer, eptp);
@@ -1014,6 +1004,7 @@ void vmcs_init(void) {
   hc = efi_allocate_pool(sizeof(struct vmcs));
   vmcs_cache_pool = efi_allocate_pool(sizeof(struct vmcs) * VM_NB);
   vmcs_region_pool = efi_allocate_pages(VM_NB);
+  vapic = efi_allocate_pages(1);
   vmxon = efi_allocate_pages(1);
   // Initialize VMCS region pool
   memset(&vmcs_region_pool[0], 0, VM_NB * 0x1000);

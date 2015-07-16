@@ -136,6 +136,14 @@ void vmm_vm_setup_and_launch(struct setup_state *state) {
   cpu_vmptrld((uint8_t *) (uint64_t)&(v->vmcs_region)[0]);
   INFO("Cloning configuration\n");
   vmcs_clone(v->vmcs);
+  INFO("Setting executive I/O bitmaps\n");
+  io_bitmap_clone_a_b(&io_bitmap_a_pool[v->index][0],
+      &io_bitmap_b_pool[v->index][0]);
+  VMW(ctrls.ex.io_bitmap_a, (uint64_t)&io_bitmap_a_pool[v->index][0]);
+  VMW(ctrls.ex.io_bitmap_b, (uint64_t)&io_bitmap_b_pool[v->index][0]);
+  INFO("Setting executive msr bitmap\n");
+  msr_bitmap_clone((uint8_t *)&msr_bitmap_pool[v->index]);
+  VMW(ctrls.ex.msr_bitmap, (uint64_t)&msr_bitmap_pool[v->index]);
   INFO("Committing the configuration\n");
   vmcs_commit();
   INFO("READY TO GO!\n");

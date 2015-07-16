@@ -5,7 +5,6 @@
 #define NB_VMCS_FIELDS 185
 
 extern uint8_t *vmxon;
-extern uint8_t vmcs0[4096];
 
 enum vmcs_field {                                 // ▼ require support of ▼
   /* 16-BIT FIELDS */
