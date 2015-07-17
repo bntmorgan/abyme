@@ -118,7 +118,7 @@ vmware-umount:
 	sudo vmware-mount -x
 
 vmware-prepare:
-	sudo vmware-modconfig --console --install-all
+	sudo /etc/init.d/vmware start
 	sudo chown root:vmnet /dev/vmnet*
 	sudo chmod g+rw /dev/vmnet*
 
