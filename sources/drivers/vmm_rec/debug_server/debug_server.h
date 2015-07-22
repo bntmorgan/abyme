@@ -47,7 +47,7 @@ enum DEBUG_SERVER_USER_DEFINED_TYPES {
 // Registers structures
 //
 
-typedef struct _core_regs {
+struct core_regs {
   // GPRs
   uint64_t rax;
   uint64_t rbx;
@@ -82,7 +82,11 @@ typedef struct _core_regs {
   uint64_t cr2;
   uint64_t cr3;
   uint64_t cr4;
-} __attribute__((packed)) core_regs;
+  // Flags
+  uint64_t rflags;
+  // MSRs 
+  uint64_t ia32_efer;
+} __attribute__((packed));
 
 //
 // Messages
@@ -97,6 +101,8 @@ typedef struct _message_vmexit {
   uint8_t type;
   uint8_t vmid;
   uint32_t exit_reason;
+  // Registers
+  struct core_regs regs;
 } __attribute__((packed)) message_vmexit;
 
 typedef struct _message_memory_read {
@@ -135,7 +141,7 @@ typedef struct _message_core_regs_data {
   uint8_t type;
   uint8_t vmid;
   // Registers
-  core_regs regs;
+  struct core_regs regs;
 } __attribute__((packed)) message_core_regs_data;
 
 typedef struct _message_vmcs_read {
@@ -204,5 +210,7 @@ extern protocol_82579LM *eth;
 void debug_server_log_cr3_add(struct registers *regs, uint64_t cr3);
 
 void debug_server_mtf(void);
+
+void debug_server_send_debug_all(void);
 
 #endif

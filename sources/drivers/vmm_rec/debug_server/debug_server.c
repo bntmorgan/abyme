@@ -70,6 +70,55 @@ void debug_server_log_cr3_add(struct registers *regs, uint64_t cr3) {
   log_cr3_index++;
 }
 
+void debug_server_get_segment_regs(struct core_regs *regs) {
+  VMR2(gs.cs_selector, regs->cs);
+  VMR2(gs.ds_selector, regs->ds);
+  VMR2(gs.ss_selector, regs->ss);
+  VMR2(gs.es_selector, regs->es);
+  VMR2(gs.fs_selector, regs->fs);
+  VMR2(gs.gs_selector, regs->gs);
+}
+
+void debug_server_get_control_regs(struct core_regs *regs) {
+  VMR2(gs.cr0, regs->cr0);
+  regs->cr1 = 0;
+  regs->cr2 = 0;
+  VMR2(gs.cr3, regs->cr3);
+  VMR2(gs.cr4, regs->cr4);
+}
+
+void debug_server_core_regs_read(struct core_regs *cr, struct registers *regs) {
+  // Copy segment regs
+  debug_server_get_segment_regs(cr);
+  // Copy control registers
+  debug_server_get_control_regs(cr);
+  // Copy GPRs rsp, rbp, rsi, rdi and rip
+  cr->rax = regs->rax;
+  cr->rbx = regs->rbx;
+  cr->rcx = regs->rcx;
+  cr->rdx = regs->rdx;
+  cr->r8 = regs->r8;
+  cr->r9 = regs->r9;
+  cr->r10 = regs->r10;
+  cr->r11 = regs->r11;
+  cr->r12 = regs->r12;
+  cr->r13 = regs->r13;
+  cr->r14 = regs->r14;
+  cr->r15 = regs->r15;
+  // Copy index registers
+  cr->rsi = regs->rsi;
+  cr->rdi = regs->rdi;
+  // Copy pointer registers
+  cr->rbp = regs->rbp;
+  cr->rsp = regs->rsp;
+  // Copy instruction pointer register
+  cr->rip = regs->rip;
+  // Flasgs
+  VMR2(gs.rflags, cr->rflags);
+  // MSRs 
+  VMR2(gs.ia32_efer, cr->ia32_efer);
+}
+
 void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
     struct registers *guest_regs) {
   if (send_debug[exit_reason]) {
@@ -78,6 +127,7 @@ void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
       vmid,
       exit_reason
     };
+    debug_server_core_regs_read(&ms.regs, guest_regs);
     debug_server_send(&ms, sizeof(ms));
     debug_server_run(guest_regs);
   }
@@ -167,53 +217,12 @@ void debug_server_handle_memory_write(message_memory_write *mr) {
   debug_server_send(&r, sizeof(r));
 }
 
-void debug_server_get_segment_regs(core_regs *regs) {
-  VMR2(gs.cs_selector, regs->cs);
-  VMR2(gs.ds_selector, regs->ds);
-  VMR2(gs.ss_selector, regs->ss);
-  VMR2(gs.es_selector, regs->es);
-  VMR2(gs.fs_selector, regs->fs);
-  VMR2(gs.gs_selector, regs->gs);
-}
-
-void debug_server_get_control_regs(core_regs *regs) {
-  VMR2(gs.cr0, regs->cr0);
-  regs->cr1 = 0;
-  regs->cr2 = 0;
-  VMR2(gs.cr3, regs->cr3);
-  VMR2(gs.cr4, regs->cr4);
-}
-
 void debug_server_handle_core_regs_read(message_core_regs_read *mr, struct registers *regs) {
   message_core_regs_data m = {
     MESSAGE_CORE_REGS_DATA,
     debug_server_get_core()
   };
-  // Copy segment regs
-  debug_server_get_segment_regs(&m.regs);
-  // Copy control registers
-  debug_server_get_control_regs(&m.regs);
-  // Copy GPRs rsp, rbp, rsi, rdi and rip
-  m.regs.rax = regs->rax;
-  m.regs.rbx = regs->rbx;
-  m.regs.rcx = regs->rcx;
-  m.regs.rdx = regs->rdx;
-  m.regs.r8 = regs->r8;
-  m.regs.r9 = regs->r9;
-  m.regs.r10 = regs->r10;
-  m.regs.r11 = regs->r11;
-  m.regs.r12 = regs->r12;
-  m.regs.r13 = regs->r13;
-  m.regs.r14 = regs->r14;
-  m.regs.r15 = regs->r15;
-  // Copy index registers
-  m.regs.rsi = regs->rsi;
-  m.regs.rdi = regs->rdi;
-  // Copy pointer registers
-  m.regs.rbp = regs->rbp;
-  m.regs.rsp = regs->rsp;
-  // Copy instruction pointer register
-  m.regs.rip = regs->rip;
+  debug_server_core_regs_read(&m.regs, regs);
   // Send to the client
   debug_server_send(&m, sizeof(m));
 }
@@ -307,6 +316,10 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr) {
     1
   };
   debug_server_send(&r, sizeof(r));
+}
+
+void debug_server_send_debug_all(void) {
+  memset(&send_debug[0], 1, NB_EXIT_REASONS);
 }
 
 void debug_server_handle_send_debug(message_send_debug *mr) {
@@ -406,10 +419,10 @@ void debug_server_mtf(void) {
   VMR(ctrls.ex.cpu_based_vm_exec_control);
   if (ismtf()) {
     VMW(ctrls.ex.cpu_based_vm_exec_control,
-        vmcs->ctrls.ex.cpu_based_vm_exec_control | MONITOR_TRAP_FLAG);
+        vmcs->ctrls.ex.cpu_based_vm_exec_control.raw | MONITOR_TRAP_FLAG);
   } else {
     VMW(ctrls.ex.cpu_based_vm_exec_control,
-        vmcs->ctrls.ex.cpu_based_vm_exec_control &
+        vmcs->ctrls.ex.cpu_based_vm_exec_control.raw &
         ~(uint32_t)MONITOR_TRAP_FLAG);
   }
 }
