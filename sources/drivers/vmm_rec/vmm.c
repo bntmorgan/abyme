@@ -46,7 +46,6 @@ void vm_set(struct vm *v) {
 
 void vm_set_root(struct vm *v) {
   rvm = v;
-  rvm->level = 1;
 }
 
 void vm_get(struct vm **v) {
@@ -54,9 +53,7 @@ void vm_get(struct vm **v) {
 }
 
 void vm_print(struct vm *v) {
-
-  INFO("VM : Index(0x%x), child(@0x%x), level(0x%x)\n",
-      v->index, v->child, v->level);
+  INFO("VM : Index(0x%x), child(@0x%x)\n", v->index, v->child);
 }
 
 uint8_t vmm_stack[VMM_STACK_SIZE];
@@ -225,8 +222,16 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     vmm_panic(rvm->state, 0, 0, &guest_regs);
   }
 
+  // Check VM Entry failure
+  if (vmcs->info.reason.vm_entry_failure) {
+    vmcs_update();
+    vmcs_dump(vmcs);
+    // TODO decode the exit reason which gives the reason of the failure
+    ERROR("VM entry failure\n");
+  }
+
 #ifdef _DEBUG_SERVER
-  debug_server_vmexit(level, exit_reason, &guest_regs);
+  debug_server_vmexit(vm->index, exit_reason, &guest_regs);
 #endif
 
   // Boot hook
@@ -606,7 +611,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     default: {
 #ifdef _DEBUG_SERVER
       if (debug_server) {
-        debug_server_vmexit(level, exit_reason, &guest_regs);
+        debug_server_vmexit(vm->index, exit_reason, &guest_regs);
       }
 #endif
     }

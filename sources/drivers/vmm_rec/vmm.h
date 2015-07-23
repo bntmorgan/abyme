@@ -113,8 +113,6 @@ struct vm {
   struct vm *child;
   // VMs owned by this VM
   struct vm *childs[VM_NB];
-  // VM level
-  uint8_t level;
 };
 
 void vmm_vm_exit_handler(void);

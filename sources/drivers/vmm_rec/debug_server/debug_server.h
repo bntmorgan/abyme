@@ -196,11 +196,6 @@ static inline void *message_check_type(message *m, uint8_t type) {
 
 void debug_server_run(struct registers *regs);
 
-static inline uint8_t debug_server_get_core() {
-  // XXX as dirty as possible
-  return 0;
-}
-
 extern protocol_82579LM *eth;
 
 // 8 * 0x20000 = 1Mo must be DEBUG_SERVER_CR3_PER_MESSAGE multiple

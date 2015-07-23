@@ -407,10 +407,6 @@ void nested_vmlaunch(struct registers *guest_regs) {
   vm_child_add(vm, nvm);
   // Set the VM as the current child
   vm->child = nvm;
-  // Set the child VM level
-  nvm->level = vm->level + 1;
-  // Set the current level
-  level = nvm->level;
   // Set the corresponding shadow_vmcs
   nvm->shadow_vmcs = rvm->shadow_ptr;
   // Set the new VM as the current VM
@@ -619,7 +615,6 @@ void nested_load_host(void) {
   VMW(ctrls.ex.virtual_processor_id, rvm->index + 1); // VPIDs starts at 0
 
   vm->state = NESTED_HOST_RUNNING;
-  level = rvm->level;
 
 #ifdef _DEBUG_SERVER
   // handle Monitor trap flag

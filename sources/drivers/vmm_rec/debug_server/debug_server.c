@@ -37,7 +37,7 @@ void debug_server_log_cr3_flush(struct registers *regs) {
   message_user_defined *m = (message_user_defined *)&b[0];
   uint8_t *data = b + sizeof(message_user_defined);
   m->type = MESSAGE_USER_DEFINED;
-  m->vmid = debug_server_get_core();
+  m->vmid = vm->index;
   m->user_type = USER_DEFINED_LOG_CR3;
   m->length = DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t);
   for (i = 0; i < DEBUG_SERVER_CR3_SIZE / DEBUG_SERVER_CR3_PER_MESSAGE; i++) {
@@ -192,7 +192,7 @@ void debug_server_handle_memory_read(message_memory_read *mr) {
   uint8_t b[length + sizeof(message_memory_data)];
   message_memory_data *r = (message_memory_data *)b;
   r->type = MESSAGE_MEMORY_DATA;
-  r->vmid = debug_server_get_core();
+  r->vmid = vm->index;
   r->address = mr->address;
   r->length = length;
   uint8_t *buf = (uint8_t *)&b[0] + sizeof(message_memory_data);
@@ -211,7 +211,7 @@ void debug_server_handle_memory_write(message_memory_write *mr) {
 
   message_commit r = {
     MESSAGE_COMMIT,
-    debug_server_get_core(),
+    vm->index,
     ok
   };
   debug_server_send(&r, sizeof(r));
@@ -220,7 +220,7 @@ void debug_server_handle_memory_write(message_memory_write *mr) {
 void debug_server_handle_core_regs_read(message_core_regs_read *mr, struct registers *regs) {
   message_core_regs_data m = {
     MESSAGE_CORE_REGS_DATA,
-    debug_server_get_core()
+    vm->index
   };
   debug_server_core_regs_read(&m.regs, regs);
   // Send to the client
@@ -236,7 +236,7 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   uint8_t *buf = &b[0];
   uint64_t v = 0;
   message_vmcs_data *m = (message_vmcs_data *)&buf[0];
-  m->vmid = debug_server_get_core();
+  m->vmid = vm->index;
   m->type = MESSAGE_VMCS_DATA;
   buf = (uint8_t *)buf + sizeof(message_vmcs_data);
   // Size
@@ -312,7 +312,7 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr) {
   }
   message_commit r = {
     MESSAGE_COMMIT,
-    debug_server_get_core(),
+    vm->index,
     1
   };
   debug_server_send(&r, sizeof(r));
@@ -329,7 +329,7 @@ void debug_server_handle_send_debug(message_send_debug *mr) {
   }
   message_commit r = {
     MESSAGE_COMMIT,
-    debug_server_get_core(),
+    vm->index,
     1
   };
   debug_server_send(&r, sizeof(r));
@@ -391,7 +391,7 @@ void debug_server_putc(uint8_t value) {
 
   if (value == '\n' || current_size == MAX_INFO_SIZE) {
     m->type = MESSAGE_INFO;
-    m->vmid = debug_server_get_core();
+    m->vmid = vm->index;
     m->length = current_size;
     m->level = debug_server_level;
     eth->send(b, current_size + sizeof(message_info), EFI_82579LM_API_BLOCK);
