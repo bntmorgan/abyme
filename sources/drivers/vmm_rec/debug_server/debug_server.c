@@ -82,7 +82,7 @@ void debug_server_get_segment_regs(struct core_regs *regs) {
 void debug_server_get_control_regs(struct core_regs *regs) {
   VMR2(gs.cr0, regs->cr0);
   regs->cr1 = 0;
-  regs->cr2 = 0;
+  regs->cr2 = cpu_read_cr2();
   VMR2(gs.cr3, regs->cr3);
   VMR2(gs.cr4, regs->cr4);
 }
@@ -235,15 +235,36 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   uint8_t b[eth->mtu];
   uint8_t *buf = &b[0];
   uint64_t v = 0;
+  uint8_t *current_vmcs = cpu_vmptrst();
+  uint8_t *read_vmcs;
   message_vmcs_data *m = (message_vmcs_data *)&buf[0];
-  m->vmid = vm->index;
   m->type = MESSAGE_VMCS_DATA;
+  if (mr->vmid < VM_NB) {
+    // TODO XXX
+    if (mr->shadow) {
+      if (vm_pool[mr->vmid].shadow_vmcs == 0) {
+        read_vmcs = &vm_pool[mr->vmid].vmcs_region[0];
+        mr->shadow = 0;
+      } else {
+        read_vmcs = vm_pool[mr->vmid].shadow_vmcs;
+      }
+    } else {
+      read_vmcs = &vm_pool[mr->vmid].vmcs_region[0];
+    }
+    m->vmid = mr->vmid;
+  } else {
+    read_vmcs = vm->vmcs_region;
+    m->vmid = vm->index;
+  }
+  m->shadow = mr->shadow;
   buf = (uint8_t *)buf + sizeof(message_vmcs_data);
   // Size
   s = data[0];
   data++;
   // Global size
   size += sizeof(s) + sizeof(uint64_t) + s;
+  // load the requested vmcs
+  cpu_vmptrld(read_vmcs);
   while (s && size < eth->mtu) {
     // Encoding
     e = *((uint64_t *)data);
@@ -264,6 +285,8 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
     // Global size
     size += sizeof(s) + sizeof(uint64_t) + s;
   }
+  // reload the current vmcs
+  cpu_vmptrld(current_vmcs);
   // Ends the message
   buf[0] = 0;
   // Send the message
@@ -277,6 +300,21 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr) {
   data += 1;
   uint64_t e = 0;
   uint64_t v = 0;
+  uint8_t *current_vmcs = cpu_vmptrst();
+  uint8_t *write_vmcs;
+  message_commit r = {
+    MESSAGE_COMMIT,
+    vm->index,
+    1
+  };
+  if (mr->vmid < VM_NB) {
+    write_vmcs = &vm_pool[mr->vmid].vmcs_region[0];
+    r.vmid = mr->vmid;
+  } else {
+    write_vmcs = vm->vmcs_region;
+    r.vmid = vm->index;
+  }
+  cpu_vmptrld(write_vmcs);
   while (s) {
     // Encoding
     e = *((uint64_t *)data);
@@ -310,12 +348,16 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr) {
     s = *((uint8_t *)data);
     data += 1;
   }
-  message_commit r = {
-    MESSAGE_COMMIT,
-    vm->index,
-    1
-  };
+  cpu_vmptrld(current_vmcs);
   debug_server_send(&r, sizeof(r));
+}
+
+void debug_server_send_debug_unset(uint8_t reason) {
+  send_debug[reason] = 0;
+}
+
+void debug_server_send_debug_set(uint8_t reason) {
+  send_debug[reason] = 1;
 }
 
 void debug_server_send_debug_all(void) {

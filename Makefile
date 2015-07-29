@@ -122,6 +122,9 @@ vmware-prepare:
 	sudo chown root:vmnet /dev/vmnet*
 	sudo chmod g+rw /dev/vmnet*
 
+vmware-compile:
+	sudo vmware-modconfig --console --install-all
+
 qemu: launch
 
 pre-launch:

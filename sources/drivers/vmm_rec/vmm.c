@@ -63,13 +63,6 @@ struct setup_state *setup_state;
 static uint64_t io_count = 0;
 static uint64_t cr3_count = 0;
 
-enum CPU_MODE {
-  MODE_REAL,
-  MODE_PROTECTED,
-  MODE_LONG,
-  MODE_VIRTUAL_8086
-};
-
 enum VMM_PANIC {
   VMM_PANIC_RDMSR,
   VMM_PANIC_WRMSR,
@@ -79,7 +72,39 @@ enum VMM_PANIC {
   VMM_PANIC_XSETBV
 };
 
-static inline int get_cpu_mode(void);
+int get_paging_mode(void) {
+  if (!vmcs->gs.cr0.pg) {
+    return PAGING_DISABLED;
+  } else if (!vmcs->gs.cr4.pae && !vmcs->gs.ia32_efer.lma) {
+    return PAGING_P32BIT;
+  } else if (!vmcs->gs.ia32_efer.lma) {
+    return PAGING_PAE;
+  } else if (vmcs->gs.ia32_efer.lma) {
+    return PAGING_IA32E;
+  } else {
+    ERROR("Error getting paging mode\n");
+  }
+  return 0;
+}
+
+int get_cpu_mode(void) {
+  VMR(gs.cr0);
+  uint64_t cr0 = vmcs->gs.cr0.raw;
+  VMR(gs.ia32_efer);
+  uint64_t ia32_efer = vmcs->gs.ia32_efer.raw;
+  VMR(gs.rflags);
+  union rflags rf = {.raw = vmcs->gs.rflags.raw};
+  if (rf.vm == 1) {
+    return MODE_VIRTUAL_8086;
+  } else if (!(cr0 & (1 << 0))) {
+    return MODE_REAL;
+  } else if (!(ia32_efer & (1 << 10))) {
+    return MODE_PROTECTED;
+  } else {
+    return MODE_LONG;
+  }
+}
+
 static inline void* get_instr_param_ptr(struct registers *guest_regs);
 static void vmm_panic(uint8_t core, uint64_t code, uint64_t extra, struct
     registers *guest_regs);
@@ -209,9 +234,9 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   VMR2(gs.rip, guest_regs.rip);
 
   VMR(info.reason);
-  uint32_t exit_reason = vmcs->info.reason;
+  uint32_t exit_reason = vmcs->info.reason.raw;
   VMR(info.qualification);
-  uint64_t exit_qualification = vmcs->info.qualification;
+  uint64_t exit_qualification = vmcs->info.qualification.raw;
   uint8_t cpu_mode = get_cpu_mode();
   uint8_t** instr_param_ptr;
 
@@ -252,22 +277,23 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     vmcs_set_vmx_preemption_timer_value(vmcs,
         VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
     return;
-  } else if (exit_reason == EXIT_REASON_EXTERNAL_INTERRUPT) {
-    INFO("External interrupt from 0x%x!\n", level);
-    VMR(info.intr_info);
-    union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info};
-    VMR(info.intr_error_code);
-    uint32_t error_code = vmcs->info.intr_error_code;
-    nested_interrupt_set(iif.vector, iif.type, error_code);
-    return;
-  } else if (exit_reason == EXIT_REASON_EXCEPTION_OR_NMI) {
-    INFO("NMI interrupt from 0x%x!\n", level);
-    VMR(info.intr_info);
-    union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info};
-    VMR(info.intr_error_code);
-    uint32_t error_code = vmcs->info.intr_error_code;
-    nested_interrupt_set(iif.vector, iif.type, error_code);
-    return;
+// XXX Optimisation rappel de la NIM et EXternal interrupt
+//  } else if (exit_reason == EXIT_REASON_EXTERNAL_INTERRUPT) {
+//    INFO("External interrupt from 0x%x!\n", vm->index);
+//    VMR(info.intr_info);
+//    union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info.raw};
+//    VMR(info.intr_error_code);
+//    uint32_t error_code = vmcs->info.intr_error_code.raw;
+//    nested_interrupt_set(iif.vector, iif.type, error_code);
+//    return;
+//  } else if (exit_reason == EXIT_REASON_EXCEPTION_OR_NMI) {
+//    INFO("NMI interrupt from 0x%x!\n", vm->index);
+//    VMR(info.intr_info);
+//    union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info.raw};
+//    VMR(info.intr_error_code);
+//    uint32_t error_code = vmcs->info.intr_error_code.raw;
+//    nested_interrupt_set(iif.vector, iif.type, error_code);
+//    return;
   } else if (exit_reason == EXIT_REASON_MONITOR_TRAP_FLAG) {
     return;
   }
@@ -275,9 +301,9 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   // EPT violation hadling
   if (exit_reason == EXIT_REASON_EPT_VIOLATION) {
     VMR(info.guest_physical_address);
-    uint64_t guest_physical_addr = vmcs->info.guest_physical_address;
+    uint64_t guest_physical_addr = vmcs->info.guest_physical_address.raw;
     VMR(ctrls.ex.ept_pointer);
-    uint64_t eptp = vmcs->ctrls.ex.ept_pointer;
+    uint64_t eptp = vmcs->ctrls.ex.ept_pointer.raw;
     uint64_t *e;
     uint64_t a;
     uint8_t s;
@@ -289,6 +315,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     }
     INFO("EPT VIOLATION from 0x%x: Guest physical 0x%016X\n",
         ept_get_ctx(), guest_physical_addr);
+    // Own memory space check
     if (guest_physical_addr >= setup_state->protected_begin &&
         guest_physical_addr < setup_state->protected_end) {
       INFO("EPT VIOLATION FOR ME!\n");
@@ -355,7 +382,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_INVVPID: {
       uint8_t* desc = get_instr_param_ptr(&guest_regs);
       VMR(info.vmx_instruction_info);
-      uint64_t type = ((uint64_t*)&guest_regs)[(vmcs->info.vmx_instruction_info >> 28) & 0xF];
+      uint64_t type = ((uint64_t*)&guest_regs)
+        [(vmcs->info.vmx_instruction_info.raw >> 28) & 0xF];
       // We need to increment the VPID
       ((uint16_t*)desc)[0]++;
       __asm__ __volatile__("invvpid %0, %1" : : "m"(*desc), "r"(type) );
@@ -364,12 +392,14 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_VMREAD:
     case EXIT_REASON_VMWRITE: {
       VMR(info.vmx_instruction_info);
-      uint8_t operand_in_register = (vmcs->info.vmx_instruction_info >> 10) & 0x1;
-      uint64_t field = ((uint64_t*)&guest_regs)[(vmcs->info.vmx_instruction_info >> 28) & 0xF];
+      uint8_t operand_in_register = (vmcs->info.vmx_instruction_info.raw >> 10) & 0x1;
+      uint64_t field = ((uint64_t*)&guest_regs)
+        [(vmcs->info.vmx_instruction_info.raw >> 28) & 0xF];
       uint64_t* value_ptr = NULL;
 
       if (operand_in_register) {
-        value_ptr = &((uint64_t*)&guest_regs)[(vmcs->info.vmx_instruction_info >> 3) & 0xF];
+        value_ptr = &((uint64_t*)&guest_regs)
+          [(vmcs->info.vmx_instruction_info.raw >> 3) & 0xF];
       } else {
         value_ptr = get_instr_param_ptr(&guest_regs);
       }
@@ -397,9 +427,9 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       io_count++;
       // Checking the privileges
       VMR(gs.cs_ar_bytes);
-      uint8_t cpl = (vmcs->gs.cs_ar_bytes >> 5) & 3;
+      uint8_t cpl = (vmcs->gs.cs_ar_bytes.raw >> 5) & 3;
       VMR(gs.rflags);
-      uint8_t iopl = (vmcs->gs.rflags >> 12) & 3;
+      uint8_t iopl = (vmcs->gs.rflags.raw >> 12) & 3;
       if (cpu_mode == MODE_REAL || cpl <= iopl) {
         // REP prefixed || String I/O
         if ((exit_qualification & 0x20) || (exit_qualification & 0x10)) {
@@ -514,8 +544,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
           guest_regs.rax = 0;
         }
         VMR(gs.ia32_efer);
-        guest_regs.rax = (guest_regs.rax & (0xffffffff00000000)) | (vmcs->gs.ia32_efer & 0xffffffff);
-        guest_regs.rdx = (guest_regs.rdx & (0xffffffff00000000)) | ((vmcs->gs.ia32_efer >> 32) & 0xffffffff);
+        guest_regs.rax = (guest_regs.rax & (0xffffffff00000000)) | (vmcs->gs.ia32_efer.raw & 0xffffffff);
+        guest_regs.rdx = (guest_regs.rdx & (0xffffffff00000000)) | ((vmcs->gs.ia32_efer.raw >> 32) & 0xffffffff);
       } else if (guest_regs.rcx > 0xc0001fff || (guest_regs.rcx > 0x1fff && guest_regs.rcx < 0xc0000000)) {
         // Tells the vm that the msr doesn't exist
         uint32_t it_info_field =    (0x1 << 11)     // push error code
@@ -588,7 +618,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         VMW(gs.cr3, value);
         // We need to invalidate TLBs, see doc INTEL vol 3C chap 28.3.3.3
         VMR(ctrls.ex.virtual_processor_id);
-        uint8_t invvpid_desc[16] = {vmcs->ctrls.ex.virtual_processor_id};
+        uint8_t invvpid_desc[16] = {vmcs->ctrls.ex.virtual_processor_id.raw};
         __asm__ __volatile__("invvpid %1, %0" : : "r"((uint64_t)3), "m"(*invvpid_desc));
       } else {
         vmm_panic(rvm->state, VMM_PANIC_CR_ACCESS, 0, &guest_regs);
@@ -628,27 +658,27 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 /**
  * Called right after vmm_handle_vm_exit()
  */
+void vmm_adjust_paging(void) {
+  // Paging adjustments
+  // XXX if guest is in PAE paging mode we need to copy the 4 ptpte in the VMCS
+  int paging_mode = get_paging_mode();
+  if (paging_mode == PAGING_PAE) {
+    uint64_t *cr3;
+    cr3 = (uint64_t *)(uint64_t)(vmcs->gs.cr3.page_directory_base << 12);
+    // TODO XXX check the cr3 we cannot trust this address
+    VMW(gs.pdpte0, cr3[0]);
+    VMW(gs.pdpte1, cr3[1]);
+    VMW(gs.pdpte2, cr3[2]);
+    VMW(gs.pdpte3, cr3[3]);
+  }
+}
+
+/**
+ * Called right after vmm_handle_vm_exit()
+ */
 void vmm_vmcs_flush(void) {
   // Flush the current vmcs
   vmcs_commit();
-}
-
-static inline int get_cpu_mode(void) {
-  VMR(gs.cr0);
-  uint64_t cr0 = vmcs->gs.cr0;
-  VMR(gs.ia32_efer);
-  uint64_t ia32_efer = vmcs->gs.ia32_efer;
-  VMR(gs.rflags);
-  union rflags rf = {.raw = vmcs->gs.rflags};
-  if (rf.vm == 1) {
-    return MODE_VIRTUAL_8086;
-  } else if (!(cr0 & (1 << 0))) {
-    return MODE_REAL;
-  } else if (!(ia32_efer & (1 << 10))) {
-    return MODE_PROTECTED;
-  } else {
-    return MODE_LONG;
-  }
 }
 
 static inline uint8_t is_MTRR(uint64_t msr_addr) {
@@ -674,14 +704,14 @@ static inline void* get_instr_param_ptr(struct registers *guest_regs) {
   uint64_t addr_ptr = 0;
   uint8_t i;
   VMR(info.vmx_instruction_info);
-  uint32_t vmx_instr_info = vmcs->info.vmx_instruction_info;
+  uint32_t vmx_instr_info = vmcs->info.vmx_instruction_info.raw;
   uint8_t scaling = vmx_instr_info & 0x03;
   uint8_t index_reg_disabled = (vmx_instr_info >> 22) & 0x01;
   uint8_t base_reg_disabled = (vmx_instr_info >> 27) & 0x01;
   uint8_t index_reg = (vmx_instr_info >> 18) & 0x0F;
   uint8_t base_reg = (vmx_instr_info >> 23) & 0x0F;
   VMR(info.qualification);
-  int64_t instruction_displacement_field = vmcs->info.qualification;
+  int64_t instruction_displacement_field = vmcs->info.qualification.raw;
 
   if (!index_reg_disabled) {
     addr_ptr = ((uint64_t*)guest_regs)[index_reg];
@@ -699,7 +729,7 @@ static inline void* get_instr_param_ptr(struct registers *guest_regs) {
   uint64_t a;
   uint8_t s;
   VMR(gs.cr3);
-  if (paging_walk(vmcs->gs.cr3, addr_ptr, &e, &a, &s)) {
+  if (paging_walk(vmcs->gs.cr3.raw, addr_ptr, &e, &a, &s)) {
     ERROR("Page walk error\n");
   }
 
@@ -708,7 +738,7 @@ static inline void* get_instr_param_ptr(struct registers *guest_regs) {
 
 static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs) {
   VMR(info.instruction_len);
-  uint32_t exit_instruction_length = vmcs->info.instruction_len;
+  uint32_t exit_instruction_length = vmcs->info.instruction_len.raw;
   // LEVEL(2, "MODE %d, ILength %d\n", cpu_mode, exit_instruction_length);
 
   switch (cpu_mode) {
@@ -741,7 +771,7 @@ static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs)
 void vmm_adjust_vm_entry_controls(void) {
   uint8_t cpu_mode = get_cpu_mode();
   VMR(ctrls.entry.controls);
-  uint64_t vm_entry_controls = vmcs->ctrls.entry.controls;
+  uint64_t vm_entry_controls = vmcs->ctrls.entry.controls.raw;
   if (cpu_mode == MODE_LONG) {
     // Guest is in IA32e mode
     // INFO("Setting IA32E_MODE_GUEST\n");
@@ -749,8 +779,6 @@ void vmm_adjust_vm_entry_controls(void) {
         (uint64_t)IA32E_MODE_GUEST);
   } else {
     // Guest is not in IA32e mode
-    INFO("Removing IA32E_MODE_GUEST : controls befor adjustments 0x%016X\n",
-        vm_entry_controls);
     VMW(ctrls.entry.controls, vm_entry_controls & ~(uint64_t)IA32E_MODE_GUEST);
   }
 }

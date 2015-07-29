@@ -110,11 +110,81 @@ uint8_t cpu_vmread_safe(unsigned long field, unsigned long *value)
   return okay;
 }
 
+// From linux
+#define ASM_VMX_INVVPID     ".byte 0x66, 0x0f, 0x38, 0x81, 0x08"
+void cpu_invvpid(int type, uint16_t vpid, uint64_t gva) {
+  struct {
+    uint64_t vpid : 16;
+    uint64_t rsvd : 48;
+    uint64_t gva;
+  } operand = { vpid, 0, gva };
+
+  asm volatile (ASM_VMX_INVVPID
+      /* CF==1 or ZF==1 --> rc = -1 */
+      "; ja 1f ; ud2 ; 1:"
+      : : "a"(&operand), "c"(type) : "cc", "memory");
+}
+
 __attribute__((sysv_abi)) void vmx_transition_display_error(uint8_t VMfailInvalid, uint8_t VMfailValid) {
   if (VMfailInvalid) {
     panic("#!VMX Transition VMfailInvalid\n");
   } else if(VMfailValid) {
-    panic("#!VMX Transition VMfailValid, errcode=%d\n", cpu_vmread(VM_INSTRUCTION_ERROR));
+    uint8_t e = cpu_vmread(VM_INSTRUCTION_ERROR);
+    printk("#!VMX Transition VMfailValid, errcode=%d\n", e);
+    switch (e) {
+      case 1:
+        panic("VMCALL executed in VMX root operation\n");
+      case 2:
+        panic("VMCLEAR with invalid physical address\n");
+      case 3:
+        panic("VMCLEAR with VMXON pointer\n");
+      case 4:
+        panic("VMLAUNCH with non-clear VMCS\n");
+      case 5:
+        panic("VMRESUME with non-launched VMCS\n");
+      case 6:
+        panic("VMRESUME after VMXOFF (VMXOFF and VMXON between VMLAUNCH and VMRESUME)\n");
+      case 7:
+        panic("VM entry with invalid control field(s)\n");
+      case 8:
+        panic("VM entry with invalid host-state field(s)\n");
+      case 9:
+        panic("VMPTRLD with invalid physical address\n");
+      case 10:
+        panic("VMPTRLD with VMXON pointer\n");
+      case 11:
+        panic("VMPTRLD with incorrect VMCS revision identifier\n");
+      case 12:
+        panic("VMREAD/VMWRITE from/to unsupported VMCS component\n");
+      case 13:
+        panic("VMWRITE to read-only VMCS component\n");
+      case 15:
+        panic("VMXON executed in VMX root operation\n");
+      case 16:
+        panic("VM entry with invalid executive-VMCS pointer\n");
+      case 17:
+        panic("VM entry with non-launched executive VMCS\n");
+      case 18:
+        panic("VM entry with executive-VMCS pointer not VMXON pointer (when attempting to deactivate the dual-monitor treatment of SMIs and SMM)\n");
+      case 19:
+        panic("VMCALL with non-clear VMCS (when attempting to activate the dual-monitor treatment of SMIs and SMM)\n");
+      case 20:
+        panic("VMCALL with invalid VM-exit control fields\n");
+      case 22:
+        panic("VMCALL with incorrect MSEG revision identifier (when attempting to activate the dual-monitor treatment of SMIs and SMM)\n");
+      case 23:
+        panic("VMXOFF under dual-monitor treatment of SMIs and SMM\n");
+      case 24:
+        panic("VMCALL with invalid SMM-monitor features (when attempting to activate the dual-monitor treatment of SMIs and SMM)\n");
+      case 25:
+        panic("VM entry with invalid VM-execution control fields in executive VMCS (when attempting to return from SMM)\n");
+      case 26:
+        panic("VM entry with events blocked by MOV SS\n");
+      case 28:
+        panic("Invalid operand to INVEPT/INVVPID.\n");
+      default:
+        panic("Bad error code\n");
+    }
   } else {
     panic("#!VMX Transition unkown error\n");
   }

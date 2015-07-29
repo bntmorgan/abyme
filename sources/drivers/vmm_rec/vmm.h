@@ -13,6 +13,20 @@
 
 extern uint8_t vmm_stack[VMM_STACK_SIZE];
 
+enum PAGING_MODE {
+  PAGING_DISABLED,
+  PAGING_P32BIT,
+  PAGING_PAE,
+  PAGING_IA32E
+};
+
+enum CPU_MODE {
+  MODE_REAL,
+  MODE_PROTECTED,
+  MODE_LONG,
+  MODE_VIRTUAL_8086
+};
+
 enum vm_exit_reason {
   EXIT_REASON_EXCEPTION_OR_NMI             = 0,
   EXIT_REASON_EXTERNAL_INTERRUPT           = 1,
@@ -129,7 +143,11 @@ void vm_child_del(struct vm *pv, struct vm *cv);
 void vm_child_shadow_set(struct vm *v);
 void vm_child_shadow_get(struct vm *pv, struct vm **cv);
 
+int get_paging_mode(void);
+int get_cpu_mode(void);
+
 extern struct vm *vm;
 extern struct vm *rvm;
+extern struct vm *vm_pool;
 
 #endif

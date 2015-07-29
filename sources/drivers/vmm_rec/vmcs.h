@@ -1,10 +1,11 @@
 #ifndef __VMM_VMCS_H__
 #define __VMM_VMCS_H__
 
+#include "cpu.h"
+#include "msr.h"
+
 #define VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC 5*1000000
 #define NB_VMCS_FIELDS 185
-
-extern uint8_t *vmxon;
 
 enum vmcs_field {                                 // ▼ require support of ▼
   /* 16-BIT FIELDS */
@@ -299,6 +300,10 @@ enum vm_entry_interrupt_type {
   VM_ENTRY_INT_TYPE_OTHER                = 7
 };
 
+/**
+ * VMCS Fields
+ */
+
 union vm_entry_interrupt_info {
   struct {
     uint32_t vector:8;
@@ -322,6 +327,142 @@ union vm_exit_interrupt_info {
   uint32_t raw;
 };
 
+union exit_reason {
+  struct {
+    uint32_t basic_exit_reason:16;
+    uint32_t r0:12;
+    uint32_t pending_mtf_vmxexit:1;
+    uint32_t vmexit_from_vmxroot_operation:1;
+    uint32_t r1:1;
+    uint32_t vm_entry_failure:1;
+  };
+  uint32_t raw;
+};
+
+union exit_controls {
+  struct {
+    uint32_t r0:2;
+    uint32_t save_debug_controls:1;
+    uint32_t r1:6;
+    uint32_t host_address_space_size:1;
+    uint32_t r2:2;
+    uint32_t load_ia32_perf_global_ctrl:1;
+    uint32_t r3:2;
+    uint32_t acknoledge_interrupt_on_exit:1;
+    uint32_t r4:2;
+    uint32_t save_ia32_pat:1;
+    uint32_t load_ia32_pat:1;
+    uint32_t save_ia32_efer:1;
+    uint32_t load_ia32_efer:1;
+    uint32_t save_vmx_preemption_timer_value:1;
+    uint32_t r5:9;
+  };
+  uint32_t raw;
+};
+
+union entry_controls {
+  struct {
+    uint32_t r0:2;
+    uint32_t load_debug_controls:1;
+    uint32_t r1:6;
+    uint32_t ia32_mode_guest:1;
+    uint32_t entry_to_smm:1;
+    uint32_t deactivate_dual_monitor_treatment:1;
+    uint32_t r2:1;
+    uint32_t load_ia32_perf_global_ctrl:1;
+    uint32_t load_ia32_pat:1;
+    uint32_t load_ia32_efer:1;
+    uint32_t r3:16;
+  };
+  uint32_t raw;
+};
+
+union pin_based {
+  struct {
+    uint32_t external_interrupt_exiting:1;
+    uint32_t r0:2;
+    uint32_t nmi_exiting:1;
+    uint32_t r1:1;
+    uint32_t virtual_nmi:1;
+    uint32_t activate_vmx_preemption_timer:1;
+    uint32_t process_posted_interrupts:1;
+    uint32_t r2:24;
+  };
+  uint32_t raw;
+};
+
+union proc_based {
+  struct {
+    uint32_t r0:2;
+    uint32_t interrupt_window_exiting:1;
+    uint32_t use_tsc_offsetting:1;
+    uint32_t r1:3;
+    uint32_t hlt_exiting:1;
+    uint32_t r2:1;
+    uint32_t invlpg_exiting:1;
+    uint32_t mwait_exiting:1;
+    uint32_t rdpmc_exiting:1;
+    uint32_t rdtsc_exiting:1;
+    uint32_t r3:2;
+    uint32_t cr3_load_exiting:1;
+    uint32_t cr3_store_exiting:1;
+    uint32_t r4:2;
+    uint32_t cr8_load_exiting:1;
+    uint32_t cr8_store_exiting:1;
+    uint32_t use_tpr_shadow:1;
+    uint32_t nmi_window_exiting:1;
+    uint32_t mov_dr_exiting:1;
+    uint32_t unconditional_io_exiting:1;
+    uint32_t use_io_bitmaps:1;
+    uint32_t r5:1;
+    uint32_t monitor_trap_flag:1;
+    uint32_t use_msr_bitmaps:1;
+    uint32_t monitor_exiting:1;
+    uint32_t pause_exiting:1;
+    uint32_t activate_secondary_controls:1;
+  };
+  uint32_t raw;
+};
+
+union proc_based_2 {
+  struct {
+    uint32_t virtualize_apic_access:1;
+    uint32_t enable_ept:1;
+    uint32_t descriptor_table_exiting:1;
+    uint32_t enable_rdtscp:1;
+    uint32_t virtualize_x2apic_mode:1;
+    uint32_t enable_vpid:1;
+    uint32_t wbinvd_exiting:1;
+    uint32_t unrestricted_guest:1;
+    uint32_t apic_register_virtualization:1;
+    uint32_t virtual_interrupt_delivery:1;
+    uint32_t pause_loop_exiting:1;
+    uint32_t rdrand_exiting:1;
+    uint32_t enable_invpcid:1;
+    uint32_t enable_vm_functions:1;
+    uint32_t vmcs_shadowing:1;
+    uint32_t rdseed_exiting:1;
+    uint32_t r0:1;
+    uint32_t ept_violation_ve:1;
+    uint32_t r1:1;
+    uint32_t enable_xsaves_xrstors:1;
+    uint32_t r2:12;
+  };
+  uint32_t raw;
+};
+
+struct field_16 {
+  uint16_t raw;
+};
+
+struct field_32 {
+  uint32_t raw;
+};
+
+struct field_64 {
+  uint64_t raw;
+};
+
 /**
  * VMCS
  *
@@ -330,38 +471,43 @@ union vm_exit_interrupt_info {
 
 #define VMC(__name__, __dst__, __src__) \
   (__dst__)->__name__##_enc.d = 1; \
-  (__dst__)->__name__ = (__src__)->__name__;
+  (__dst__)->__name__.raw = (__src__)->__name__.raw;
 #define VMC2(__name_dst__, __name_src__, __dst__, __src__) \
   (__dst__)->__name_dst__##_enc.d = 1; \
-  (__dst__)->__name_dst__ = (__src__)->__name_src__;
+  (__dst__)->__name_dst__.raw = (__src__)->__name_src__.raw;
 #define VMW(__name__, __val__) \
   vmcs->__name__##_enc.d = 1; \
-  vmcs->__name__ = (__val__);
-#define VMCSF(__type__, __name__) __type__ __name__; \
+  vmcs->__name__.raw = (__val__);
+#define VMW3(__vmcs__, __name__, __val__) \
+  (__vmcs__)->__name__##_enc.d = 1; \
+  (__vmcs__)->__name__.raw = (__val__);
+#define VMCSF(__type__, __name__) \
+  __type__ __name__; \
   union vmcs_field_encoding __name__##_enc
 #define VMCSE(__vmcs__, __name__, __encoding__) \
   (__vmcs__)->__name__##_enc.raw = __encoding__;
 #define VMR(__name__) \
   if (!vmcs->__name__##_enc.r && !vmcs->__name__##_enc.d) { \
-    vmcs->__name__ = cpu_vmread(vmcs->__name__##_enc.raw); \
+    vmcs->__name__.raw = cpu_vmread(vmcs->__name__##_enc.raw); \
     vmcs->__name__##_enc.r = 1; \
   }
 #define VMRF(__name__) \
-  vmcs->__name__ = cpu_vmread(vmcs->__name__##_enc.raw); \
+  vmcs->__name__.raw = cpu_vmread(vmcs->__name__##_enc.raw); \
   vmcs->__name__##_enc.r = 1;
 #define VMR2(__name__, __to__) \
   VMR(__name__) \
-  (__to__) = vmcs->__name__;
+  (__to__) = vmcs->__name__.raw;
 #define VMF(__name__) \
   vmcs->__name__##_enc.r = 0; \
   if (vmcs->__name__##_enc.d) { \
     vmcs->__name__##_enc.d = 0; \
-    cpu_vmwrite(vmcs->__name__##_enc.raw, vmcs->__name__); \
+    cpu_vmwrite(vmcs->__name__##_enc.raw, vmcs->__name__.raw); \
   }
 #define VMP(__vmcs__, __name__) \
-  printk("  "#__name__" : 0x%016X\n", (__vmcs__)->__name__);
+  printk("  "#__name__"[%x, %x]: 0x%016X\n", (__vmcs__)->__name__##_enc.d, \
+      (__vmcs__)->__name__##_enc.r, (__vmcs__)->__name__.raw);
 #define VMPF(__vmcs__, __name__) \
-  printk("  "#__name__" : 0x%016X\n", (__vmcs__)->__name__); \
+  printk("  "#__name__" : 0x%016X\n", (__vmcs__)->__name__.raw); \
   printk("  - d(0x%x)\n  - r(0x%x)\n  - enc(0x%08x)\n", \
       (__vmcs__)->__name__##_enc.d, (__vmcs__)->__name__##_enc.r, \
       (__vmcs__)->__name__##_enc.raw);
@@ -385,189 +531,189 @@ union vmcs_field_encoding {
 
 struct vmcs_guest_state {
   // 16-bit fields
-  VMCSF(uint16_t, es_selector);
-  VMCSF(uint16_t, cs_selector);
-  VMCSF(uint16_t, ss_selector);
-  VMCSF(uint16_t, ds_selector);
-  VMCSF(uint16_t, fs_selector);
-  VMCSF(uint16_t, gs_selector);
-  VMCSF(uint16_t, ldtr_selector);
-  VMCSF(uint16_t, tr_selector);
-  VMCSF(uint16_t, interrupt_status);
+  VMCSF(struct field_16, es_selector);
+  VMCSF(struct field_16, cs_selector);
+  VMCSF(struct field_16, ss_selector);
+  VMCSF(struct field_16, ds_selector);
+  VMCSF(struct field_16, fs_selector);
+  VMCSF(struct field_16, gs_selector);
+  VMCSF(struct field_16, ldtr_selector);
+  VMCSF(struct field_16, tr_selector);
+  VMCSF(struct field_16, interrupt_status);
   // 64-bit fields
-  VMCSF(uint64_t, vmcs_link_pointer);
-  VMCSF(uint64_t, ia32_debugctl);
-  VMCSF(uint64_t, ia32_pat);
-  VMCSF(uint64_t, ia32_efer);
-  VMCSF(uint64_t, ia32_perf_global_ctrl);
-  VMCSF(uint64_t, pdptr0);
-  VMCSF(uint64_t, pdptr1);
-  VMCSF(uint64_t, pdptr2);
-  VMCSF(uint64_t, pdptr3);
+  VMCSF(struct field_64, vmcs_link_pointer);
+  VMCSF(struct field_64, ia32_debugctl);
+  VMCSF(struct field_64, ia32_pat);
+  VMCSF(union msr_ia32_efer, ia32_efer);
+  VMCSF(struct field_64, ia32_perf_global_ctrl);
+  VMCSF(struct field_64, pdpte0);
+  VMCSF(struct field_64, pdpte1);
+  VMCSF(struct field_64, pdpte2);
+  VMCSF(struct field_64, pdpte3);
   // 32-bit fields
-  VMCSF(uint32_t, es_limit);
-  VMCSF(uint32_t, cs_limit);
-  VMCSF(uint32_t, ss_limit);
-  VMCSF(uint32_t, ds_limit);
-  VMCSF(uint32_t, fs_limit);
-  VMCSF(uint32_t, gs_limit);
-  VMCSF(uint32_t, ldtr_limit);
-  VMCSF(uint32_t, tr_limit);
-  VMCSF(uint32_t, gdtr_limit);
-  VMCSF(uint32_t, idtr_limit);
-  VMCSF(uint32_t, es_ar_bytes);
-  VMCSF(uint32_t, cs_ar_bytes);
-  VMCSF(uint32_t, ss_ar_bytes);
-  VMCSF(uint32_t, ds_ar_bytes);
-  VMCSF(uint32_t, fs_ar_bytes);
-  VMCSF(uint32_t, gs_ar_bytes);
-  VMCSF(uint32_t, ldtr_ar_bytes);
-  VMCSF(uint32_t, tr_ar_bytes);
-  VMCSF(uint32_t, interruptibility_info);
-  VMCSF(uint32_t, activity_state);
-  VMCSF(uint32_t, smbase);
-  VMCSF(uint32_t, sysenter_cs);
-  VMCSF(uint32_t, vmx_preemption_timer_value);
+  VMCSF(struct field_32, es_limit);
+  VMCSF(struct field_32, cs_limit);
+  VMCSF(struct field_32, ss_limit);
+  VMCSF(struct field_32, ds_limit);
+  VMCSF(struct field_32, fs_limit);
+  VMCSF(struct field_32, gs_limit);
+  VMCSF(struct field_32, ldtr_limit);
+  VMCSF(struct field_32, tr_limit);
+  VMCSF(struct field_32, gdtr_limit);
+  VMCSF(struct field_32, idtr_limit);
+  VMCSF(struct field_32, es_ar_bytes);
+  VMCSF(struct field_32, cs_ar_bytes);
+  VMCSF(struct field_32, ss_ar_bytes);
+  VMCSF(struct field_32, ds_ar_bytes);
+  VMCSF(struct field_32, fs_ar_bytes);
+  VMCSF(struct field_32, gs_ar_bytes);
+  VMCSF(struct field_32, ldtr_ar_bytes);
+  VMCSF(struct field_32, tr_ar_bytes);
+  VMCSF(struct field_32, interruptibility_info);
+  VMCSF(struct field_32, activity_state);
+  VMCSF(struct field_32, smbase);
+  VMCSF(struct field_32, sysenter_cs);
+  VMCSF(struct field_32, vmx_preemption_timer_value);
   // Natural-width fields
-  VMCSF(uint64_t, cr0);
-  VMCSF(uint64_t, cr3);
-  VMCSF(uint64_t, cr4);
-  VMCSF(uint64_t, es_base);
-  VMCSF(uint64_t, cs_base);
-  VMCSF(uint64_t, ss_base);
-  VMCSF(uint64_t, ds_base);
-  VMCSF(uint64_t, fs_base);
-  VMCSF(uint64_t, gs_base);
-  VMCSF(uint64_t, ldtr_base);
-  VMCSF(uint64_t, tr_base);
-  VMCSF(uint64_t, gdtr_base);
-  VMCSF(uint64_t, idtr_base);
-  VMCSF(uint64_t, dr7);
-  VMCSF(uint64_t, rsp);
-  VMCSF(uint64_t, rip);
-  VMCSF(uint64_t, rflags);
-  VMCSF(uint64_t, pending_dbg_exceptions);
-  VMCSF(uint64_t, sysenter_esp);
-  VMCSF(uint64_t, sysenter_eip);
+  VMCSF(union cr0, cr0);
+  VMCSF(union cr3, cr3);
+  VMCSF(union cr4, cr4);
+  VMCSF(struct field_64, es_base);
+  VMCSF(struct field_64, cs_base);
+  VMCSF(struct field_64, ss_base);
+  VMCSF(struct field_64, ds_base);
+  VMCSF(struct field_64, fs_base);
+  VMCSF(struct field_64, gs_base);
+  VMCSF(struct field_64, ldtr_base);
+  VMCSF(struct field_64, tr_base);
+  VMCSF(struct field_64, gdtr_base);
+  VMCSF(struct field_64, idtr_base);
+  VMCSF(struct field_64, dr7);
+  VMCSF(struct field_64, rsp);
+  VMCSF(struct field_64, rip);
+  VMCSF(struct field_64, rflags);
+  VMCSF(struct field_64, pending_dbg_exceptions);
+  VMCSF(struct field_64, sysenter_esp);
+  VMCSF(struct field_64, sysenter_eip);
 } __attribute__((packed));
 
 struct vmcs_host_state {
   // 16-bit fields
-  VMCSF(uint16_t, es_selector);
-  VMCSF(uint16_t, cs_selector);
-  VMCSF(uint16_t, ss_selector);
-  VMCSF(uint16_t, ds_selector);
-  VMCSF(uint16_t, fs_selector);
-  VMCSF(uint16_t, gs_selector);
-  VMCSF(uint16_t, tr_selector);
+  VMCSF(struct field_16, es_selector);
+  VMCSF(struct field_16, cs_selector);
+  VMCSF(struct field_16, ss_selector);
+  VMCSF(struct field_16, ds_selector);
+  VMCSF(struct field_16, fs_selector);
+  VMCSF(struct field_16, gs_selector);
+  VMCSF(struct field_16, tr_selector);
   // 64-bit fields
-  VMCSF(uint64_t, ia32_pat);
-  VMCSF(uint64_t, ia32_efer);
-  VMCSF(uint64_t, ia32_perf_global_ctrl);
+  VMCSF(struct field_64, ia32_pat);
+  VMCSF(union msr_ia32_efer, ia32_efer);
+  VMCSF(struct field_64, ia32_perf_global_ctrl);
   // 32-bit fields
-  VMCSF(uint32_t, ia32_sysenter_cs);
+  VMCSF(struct field_32, ia32_sysenter_cs);
   // Natural-width fields
-  VMCSF(uint32_t, cr0);
-  VMCSF(uint32_t, cr3);
-  VMCSF(uint32_t, cr4);
-  VMCSF(uint64_t, fs_base);
-  VMCSF(uint64_t, gs_base);
-  VMCSF(uint64_t, tr_base);
-  VMCSF(uint64_t, gdtr_base);
-  VMCSF(uint64_t, idtr_base);
-  VMCSF(uint64_t, ia32_sysenter_esp);
-  VMCSF(uint64_t, ia32_sysenter_eip);
-  VMCSF(uint64_t, rsp);
-  VMCSF(uint64_t, rip);
+  VMCSF(struct field_32, cr0);
+  VMCSF(struct field_32, cr3);
+  VMCSF(struct field_32, cr4);
+  VMCSF(struct field_64, fs_base);
+  VMCSF(struct field_64, gs_base);
+  VMCSF(struct field_64, tr_base);
+  VMCSF(struct field_64, gdtr_base);
+  VMCSF(struct field_64, idtr_base);
+  VMCSF(struct field_64, ia32_sysenter_esp);
+  VMCSF(struct field_64, ia32_sysenter_eip);
+  VMCSF(struct field_64, rsp);
+  VMCSF(struct field_64, rip);
 } __attribute__((packed));
 
 struct vmcs_vmexit_information {
   // 64-bit fields
-  VMCSF(uint64_t, guest_physical_address);
+  VMCSF(struct field_64, guest_physical_address);
   // 32-bit fields
-  VMCSF(uint32_t, vm_instruction_error);
-  VMCSF(uint32_t, reason);
-  VMCSF(uint32_t, intr_info);
-  VMCSF(uint32_t, intr_error_code);
-  VMCSF(uint32_t, idt_vectoring_info_field);
-  VMCSF(uint32_t, idt_vectoring_error_code);
-  VMCSF(uint32_t, instruction_len);
-  VMCSF(uint32_t, vmx_instruction_info);
+  VMCSF(struct field_32, vm_instruction_error);
+  VMCSF(union exit_reason, reason);
+  VMCSF(struct field_32, intr_info);
+  VMCSF(struct field_32, intr_error_code);
+  VMCSF(struct field_32, idt_vectoring_info_field);
+  VMCSF(struct field_32, idt_vectoring_error_code);
+  VMCSF(struct field_32, instruction_len);
+  VMCSF(struct field_32, vmx_instruction_info);
   // Natural-width fields
-  VMCSF(uint64_t, qualification);
-  VMCSF(uint64_t, io_rcx);
-  VMCSF(uint64_t, io_rsi);
-  VMCSF(uint64_t, io_rdi);
-  VMCSF(uint64_t, io_rip);
-  VMCSF(uint64_t, guest_linear_address);
+  VMCSF(struct field_64, qualification);
+  VMCSF(struct field_64, io_rcx);
+  VMCSF(struct field_64, io_rsi);
+  VMCSF(struct field_64, io_rdi);
+  VMCSF(struct field_64, io_rip);
+  VMCSF(struct field_64, guest_linear_address);
 } __attribute__((packed));
 
 struct vmcs_execution_controls {
   // 16-bit fields
-  VMCSF(uint16_t, virtual_processor_id);
-  VMCSF(uint16_t, posted_int_notif_vector);
-  VMCSF(uint16_t, eptp_index);
+  VMCSF(struct field_16, virtual_processor_id);
+  VMCSF(struct field_16, posted_int_notif_vector);
+  VMCSF(struct field_16, eptp_index);
   // 64-bit fields
-  VMCSF(uint64_t, io_bitmap_a);
-  VMCSF(uint64_t, io_bitmap_b);
-  VMCSF(uint64_t, msr_bitmap);
-  VMCSF(uint64_t, executive_vmcs_pointer);
-  VMCSF(uint64_t, tsc_offset);
-  VMCSF(uint64_t, virtual_apic_page_addr);
-  VMCSF(uint64_t, apic_access_addr);
-  VMCSF(uint64_t, posted_intr_desc_addr);
-  VMCSF(uint64_t, vm_function_controls);
-  VMCSF(uint64_t, ept_pointer);
-  VMCSF(uint64_t, eoi_exit_bitmap_0);
-  VMCSF(uint64_t, eoi_exit_bitmap_1);
-  VMCSF(uint64_t, eoi_exit_bitmap_2);
-  VMCSF(uint64_t, eoi_exit_bitmap_3);
-  VMCSF(uint64_t, eptp_list_addr);
-  VMCSF(uint64_t, vmread_bitmap_addr);
-  VMCSF(uint64_t, vmwrite_bitmap_addr);
-  VMCSF(uint64_t, virt_excep_info_addr);
-  VMCSF(uint64_t, xss_exiting_bitmap);
+  VMCSF(struct field_64, io_bitmap_a);
+  VMCSF(struct field_64, io_bitmap_b);
+  VMCSF(struct field_64, msr_bitmap);
+  VMCSF(struct field_64, executive_vmcs_pointer);
+  VMCSF(struct field_64, tsc_offset);
+  VMCSF(struct field_64, virtual_apic_page_addr);
+  VMCSF(struct field_64, apic_access_addr);
+  VMCSF(struct field_64, posted_intr_desc_addr);
+  VMCSF(struct field_64, vm_function_controls);
+  VMCSF(struct field_64, ept_pointer);
+  VMCSF(struct field_64, eoi_exit_bitmap_0);
+  VMCSF(struct field_64, eoi_exit_bitmap_1);
+  VMCSF(struct field_64, eoi_exit_bitmap_2);
+  VMCSF(struct field_64, eoi_exit_bitmap_3);
+  VMCSF(struct field_64, eptp_list_addr);
+  VMCSF(struct field_64, vmread_bitmap_addr);
+  VMCSF(struct field_64, vmwrite_bitmap_addr);
+  VMCSF(struct field_64, virt_excep_info_addr);
+  VMCSF(struct field_64, xss_exiting_bitmap);
   // 32-bit fields
-  VMCSF(uint32_t, pin_based_vm_exec_control);
-  VMCSF(uint32_t, cpu_based_vm_exec_control);
-  VMCSF(uint32_t, exception_bitmap);
-  VMCSF(uint32_t, page_fault_error_code_mask);
-  VMCSF(uint32_t, page_fault_error_code_match);
-  VMCSF(uint32_t, cr3_target_count);
-  VMCSF(uint32_t, tpr_threshold);
-  VMCSF(uint32_t, secondary_vm_exec_control);
-  VMCSF(uint32_t, ple_gap);
-  VMCSF(uint32_t, ple_window);
+  VMCSF(union pin_based, pin_based_vm_exec_control);
+  VMCSF(union proc_based, cpu_based_vm_exec_control);
+  VMCSF(struct field_32, exception_bitmap);
+  VMCSF(struct field_32, page_fault_error_code_mask);
+  VMCSF(struct field_32, page_fault_error_code_match);
+  VMCSF(struct field_32, cr3_target_count);
+  VMCSF(struct field_32, tpr_threshold);
+  VMCSF(union proc_based_2, secondary_vm_exec_control);
+  VMCSF(struct field_32, ple_gap);
+  VMCSF(struct field_32, ple_window);
   // Natural-width fields
-  VMCSF(uint32_t, cr0_guest_host_mask);
-  VMCSF(uint32_t, cr4_guest_host_mask);
-  VMCSF(uint32_t, cr0_read_shadow);
-  VMCSF(uint32_t, cr4_read_shadow);
-  VMCSF(uint32_t, cr3_target_value0);
-  VMCSF(uint32_t, cr3_target_value1);
-  VMCSF(uint32_t, cr3_target_value2);
-  VMCSF(uint32_t, cr3_target_value3);
+  VMCSF(struct field_32, cr0_guest_host_mask);
+  VMCSF(struct field_32, cr4_guest_host_mask);
+  VMCSF(struct field_32, cr0_read_shadow);
+  VMCSF(struct field_32, cr4_read_shadow);
+  VMCSF(struct field_32, cr3_target_value0);
+  VMCSF(struct field_32, cr3_target_value1);
+  VMCSF(struct field_32, cr3_target_value2);
+  VMCSF(struct field_32, cr3_target_value3);
 } __attribute__((packed));
 
 struct vmcs_exit_controls {
   // 64-bit fields
-  VMCSF(uint64_t, msr_store_addr);
-  VMCSF(uint64_t, msr_load_addr);
+  VMCSF(struct field_64, msr_store_addr);
+  VMCSF(struct field_64, msr_load_addr);
   // 32-bit fields
-  VMCSF(uint32_t, controls);
-  VMCSF(uint32_t, msr_store_count);
-  VMCSF(uint32_t, msr_load_count);
+  VMCSF(union exit_controls, controls);
+  VMCSF(struct field_32, msr_store_count);
+  VMCSF(struct field_32, msr_load_count);
 } __attribute__((packed));
 
 struct vmcs_entry_controls {
   // 64-bit fields
-  VMCSF(uint64_t, msr_load_addr);
+  VMCSF(struct field_64, msr_load_addr);
   // 32-bit fields
-  VMCSF(uint32_t, controls);
-  VMCSF(uint32_t, msr_load_count);
-  VMCSF(uint32_t, intr_info_field);
-  VMCSF(uint32_t, exception_error_code);
-  VMCSF(uint32_t, instruction_len);
+  VMCSF(union entry_controls, controls);
+  VMCSF(struct field_32, msr_load_count);
+  VMCSF(struct field_32, intr_info_field);
+  VMCSF(struct field_32, exception_error_code);
+  VMCSF(struct field_32, instruction_len);
 } __attribute__((packed));
 
 struct vmcs_controls {
@@ -609,8 +755,11 @@ void vmcs_create_vmcs_regions(void);
 
 void vmcs_encoding_init(struct vmcs *v);
 
+extern uint8_t *vmxon;
+
 extern struct vmcs *vmcs_cache_pool;
 extern uint8_t (*vmcs_region_pool)[0x1000];
 extern struct vmcs *vmcs;
+extern struct vmcs *hc;
 
 #endif

@@ -147,11 +147,13 @@ typedef struct _message_core_regs_data {
 typedef struct _message_vmcs_read {
   uint8_t type;
   uint8_t vmid;
+  uint8_t shadow;
 } __attribute__((packed)) message_vmcs_read;
 
 typedef struct _message_vmcs_data {
   uint8_t type;
   uint8_t vmid;
+  uint8_t shadow;
 } __attribute__((packed)) message_vmcs_data;
 
 typedef struct _message_vmm_panic {
@@ -207,5 +209,7 @@ void debug_server_log_cr3_add(struct registers *regs, uint64_t cr3);
 void debug_server_mtf(void);
 
 void debug_server_send_debug_all(void);
+void debug_server_send_debug_unset(uint8_t reason);
+void debug_server_send_debug_set(uint8_t reason);
 
 #endif

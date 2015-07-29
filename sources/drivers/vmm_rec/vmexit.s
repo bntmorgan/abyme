@@ -1,6 +1,7 @@
 .text
 .global vmm_vm_exit_handler
 .global vmm_vmcs_flush
+.global vmm_adjust_paging
 
 vmm_vm_exit_handler:
   /*
@@ -31,6 +32,10 @@ vmm_vm_exit_handler:
    * It takes the guest general purpose registers as a parameter (see gpr64_t).
    */
   call vmm_handle_vm_exit
+  /*
+   * Adjust paging
+   */
+  call vmm_adjust_paging
   /*
    * Flush the current VMCS cache
    */

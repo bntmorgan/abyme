@@ -17,7 +17,6 @@
 #include "msr.h"
 
 uint8_t *vmxon;
-uint8_t (*vapic)[0x1000];
 
 /**
  * Host vmcs configuration reference
@@ -58,6 +57,85 @@ void vmcs_create_vmcs_regions(void) {
   }
 }
 
+/**
+ * Specific field dumping
+ */
+
+void print_exit_controls(union exit_controls *c) {
+  printk("    save_debug_controls: 0x%x\n", c->save_debug_controls);
+  printk("    host_address_space_size: 0x%x\n", c->host_address_space_size);
+  printk("    load_ia32_perf_global_ctrl: 0x%x\n", c->load_ia32_perf_global_ctrl);
+  printk("    acknoledge_interrupt_on_exit: 0x%x\n", c->acknoledge_interrupt_on_exit);
+  printk("    save_ia32_pat: 0x%x\n", c->save_ia32_pat);
+  printk("    load_ia32_pat: 0x%x\n", c->load_ia32_pat);
+  printk("    save_ia32_efer: 0x%x\n", c->save_ia32_efer);
+  printk("    load_ia32_efer: 0x%x\n", c->load_ia32_efer);
+  printk("    save_vmx_preemption_timer_value: 0x%x\n", c->save_vmx_preemption_timer_value);
+}
+
+void print_entry_controls(union entry_controls *c) {
+  printk("    load_debug_controls: 0x%x\n", c->load_debug_controls);
+  printk("    ia32_mode_guest: 0x%x\n", c->ia32_mode_guest);
+  printk("    entry_to_smm: 0x%x\n", c->entry_to_smm);
+  printk("    deactivate_dual_monitor_treatment: 0x%x\n", c->deactivate_dual_monitor_treatment);
+  printk("    load_ia32_perf_global_ctrl: 0x%x\n", c->load_ia32_perf_global_ctrl);
+  printk("    load_ia32_pat: 0x%x\n", c->load_ia32_pat);
+  printk("    load_ia32_efer: 0x%x\n", c->load_ia32_efer);
+}
+
+void print_pin_based(union pin_based *c) {
+  printk("    external_interrupt_exiting: 0x%x\n", c->external_interrupt_exiting);
+  printk("    nmi_exiting: 0x%x\n", c->nmi_exiting);
+  printk("    virtual_nmi: 0x%x\n", c->virtual_nmi);
+  printk("    activate_vmx_preemption_timer: 0x%x\n", c->activate_vmx_preemption_timer);
+  printk("    process_posted_interrupts: 0x%x\n", c->process_posted_interrupts);
+}
+
+void print_proc_based(union proc_based *c) {
+  printk("    interrupt_window_exiting: 0x%x\n", c->interrupt_window_exiting);
+  printk("    use_tsc_offsetting: 0x%x\n", c->use_tsc_offsetting);
+  printk("    hlt_exiting: 0x%x\n", c->hlt_exiting);
+  printk("    invlpg_exiting: 0x%x\n", c->invlpg_exiting);
+  printk("    mwait_exiting: 0x%x\n", c->mwait_exiting);
+  printk("    rdpmc_exiting: 0x%x\n", c->rdpmc_exiting);
+  printk("    rdtsc_exiting: 0x%x\n", c->rdtsc_exiting);
+  printk("    cr3_load_exiting: 0x%x\n", c->cr3_load_exiting);
+  printk("    cr3_store_exiting: 0x%x\n", c->cr3_store_exiting);
+  printk("    cr8_load_exiting: 0x%x\n", c->cr8_load_exiting);
+  printk("    cr8_store_exiting: 0x%x\n", c->cr8_store_exiting);
+  printk("    use_tpr_shadow: 0x%x\n", c->use_tpr_shadow);
+  printk("    nmi_window_exiting: 0x%x\n", c->nmi_window_exiting);
+  printk("    mov_dr_exiting: 0x%x\n", c->mov_dr_exiting);
+  printk("    unconditional_io_exiting: 0x%x\n", c->unconditional_io_exiting);
+  printk("    use_io_bitmaps: 0x%x\n", c->use_io_bitmaps);
+  printk("    monitor_trap_flag: 0x%x\n", c->monitor_trap_flag);
+  printk("    use_msr_bitmaps: 0x%x\n", c->use_msr_bitmaps);
+  printk("    monitor_exiting: 0x%x\n", c->monitor_exiting);
+  printk("    pause_exiting: 0x%x\n", c->pause_exiting);
+  printk("    activate_secondary_controls: 0x%x\n", c->activate_secondary_controls);
+}
+
+void print_proc_based_2(union proc_based_2 *c) {
+  printk("    virtualize_apic_access: 0x%x\n", c->virtualize_apic_access);
+  printk("    enable_ept: 0x%x\n", c->enable_ept);
+  printk("    descriptor_table_exiting: 0x%x\n", c->descriptor_table_exiting);
+  printk("    enable_rdtscp: 0x%x\n", c->enable_rdtscp);
+  printk("    virtualize_x2apic_mode: 0x%x\n", c->virtualize_x2apic_mode);
+  printk("    enable_vpid: 0x%x\n", c->enable_vpid);
+  printk("    wbinvd_exiting: 0x%x\n", c->wbinvd_exiting);
+  printk("    unrestricted_guest: 0x%x\n", c->unrestricted_guest);
+  printk("    apic_register_virtualization: 0x%x\n", c->apic_register_virtualization);
+  printk("    virtual_interrupt_delivery: 0x%x\n", c->virtual_interrupt_delivery);
+  printk("    pause_loop_exiting: 0x%x\n", c->pause_loop_exiting);
+  printk("    rdrand_exiting: 0x%x\n", c->rdrand_exiting);
+  printk("    enable_invpcid: 0x%x\n", c->enable_invpcid);
+  printk("    enable_vm_functions: 0x%x\n", c->enable_vm_functions);
+  printk("    vmcs_shadowing: 0x%x\n", c->vmcs_shadowing);
+  printk("    rdseed_exiting: 0x%x\n", c->rdseed_exiting);
+  printk("    ept_violation_ve: 0x%x\n", c->ept_violation_ve);
+  printk("    enable_xsaves_xrstors: 0x%x\n", c->enable_xsaves_xrstors);
+}
+
 void vmcs_dump(struct vmcs *v) {
   INFO("VMCS dump(0x%016X)\n", v);
   printk("Execution controls\n");
@@ -84,13 +162,16 @@ void vmcs_dump(struct vmcs *v) {
   VMP(v, ctrls.ex.virt_excep_info_addr);
   VMP(v, ctrls.ex.xss_exiting_bitmap);
   VMP(v, ctrls.ex.pin_based_vm_exec_control);
+  print_pin_based(&v->ctrls.ex.pin_based_vm_exec_control);
   VMP(v, ctrls.ex.cpu_based_vm_exec_control);
+  print_proc_based(&v->ctrls.ex.cpu_based_vm_exec_control);
   VMP(v, ctrls.ex.exception_bitmap);
   VMP(v, ctrls.ex.page_fault_error_code_mask);
   VMP(v, ctrls.ex.page_fault_error_code_match);
   VMP(v, ctrls.ex.cr3_target_count);
   VMP(v, ctrls.ex.tpr_threshold);
   VMP(v, ctrls.ex.secondary_vm_exec_control);
+  print_proc_based_2(&v->ctrls.ex.secondary_vm_exec_control);
   VMP(v, ctrls.ex.ple_gap);
   VMP(v, ctrls.ex.ple_window);
   VMP(v, ctrls.ex.cr0_guest_host_mask);
@@ -114,10 +195,10 @@ void vmcs_dump(struct vmcs *v) {
   VMP(v, gs.ia32_pat);
   VMP(v, gs.ia32_efer);
   VMP(v, gs.ia32_perf_global_ctrl);
-  VMP(v, gs.pdptr0);
-  VMP(v, gs.pdptr1);
-  VMP(v, gs.pdptr2);
-  VMP(v, gs.pdptr3);
+  VMP(v, gs.pdpte0);
+  VMP(v, gs.pdpte1);
+  VMP(v, gs.pdpte2);
+  VMP(v, gs.pdpte3);
   VMP(v, gs.cr0);
   VMP(v, gs.cr3);
   VMP(v, gs.cr4);
@@ -191,11 +272,13 @@ void vmcs_dump(struct vmcs *v) {
   VMP(v, ctrls.exit.msr_store_addr);
   VMP(v, ctrls.exit.msr_load_addr);
   VMP(v, ctrls.exit.controls);
+  print_exit_controls(&v->ctrls.exit.controls);
   VMP(v, ctrls.exit.msr_store_count);
   VMP(v, ctrls.exit.msr_load_count);
   printk("VM entry controls\n");
   VMP(v, ctrls.entry.msr_load_addr);
   VMP(v, ctrls.entry.controls);
+  print_entry_controls(&v->ctrls.entry.controls);
   VMP(v, ctrls.entry.msr_load_count);
   VMP(v, ctrls.entry.intr_info_field);
   VMP(v, ctrls.entry.exception_error_code);
@@ -221,7 +304,7 @@ void vmcs_dump(struct vmcs *v) {
 /**
  * Forced VMREAD every fields of the VMCS
  */
-void vmcs_update(struct vmcs *v) {
+void vmcs_update() {
   // Execution controls
   VMRF(ctrls.ex.virtual_processor_id);
   VMRF(ctrls.ex.posted_int_notif_vector);
@@ -276,10 +359,10 @@ void vmcs_update(struct vmcs *v) {
   VMRF(gs.ia32_pat);
   VMRF(gs.ia32_efer);
   VMRF(gs.ia32_perf_global_ctrl);
-  VMRF(gs.pdptr0);
-  VMRF(gs.pdptr1);
-  VMRF(gs.pdptr2);
-  VMRF(gs.pdptr3);
+  VMRF(gs.pdpte0);
+  VMRF(gs.pdpte1);
+  VMRF(gs.pdpte2);
+  VMRF(gs.pdpte3);
   VMRF(gs.cr0);
   VMRF(gs.cr3);
   VMRF(gs.cr4);
@@ -396,10 +479,10 @@ void vmcs_collect_shadow(struct vmcs *gvmcs) {
   VMR(gs.ia32_pat);
   VMR(gs.ia32_efer);
   VMR(gs.ia32_perf_global_ctrl);
-  VMR(gs.pdptr0);
-  VMR(gs.pdptr1);
-  VMR(gs.pdptr2);
-  VMR(gs.pdptr3);
+  VMR(gs.pdpte0);
+  VMR(gs.pdpte1);
+  VMR(gs.pdpte2);
+  VMR(gs.pdpte3);
   VMR(gs.cr0);
   VMR(gs.cr3);
   VMR(gs.cr4);
@@ -512,10 +595,10 @@ void vmcs_commit() {
   VMF(gs.ia32_pat);
   VMF(gs.ia32_efer);
   VMF(gs.ia32_perf_global_ctrl);
-  VMF(gs.pdptr0);
-  VMF(gs.pdptr1);
-  VMF(gs.pdptr2);
-  VMF(gs.pdptr3);
+  VMF(gs.pdpte0);
+  VMF(gs.pdpte1);
+  VMF(gs.pdpte2);
+  VMF(gs.pdpte3);
   VMF(gs.cr0);
   VMF(gs.cr3);
   VMF(gs.cr4);
@@ -672,10 +755,10 @@ void vmcs_encoding_init(struct vmcs *v) {
   VMCSE(v, gs.ia32_pat, GUEST_IA32_PAT);
   VMCSE(v, gs.ia32_efer, GUEST_IA32_EFER);
   VMCSE(v, gs.ia32_perf_global_ctrl, GUEST_IA32_PERF_GLOBAL_CTRL);
-  VMCSE(v, gs.pdptr0, GUEST_PDPTR0);
-  VMCSE(v, gs.pdptr1, GUEST_PDPTR1);
-  VMCSE(v, gs.pdptr2, GUEST_PDPTR2);
-  VMCSE(v, gs.pdptr3, GUEST_PDPTR3);
+  VMCSE(v, gs.pdpte0, GUEST_PDPTR0);
+  VMCSE(v, gs.pdpte1, GUEST_PDPTR1);
+  VMCSE(v, gs.pdpte2, GUEST_PDPTR2);
+  VMCSE(v, gs.pdpte3, GUEST_PDPTR3);
   VMCSE(v, gs.cr0, GUEST_CR0);
   VMCSE(v, gs.cr3, GUEST_CR3);
   VMCSE(v, gs.cr4, GUEST_CR4);
@@ -824,7 +907,7 @@ void vmcs_host_config_vm_exec_control_fields(void) {
       ENABLE_RDTSCP;
                              
   uint64_t eptp;
-  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER | NMI_EXITING;
+  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER; // | NMI_EXITING;
 
   VMW(ctrls.ex.pin_based_vm_exec_control,
       cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
@@ -870,9 +953,6 @@ void vmcs_host_config_vm_exec_control_fields(void) {
   eptp = ept_get_eptp();
   VMW(ctrls.ex.ept_pointer, eptp);
   VMW(ctrls.ex.virtual_processor_id, 0x1); // vmcs0 is 1
-
-  VMW(ctrls.ex.virtual_apic_page_addr,
-      ((uintptr_t)&vapic[0]));
 }
 
 void vmcs_host_config_guest_state_fields() {
@@ -1004,7 +1084,6 @@ void vmcs_init(void) {
   hc = efi_allocate_pool(sizeof(struct vmcs));
   vmcs_cache_pool = efi_allocate_pool(sizeof(struct vmcs) * VM_NB);
   vmcs_region_pool = efi_allocate_pages(VM_NB);
-  vapic = efi_allocate_pages(1);
   vmxon = efi_allocate_pages(1);
   // Initialize VMCS region pool
   memset(&vmcs_region_pool[0], 0, VM_NB * 0x1000);

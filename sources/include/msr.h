@@ -5,6 +5,19 @@
 #include <efi.h>
 #include "types.h"
 
+union msr_ia32_efer {
+  struct {
+    uint64_t sce:1;
+    uint64_t r0:7;
+    uint64_t lme:1;
+    uint64_t r1:1;
+    uint64_t lma:1;
+    uint64_t nxe:1;
+    uint64_t r2:52;
+  };
+  uint64_t raw;
+};
+
 #define MSR_ADDRESS_IA32_EFER                       0xc0000080
 #define MSR_ADDRESS_IA32_TIME_STAMP_COUNTER         0x010
 #define MSR_ADDRESS_IA32_APIC_BASE                  0x01b
