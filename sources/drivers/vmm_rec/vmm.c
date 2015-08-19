@@ -56,12 +56,17 @@ void vm_print(struct vm *v) {
   INFO("VM : Index(0x%x), child(@0x%x)\n", v->index, v->child);
 }
 
-uint8_t vmm_stack[VMM_STACK_SIZE];
+uint8_t *vmm_stack;
 
 struct setup_state *setup_state;
 
 static uint64_t io_count = 0;
 static uint64_t cr3_count = 0;
+
+static uint64_t tsc_offset = 0;
+int64_t tsc_offset_adjust = 0;
+static uint64_t tsc_delta = 0;
+static uint64_t tsc_vmexit = 0;
 
 enum VMM_PANIC {
   VMM_PANIC_RDMSR,
@@ -113,6 +118,10 @@ static inline uint8_t is_MTRR(uint64_t msr_addr);
 void vmm_vms_init(void);
 
 void vmm_init(struct setup_state *state) {
+  vmm_stack = efi_allocate_pages(VMM_STACK_SIZE >> 12);
+  // initialize the TSC offset
+  *((uint64_t*)&vmm_stack[VMM_STACK_SIZE - 8]) = 0x0;
+  *((uint64_t*)&vmm_stack[VMM_STACK_SIZE - 16]) = 0x0;
   setup_state = state;
   vmm_vms_init();
 }
@@ -156,6 +165,14 @@ void vm_free(struct vm *v) {
     }
   }
   ERROR("Failed to free a VM : not found\n");
+}
+
+// Don't dealocate the VM0
+void vm_free_all(void) {
+  uint32_t i;
+  for (i = 1; i < VM_NB; i++) {
+    vm_allocated[i] = 0;
+  }
 }
 
 /**
@@ -227,8 +244,11 @@ void vmm_vms_init(void) {
   memset(&vm_allocated[0], 0, VM_NB);
 }
 
-void vmm_handle_vm_exit(struct registers guest_regs) {
+void vmm_handle_vm_exit(uint64_t tsc, struct registers guest_regs) {
   uint8_t hook_override = 0;
+
+  tsc_vmexit = cpu_rdtsc();
+  tsc_offset_adjust = 0;
 
   VMR2(gs.rsp, guest_regs.rsp);
   VMR2(gs.rip, guest_regs.rip);
@@ -355,6 +375,9 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     //
     // VMX Operations
     //
+    case EXIT_REASON_VMXOFF:
+      nested_vmxoff(&guest_regs);
+      break;
     case EXIT_REASON_VMXON:
       instr_param_ptr = get_instr_param_ptr(&guest_regs);
       nested_vmxon(*instr_param_ptr);
@@ -653,6 +676,17 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   if (hook_post[exit_reason] != 0) {
     (hook_post[exit_reason])(&guest_regs);
   }
+}
+
+/**
+ * Called right after vmm_handle_vm_exit()
+ */
+void vmm_adjust_tsc(void) {
+  uint64_t tso;
+  tsc_delta = cpu_rdtsc() - tsc_vmexit;
+  tsc_offset += tsc_delta;
+  tso = tsc_offset_adjust - tsc_offset;
+  VMW(ctrls.ex.tsc_offset, tso);
 }
 
 /**

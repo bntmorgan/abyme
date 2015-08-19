@@ -129,6 +129,8 @@ __attribute__((sysv_abi)) void vmx_transition_display_error(uint8_t VMfailInvali
   if (VMfailInvalid) {
     panic("#!VMX Transition VMfailInvalid\n");
   } else if(VMfailValid) {
+    // Dump the entire VMCS
+    vmcs_dump(vmcs);
     uint8_t e = cpu_vmread(VM_INSTRUCTION_ERROR);
     printk("#!VMX Transition VMfailValid, errcode=%d\n", e);
     switch (e) {

@@ -26,6 +26,8 @@ void nested_vmlaunch(struct registers *guest_regs);
 
 void nested_vmresume(struct registers *guest_regs);
 
+void nested_vmxoff(struct registers *guest_regs);
+
 uint64_t nested_vmread(uint64_t field);
 
 void nested_vmwrite(uint64_t field, uint64_t value);

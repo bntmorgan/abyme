@@ -135,7 +135,7 @@ void cpu_stop(void);
 
 uint64_t cpu_read_flags(void);
 
-uint64_t cpu_read_tsc(void);
+uint64_t cpu_rdtsc(void);
 
 static inline void cpu_outportb(uint32_t port, uint8_t value) {
   __asm__ __volatile__(

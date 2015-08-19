@@ -20,7 +20,7 @@ uint8_t debug_printk = 0;
 
 uint32_t debug_server_level = 0;
 
-static uint8_t send_debug[NB_EXIT_REASONS];
+static uint8_t send_debug[VM_NB][NB_EXIT_REASONS];
 
 static uint8_t mtf = 0;
 
@@ -121,7 +121,7 @@ void debug_server_core_regs_read(struct core_regs *cr, struct registers *regs) {
 
 void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
     struct registers *guest_regs) {
-  if (send_debug[exit_reason]) {
+  if (send_debug[vmid][exit_reason]) {
     message_vmexit ms = {
       MESSAGE_VMEXIT,
       vmid,
@@ -150,20 +150,13 @@ void debug_server_panic(uint8_t vmid, uint64_t code, uint64_t extra,
 }
 
 void debug_server_init() {
+  uint32_t i;
   /* Init exit reasons for which we need to send a debug message */
-  memset(&send_debug[0], 0, NB_EXIT_REASONS);
-  send_debug[EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED] = 1;
-  send_debug[EXIT_REASON_VMCALL] = 1;
-//   send_debug[EXIT_REASON_CPUID] = 0;
-//   send_debug[EXIT_REASON_IO_INSTRUCTION] = 0;
-//   send_debug[EXIT_REASON_WRMSR] = 0;
-//   send_debug[EXIT_REASON_RDMSR] = 0;
-//   send_debug[EXIT_REASON_XSETBV] = 0;
-//   send_debug[EXIT_REASON_CR_ACCESS] = 0;
-//   send_debug[EXIT_REASON_INVVPID] = 0;
-//   send_debug[EXIT_REASON_VMRESUME] = 0;
-//   send_debug[EXIT_REASON_VMREAD] = 0;
-//   send_debug[EXIT_REASON_VMWRITE] = 0;
+  memset(&send_debug[0][0], 0, NB_EXIT_REASONS * VM_NB);
+  for (i = 0; i < VM_NB; i++) {
+    send_debug[i][EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED] = 1;
+    send_debug[i][EXIT_REASON_VMCALL] = 1;
+  }
 
   debug_server_log_cr3_reset();
   EFI_STATUS status;
@@ -293,7 +286,7 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   debug_server_send(b, size);
 }
 
-void debug_server_handle_vmcs_write(message_vmcs_write *mr) {
+void debug_server_handle_vmcs_write(message_vmcs_write *mr, struct registers *guest_regs) {
   uint8_t *data = (uint8_t*)mr + sizeof(message_vmcs_write);
   // Size
   uint8_t s = *((uint8_t*)data);
@@ -344,6 +337,12 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr) {
         mtf = 0;
       }
     }
+    // Special case for some guest regs
+    if (e == GUEST_RIP) {
+      guest_regs->rip = v; 
+    } else if (e == GUEST_RSP) {
+      guest_regs->rsp = v; 
+    }
     // Size
     s = *((uint8_t *)data);
     data += 1;
@@ -353,26 +352,29 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr) {
 }
 
 void debug_server_send_debug_unset(uint8_t reason) {
-  send_debug[reason] = 0;
+  uint32_t i;
+  for (i = 0; i < VM_NB; i++) {
+    send_debug[i][reason] = 0;
+  }
 }
 
 void debug_server_send_debug_set(uint8_t reason) {
-  send_debug[reason] = 1;
+  uint32_t i;
+  for (i = 0; i < VM_NB; i++) {
+    send_debug[i][reason] = 1;
+  }
 }
 
 void debug_server_send_debug_all(void) {
-  memset(&send_debug[0], 1, NB_EXIT_REASONS);
+  memset(&send_debug[0][0], 1, NB_EXIT_REASONS * VM_NB);
 }
 
 void debug_server_handle_send_debug(message_send_debug *mr) {
-  uint32_t i;
-  for (i = 0; i < NB_EXIT_REASONS; i++) {
-    send_debug[i] = mr->send_debug[i];
-  }
+  memcpy(&send_debug[0][0], &mr->send_debug[0][0], NB_EXIT_REASONS * VM_NB);
   message_commit r = {
     MESSAGE_COMMIT,
     vm->index,
-    1
+    mr->vmid
   };
   debug_server_send(&r, sizeof(r));
 }
@@ -401,7 +403,7 @@ void debug_server_run(struct registers *regs) {
           debug_server_handle_vmcs_read((message_vmcs_read*)mr);
           break;
         case MESSAGE_VMCS_WRITE:
-          debug_server_handle_vmcs_write((message_vmcs_write*)mr);
+          debug_server_handle_vmcs_write((message_vmcs_write*)mr, regs);
           break;
         case MESSAGE_SEND_DEBUG:
           debug_server_handle_send_debug((message_send_debug*)mr);

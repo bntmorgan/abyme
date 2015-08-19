@@ -11,7 +11,9 @@
 
 #define VM_NB 8
 
-extern uint8_t vmm_stack[VMM_STACK_SIZE];
+extern uint8_t *vmm_stack;
+
+extern int64_t tsc_offset_adjust;
 
 enum PAGING_MODE {
   PAGING_DISABLED,
@@ -135,6 +137,7 @@ void vmm_adjust_vm_entry_controls(void);
 
 void vm_alloc(struct vm **v);
 void vm_free(struct vm *v);
+void vm_free_all(void);
 void vm_set(struct vm *v);
 void vm_get(struct vm **v);
 void vm_set_root(struct vm *v);

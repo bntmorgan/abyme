@@ -178,7 +178,7 @@ typedef struct _message_user_defined {
 typedef struct _message_send_debug {
   uint8_t type;
   uint8_t vmid;
-  uint8_t send_debug[NB_EXIT_REASONS];
+  uint8_t send_debug[VM_NB][NB_EXIT_REASONS];
 } __attribute__((packed)) message_send_debug;
 
 typedef struct _message_info {

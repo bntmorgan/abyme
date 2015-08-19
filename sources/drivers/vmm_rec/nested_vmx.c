@@ -104,6 +104,14 @@ static void set_vmcs_link_pointer(uint8_t *shadow_vmcs) {
 }
 #endif
 
+void nested_vmxoff(struct registers *gr) {
+  INFO("This is a VMXOFF\n");
+  // Change the state of the root VM
+  rvm->state = NESTED_DISABLED;
+  // Deallocate VMs
+  vm_free_all();
+}
+
 void nested_vmxon(uint8_t *vmxon_guest) {
   if (vm->state != NESTED_DISABLED) {
     panic("#!NESTED_VMXON not disabled\n");
@@ -332,8 +340,8 @@ void nested_ctrls_shadow_apply(struct vm *vm) {
   VMC(ctrls.ex.cr0_read_shadow, vm->vmcs, &svmcs);
   VMC(ctrls.ex.cr4_read_shadow, vm->vmcs, &svmcs);
 
-  // copy tsc offset
-  VMC(ctrls.ex.tsc_offset, vm->vmcs, &svmcs);
+  // Tells the vmm to add this to tsc offset
+  tsc_offset_adjust = svmcs.ctrls.ex.tsc_offset.raw;
 
   // copy vapic page address : we don't virtualize it for the moment
   VMC(ctrls.ex.virtual_apic_page_addr, vm->vmcs, &svmcs);
@@ -477,7 +485,8 @@ void nested_vmlaunch(struct registers *guest_regs) {
 
   // Current shadow VMCS will be really executed, we allocate a VM for it
   vm_alloc(&nvm);
-
+  // Clear the VMCS
+  cpu_vmclear(nvm->vmcs_region);
   // copy ctrl fields + host fields from host configuration to the nvm
   vmcs_clone(nvm->vmcs);
 

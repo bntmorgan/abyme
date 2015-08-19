@@ -45,9 +45,9 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   tsc_freq_MHz = ((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
   tsc_divider = msr_read(MSR_ADDRESS_IA32_VMX_MISC) & 0x7;
 
-  a = cpu_read_tsc();
+  a = cpu_rdtsc();
   challenge_start();
-  b = cpu_read_tsc();
+  b = cpu_rdtsc();
 
   micros = env_tsc_to_micro(b - a);
   INFO("Challenge execution time : 0x%016X microseconds\n", micros);

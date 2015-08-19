@@ -148,9 +148,9 @@ void env_execute(void) {
     // Copy challenge system table
     *(uint64_t *)&code[0] = (uint64_t)&systab;
     // Execution
-    a = cpu_read_tsc();
+    a = cpu_rdtsc();
     challenge();
-    b = cpu_read_tsc();
+    b = cpu_rdtsc();
     // Compute time in microseconds
     micros = env_tsc_to_micro(b - a);
     INFO("Challenge execution time : 0x%016X microseconds\n", micros);
