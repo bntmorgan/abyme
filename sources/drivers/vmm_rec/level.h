@@ -6,7 +6,7 @@
 #ifdef _DEBUG_SERVER
 #define LEVEL(level, ...)  \
   if (debug_server_level == level) { \
-    PRINTK(0, "<LEVEL> ",   __VA_ARGS__); \
+    PRINTK(0, "[level]",   __VA_ARGS__); \
   }
 #else
 #define LEVEL(level, ...)

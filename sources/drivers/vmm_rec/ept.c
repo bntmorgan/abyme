@@ -277,7 +277,6 @@ void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
   // Protect the VMM memory space
   // Map 4kB pages for all contexts
   for (m = 0; m < VM_NB; m++) {
-    // XXX !
     ept_perm(p_begin + 0x1000, (p_end - p_begin) >> 12, 0x0, m);
   }
 

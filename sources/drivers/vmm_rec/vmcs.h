@@ -591,7 +591,7 @@ struct vmcs_guest_state {
   VMCSF(struct field_64, dr7);
   VMCSF(struct field_64, rsp);
   VMCSF(struct field_64, rip);
-  VMCSF(struct field_64, rflags);
+  VMCSF(union rflags, rflags);
   VMCSF(struct field_64, pending_dbg_exceptions);
   VMCSF(struct field_64, sysenter_esp);
   VMCSF(struct field_64, sysenter_eip);

@@ -21,6 +21,8 @@ void msr_bitmap_set_read_write(uint64_t msr);
 void msr_bitmap_set_write(uint64_t msr);
 void msr_bitmap_set_read(uint64_t msr);
 
+void msr_bitmap_dump(struct msr_bitmap *bm);
+
 void msr_bitmap_clone(uint8_t *b);
 void msr_bitmap_or(uint8_t *b_dst, uint8_t *b_src);
 

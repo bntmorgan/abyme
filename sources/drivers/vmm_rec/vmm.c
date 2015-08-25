@@ -22,6 +22,7 @@
 #include "paging.h"
 #include "apic.h"
 #include "hook.h"
+#include "msr_bitmap.h"
 
 /**
  * VMs pool
@@ -78,6 +79,9 @@ enum VMM_PANIC {
 };
 
 int get_paging_mode(void) {
+  VMR(gs.cr0);
+  VMR(gs.cr4);
+  VMR(gs.ia32_efer);
   if (!vmcs->gs.cr0.pg) {
     return PAGING_DISABLED;
   } else if (!vmcs->gs.cr4.pae && !vmcs->gs.ia32_efer.lma) {
@@ -94,16 +98,13 @@ int get_paging_mode(void) {
 
 int get_cpu_mode(void) {
   VMR(gs.cr0);
-  uint64_t cr0 = vmcs->gs.cr0.raw;
   VMR(gs.ia32_efer);
-  uint64_t ia32_efer = vmcs->gs.ia32_efer.raw;
   VMR(gs.rflags);
-  union rflags rf = {.raw = vmcs->gs.rflags.raw};
-  if (rf.vm == 1) {
+  if (vmcs->gs.rflags.vm == 1) {
     return MODE_VIRTUAL_8086;
-  } else if (!(cr0 & (1 << 0))) {
+  } else if (!vmcs->gs.cr0.pe) {
     return MODE_REAL;
-  } else if (!(ia32_efer & (1 << 10))) {
+  } else if (!vmcs->gs.ia32_efer.lma) {
     return MODE_PROTECTED;
   } else {
     return MODE_LONG;
@@ -119,10 +120,11 @@ void vmm_vms_init(void);
 
 void vmm_init(struct setup_state *state) {
   vmm_stack = efi_allocate_pages(VMM_STACK_SIZE >> 12);
-  // initialize the TSC offset
-  *((uint64_t*)&vmm_stack[VMM_STACK_SIZE - 8]) = 0x0;
-  *((uint64_t*)&vmm_stack[VMM_STACK_SIZE - 16]) = 0x0;
   setup_state = state;
+  INFO("Setup state (rip 0x%016x, rsp 0x%016x, rbp 0x%016x, start 0x%016X, end 0x%016X, vmm stack(@0x%016X)\n",
+      setup_state->vm_RIP, setup_state->vm_RSP, setup_state->vm_RBP,
+      setup_state->protected_begin, setup_state->protected_end,
+      (uint64_t)&vmm_stack[VMM_STACK_SIZE]);
   vmm_vms_init();
 }
 
@@ -244,7 +246,7 @@ void vmm_vms_init(void) {
   memset(&vm_allocated[0], 0, VM_NB);
 }
 
-void vmm_handle_vm_exit(uint64_t tsc, struct registers guest_regs) {
+void vmm_handle_vm_exit(struct registers guest_regs) {
   uint8_t hook_override = 0;
 
   tsc_vmexit = cpu_rdtsc();
@@ -329,17 +331,20 @@ void vmm_handle_vm_exit(uint64_t tsc, struct registers guest_regs) {
     uint8_t s;
     if(ept_walk(eptp, guest_physical_addr, &e, &a, &s)) {
       if (paging_error != PAGING_WALK_NOT_PRESENT) {
-        ERROR("EPT VIOLATION : ERROR walking address 0x%016X\n",
+        INFO("EPT VIOLATION : ERROR walking address 0x%016X\n",
             guest_physical_addr);
       }
     }
     INFO("EPT VIOLATION from 0x%x: Guest physical 0x%016X\n",
         ept_get_ctx(), guest_physical_addr);
+    // XXX
+    INFO("protected_end 0x%016X\n", setup_state->protected_end);
     // Own memory space check
     if (guest_physical_addr >= setup_state->protected_begin &&
         guest_physical_addr < setup_state->protected_end) {
       INFO("EPT VIOLATION FOR ME!\n");
-      increment_rip(cpu_mode, &guest_regs);                                        
+      // increment_rip(cpu_mode, &guest_regs);                                        
+      ERROR("Unsupported EPT_VIOLATION\n");
       return;
     }
   }
@@ -603,11 +608,14 @@ void vmm_handle_vm_exit(uint64_t tsc, struct registers guest_regs) {
           }
       } else if (guest_regs.rcx == MSR_ADDRESS_IA32_APIC_BASE) {
           __asm__ __volatile__("wrmsr"
-            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), 
+            "c" (guest_regs.rcx), "d" (guest_regs.rdx));
           INFO("Writing in apic base msr!\n"); 
           apic_setup();
       } else {
-        vmm_panic(rvm->state, VMM_PANIC_WRMSR, 0, &guest_regs);
+        msr_bitmap_dump((struct msr_bitmap*)vmcs->ctrls.ex.msr_bitmap.raw);
+        ERROR("MSR write panic rcx(0x%08x) <= rdx(0x%08x)\n", guest_regs.rcx,
+            guest_regs.rdx);
       }
       break;
     }
@@ -694,7 +702,6 @@ void vmm_adjust_tsc(void) {
  */
 void vmm_adjust_paging(void) {
   // Paging adjustments
-  // XXX if guest is in PAE paging mode we need to copy the 4 ptpte in the VMCS
   int paging_mode = get_paging_mode();
   if (paging_mode == PAGING_PAE) {
     uint64_t *cr3;

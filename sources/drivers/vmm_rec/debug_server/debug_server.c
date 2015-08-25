@@ -8,6 +8,7 @@
 #include "vmcs.h"
 #include "cpu.h"
 #include "debug_server.h"
+#include "efiw.h"
 
 #define MAX_INFO_SIZE 1024
 
@@ -24,6 +25,10 @@ static uint8_t send_debug[VM_NB][NB_EXIT_REASONS];
 
 static uint8_t mtf = 0;
 
+// Messages buffer
+static uint8_t *rb = NULL;
+static uint8_t *sb = NULL;
+
 /**
  * Logging
  */
@@ -33,9 +38,8 @@ uint64_t log_cr3_index;
 void debug_server_log_cr3_flush(struct registers *regs) {
   // INFO("Flush\n");
   int i;
-  uint8_t b[sizeof(message_user_defined) + DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t)];
-  message_user_defined *m = (message_user_defined *)&b[0];
-  uint8_t *data = b + sizeof(message_user_defined);
+  message_user_defined *m = (message_user_defined *)&sb[0];
+  uint8_t *data = sb + sizeof(message_user_defined);
   m->type = MESSAGE_USER_DEFINED;
   m->vmid = vm->index;
   m->user_type = USER_DEFINED_LOG_CR3;
@@ -45,7 +49,7 @@ void debug_server_log_cr3_flush(struct registers *regs) {
     memcpy(data, &log_cr3_table[i * DEBUG_SERVER_CR3_PER_MESSAGE], DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t));
     // Send the message
     // INFO("Send\n");
-    debug_server_send(b, sizeof(b));
+    debug_server_send(sb, sizeof(message_user_defined));
     // Run the debug server
     // INFO("Run\n");
     // debug_server_run(regs);
@@ -122,26 +126,24 @@ void debug_server_core_regs_read(struct core_regs *cr, struct registers *regs) {
 void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
     struct registers *guest_regs) {
   if (send_debug[vmid][exit_reason]) {
-    message_vmexit ms = {
-      MESSAGE_VMEXIT,
-      vmid,
-      exit_reason
-    };
-    debug_server_core_regs_read(&ms.regs, guest_regs);
-    debug_server_send(&ms, sizeof(ms));
+    message_vmexit *ms = (message_vmexit*)&sb[0];
+    ms->type = MESSAGE_VMEXIT;
+    ms->vmid = vmid;
+    ms->exit_reason = exit_reason;
+    debug_server_core_regs_read(&ms->regs, guest_regs);
+    debug_server_send(ms, sizeof(message_vmexit));
     debug_server_run(guest_regs);
   }
 }
 
 void debug_server_panic(uint8_t vmid, uint64_t code, uint64_t extra,
     struct registers *guest_regs) {
-  message_vmm_panic m = {
-    MESSAGE_VMM_PANIC,
-    vmid,
-    code,
-    extra
-  };
-  debug_server_send(&m, sizeof(m));
+  message_vmm_panic *m = (message_vmm_panic*) &sb[0];
+  m->type = MESSAGE_VMM_PANIC;
+  m->vmid = vmid;
+  m->code = code;
+  m->extra = extra;
+  debug_server_send(m, sizeof(message_vmm_panic));
   if (guest_regs != NULL) {
     debug_server_run(guest_regs);
   } else {
@@ -151,6 +153,11 @@ void debug_server_panic(uint8_t vmid, uint64_t code, uint64_t extra,
 
 void debug_server_init() {
   uint32_t i;
+  
+  // Info message buffer
+  rb = efi_allocate_pages(1);
+  sb = efi_allocate_pages(1);
+
   /* Init exit reasons for which we need to send a debug message */
   memset(&send_debug[0][0], 0, NB_EXIT_REASONS * VM_NB);
   for (i = 0; i < VM_NB; i++) {
@@ -182,42 +189,38 @@ void debug_server_init() {
 void debug_server_handle_memory_read(message_memory_read *mr) {
   uint64_t length = (mr->length + sizeof(message_memory_data) > eth->mtu) ? eth->mtu - sizeof(message_memory_data) : mr->length;
   // Handle message memory request
-  uint8_t b[length + sizeof(message_memory_data)];
-  message_memory_data *r = (message_memory_data *)b;
+  message_memory_data *r = (message_memory_data *)sb;
   r->type = MESSAGE_MEMORY_DATA;
   r->vmid = vm->index;
   r->address = mr->address;
   r->length = length;
-  uint8_t *buf = (uint8_t *)&b[0] + sizeof(message_memory_data);
+  uint8_t *buf = (uint8_t *)&sb[0] + sizeof(message_memory_data);
   memcpy(buf, (uint8_t *)((uintptr_t)mr->address), length);
-  debug_server_send(b, sizeof(b));
+  debug_server_send(sb, length + sizeof(message_memory_data));
 }
 
 void debug_server_handle_memory_write(message_memory_write *mr) {
   // We don't trust the length in the received message
   uint64_t length = (mr->length + sizeof(message_memory_write) > eth->mtu) ? eth->mtu - sizeof(message_memory_write) : mr->length;
+
   uint8_t *b = (uint8_t *)mr + sizeof(message_memory_write);
-
-  uint8_t ok;
   memcpy((uint8_t *)mr->address, b, length);
-  ok = *((uint8_t *)mr->address) == b[0];
 
-  message_commit r = {
-    MESSAGE_COMMIT,
-    vm->index,
-    ok
-  };
-  debug_server_send(&r, sizeof(r));
+  message_commit *r = (message_commit*)&sb[0];
+  r->type = MESSAGE_COMMIT;
+  r->vmid = vm->index;
+  r->ok = 1;
+
+  debug_server_send(&r, sizeof(message_commit));
 }
 
 void debug_server_handle_core_regs_read(message_core_regs_read *mr, struct registers *regs) {
-  message_core_regs_data m = {
-    MESSAGE_CORE_REGS_DATA,
-    vm->index
-  };
-  debug_server_core_regs_read(&m.regs, regs);
+  message_core_regs_data *m = (message_core_regs_data*) &sb[0];
+  m->type = MESSAGE_CORE_REGS_DATA,
+  m->vmid = vm->index;
+  debug_server_core_regs_read(&m->regs, regs);
   // Send to the client
-  debug_server_send(&m, sizeof(m));
+  debug_server_send(m, sizeof(message_core_regs_data));
 }
 
 void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
@@ -225,8 +228,7 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   uint8_t s = -1;
   uint64_t e = 0;
   uint8_t *data = (uint8_t *)mr + sizeof(message_vmcs_read);
-  uint8_t b[eth->mtu];
-  uint8_t *buf = &b[0];
+  uint8_t *buf = &sb[0];
   uint64_t v = 0;
   uint8_t *current_vmcs = cpu_vmptrst();
   uint8_t *read_vmcs;
@@ -283,7 +285,7 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   // Ends the message
   buf[0] = 0;
   // Send the message
-  debug_server_send(b, size);
+  debug_server_send(sb, size);
 }
 
 void debug_server_handle_vmcs_write(message_vmcs_write *mr, struct registers *guest_regs) {
@@ -295,17 +297,18 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr, struct registers *gu
   uint64_t v = 0;
   uint8_t *current_vmcs = cpu_vmptrst();
   uint8_t *write_vmcs;
-  message_commit r = {
-    MESSAGE_COMMIT,
-    vm->index,
-    1
-  };
+
+  message_commit *r = (message_commit*)&sb[0];
+  r->type = MESSAGE_COMMIT;
+  r->vmid = 0;
+  r->ok = 1;
+
   if (mr->vmid < VM_NB) {
     write_vmcs = &vm_pool[mr->vmid].vmcs_region[0];
-    r.vmid = mr->vmid;
+    r->vmid = mr->vmid;
   } else {
     write_vmcs = vm->vmcs_region;
-    r.vmid = vm->index;
+    r->vmid = vm->index;
   }
   cpu_vmptrld(write_vmcs);
   while (s) {
@@ -348,7 +351,7 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr, struct registers *gu
     data += 1;
   }
   cpu_vmptrld(current_vmcs);
-  debug_server_send(&r, sizeof(r));
+  debug_server_send(&r, sizeof(message_commit));
 }
 
 void debug_server_send_debug_unset(uint8_t reason) {
@@ -371,17 +374,17 @@ void debug_server_send_debug_all(void) {
 
 void debug_server_handle_send_debug(message_send_debug *mr) {
   memcpy(&send_debug[0][0], &mr->send_debug[0][0], NB_EXIT_REASONS * VM_NB);
-  message_commit r = {
-    MESSAGE_COMMIT,
-    vm->index,
-    mr->vmid
-  };
+
+  message_commit *r = (message_commit*)&sb[0];
+  r->type = MESSAGE_COMMIT;
+  r->vmid = vm->index;
+  r->ok = 1;
+
   debug_server_send(&r, sizeof(r));
 }
 
 void debug_server_run(struct registers *regs) {
-  uint8_t buf[eth->mtu];
-  message *mr = (message *)buf;
+  message *mr = (message *)rb;
   mr->type = MESSAGE_MESSAGE;
   while (mr->type != MESSAGE_EXEC_CONTINUE) {
     if (debug_server_recv(mr, eth->mtu) == -1) {
@@ -425,9 +428,8 @@ uint32_t debug_server_recv(void *buf, uint32_t len) {
 }
 
 void debug_server_putc(uint8_t value) {
-  static uint8_t b [MAX_INFO_SIZE + sizeof(message_info)];
-  static message_info *m = (message_info *)b;
-  static uint8_t *buf = (uint8_t *)&b[0] + sizeof(message_info);
+  message_info *m = (message_info *)sb;
+  uint8_t *buf = (uint8_t *)&sb[0] + sizeof(message_info);
   static uint8_t current_size = 0;
 
   buf[current_size] = value;
@@ -438,7 +440,9 @@ void debug_server_putc(uint8_t value) {
     m->vmid = vm->index;
     m->length = current_size;
     m->level = debug_server_level;
-    eth->send(b, current_size + sizeof(message_info), EFI_82579LM_API_BLOCK);
+    eth->send(sb, current_size + sizeof(message_info), EFI_82579LM_API_BLOCK);
+    // XXX needs blocking send
+    memset(&buf[0], 0, 0x1000); // Reset the buffer!
     current_size = 0;
   }
 }

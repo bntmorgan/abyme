@@ -2,6 +2,7 @@
 
 #include "vmcs.h"
 #include "string.h"
+#include "stdio.h"
 #include "mtrr.h"
 #include "msr.h"
 #include "vmm.h"
@@ -13,8 +14,10 @@ struct msr_bitmap *msr_bitmap_pool;
 void msr_bitmap_setup(void) {
   msr_bitmap = efi_allocate_pages(1);
   msr_bitmap_pool = efi_allocate_pages(VM_NB);
-  memset(msr_bitmap, 0, sizeof(msr_bitmap));
-  memset(msr_bitmap_pool, 0, sizeof(msr_bitmap) * VM_NB);
+  memset(msr_bitmap, 0, sizeof(struct msr_bitmap));
+  memset(msr_bitmap_pool, 0, sizeof(struct msr_bitmap) * VM_NB);
+  msr_bitmap_dump(msr_bitmap);
+  msr_bitmap_dump(&msr_bitmap_pool[0]);
 }
 
 void msr_bitmap_set_read(uint64_t msr) {
@@ -23,6 +26,33 @@ void msr_bitmap_set_read(uint64_t msr) {
   } else {
     uint64_t msr_index = msr - 0xc0000000;
     msr_bitmap->high_msrs_read_bitmap[msr_index / 8] |= (1 << (msr_index % 8));
+  }
+}
+
+void msr_bitmap_dump(struct msr_bitmap *bm) {
+  uint32_t msr, msrh;
+  uint8_t rl, wl, rh, wh;
+  INFO("MSR bitmap(@0x%016X)\n", (uint64_t)bm);
+  for (msr = 0, msrh = 0xc0000000; msr < 0x2000; msr++, msrh++) {
+    rl = 0, rh = 0,  wl = 0, wh = 0;
+    if (msr_bitmap->low_msrs_write_bitmap[msr / 8] & (1 << (msr % 8))) {
+      wl = 1;
+    }
+    if (msr_bitmap->low_msrs_read_bitmap[msr / 8] & (1 << (msr % 8))) {
+      rl = 1;
+    }
+    if (msr_bitmap->high_msrs_write_bitmap[msr / 8] & (1 << (msr % 8))) {
+      wh = 1;
+    }
+    if (msr_bitmap->high_msrs_read_bitmap[msr / 8] & (1 << (msr % 8))) {
+      rh = 1;
+    }
+    if (rl | wl) {
+      INFO("  0x%08x(r: %d, w: %d)\n", msr, rl, wl);
+    }
+    if (rh | wh) {
+      INFO("  0x%08x(r: %d, w: %d)\n", msrh, rh, wh);
+    }
   }
 }
 
@@ -65,7 +95,7 @@ void msr_bitmap_set_for_mtrr(void) {
  * Initialise the mrst bitmap with the host configuration
  */
 void msr_bitmap_clone(uint8_t *b) {
-  memcpy(b, msr_bitmap, 0x1000);
+  memcpy(b, msr_bitmap, sizeof(struct msr_bitmap));
 }
 
 /**

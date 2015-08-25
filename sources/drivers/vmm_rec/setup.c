@@ -81,10 +81,6 @@ void bsp_main(struct setup_state *state) {
   INFO("MSR BITMAP DONE\n");
   msr_bitmap_set_for_mtrr();
   INFO("MSR BITMAP FOR MTRR DONE\n");
-#ifdef _NO_GUEST_EPT
-  msr_bitmap_set_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2);
-  INFO("MSR BITMAP FOR EPT PROTECTION DONE\n");
-#endif
   msr_bitmap_set_write(MSR_ADDRESS_IA32_APIC_BASE);
   INFO("MSR BITMAP FOR APIC PROTECTION DONE\n");
   io_bitmap_setup();
@@ -101,8 +97,8 @@ void bsp_main(struct setup_state *state) {
   // Wait for the end of APs initialization chain
   // TODO implement
 
-  vmcs_init();
   vmm_init(state);
+  vmcs_init();
 
   vmm_setup(/* TODO #core */);
   INFO("SETUP DONE\n");

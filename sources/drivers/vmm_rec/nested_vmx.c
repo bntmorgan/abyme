@@ -110,6 +110,8 @@ void nested_vmxoff(struct registers *gr) {
   rvm->state = NESTED_DISABLED;
   // Deallocate VMs
   vm_free_all();
+  memset(rvm->childs, 0, sizeof(struct vm *) * VM_NB);
+  rvm->child = NULL;
 }
 
 void nested_vmxon(uint8_t *vmxon_guest) {
@@ -164,13 +166,12 @@ void nested_vmptrst(uint8_t **shadow_vmcs, struct registers *gr) {
 }
 
 #ifdef _NESTED_EPT
+// We need to read the shadow vmcs before running this function
 void nested_smap_build(uint32_t index) {
   uint64_t start, end;
   uint64_t ta = 0;
   uint8_t in = 0;
   uint8_t max_phyaddr = cpuid_get_maxphyaddr();
-  // XXX already done in shadow to guest
-  cpu_vmptrld(rvm->shadow_ptr);
   // Private callback for chunk detection
   int cb(uint64_t *e, uint64_t a, uint8_t s) {
     if (in == 0) {
@@ -208,10 +209,8 @@ void nested_smap_build(uint32_t index) {
       return 1;
     }
   }
-  // TODO XXX
-  uint64_t eptp = ((cpu_vmread(EPT_POINTER_HIGH) << 32) |
-    cpu_vmread(EPT_POINTER)) & ~((uint64_t)0xfff);
-  INFO("EPTP 0x%016X\n", eptp);
+  uint64_t eptp = svmcs.ctrls.ex.ept_pointer.raw & ~((uint64_t)0xfff);
+  INFO("EPTP 0x%016X, idx 0x%x\n", eptp, index);
   if (ept_iterate(eptp, &cb)) {
     ERROR("PAGING error... 0x%x\n", paging_error);
   }
@@ -348,7 +347,6 @@ void nested_ctrls_shadow_apply(struct vm *vm) {
 
   // copy tsc offset
   VMC(ctrls.ex.tsc_offset, vm->vmcs, &svmcs);
-  VMC(ctrls.ex.tsc_offset, vm->vmcs, &svmcs);
 
   // Exception bitmap
   exception_bitmap = hc->ctrls.ex.exception_bitmap.raw |
@@ -403,10 +401,10 @@ void nested_ctrls_shadow_apply(struct vm *vm) {
   // Activate VMCS shadowing if any
   if (sec_ctrl) {
     VMW3(vm->vmcs, crtls.ex.secondary_vm_exec_control,
-        vmcs->crtls.ex.secondary_vm_exec_control | VMCS_SHADOWING);
+        vmcs->crtls.ex.secondary_vm_exec_control.raw | VMCS_SHADOWING);
   } else {
     VMW3(vm->vmcs, crtls.ex.secondary_vm_exec_control,
-        vmcs->crtls.ex.secondary_vm_exec_control & ~VMCS_SHADOWING);
+        vmcs->crtls.ex.secondary_vm_exec_control.raw & ~VMCS_SHADOWING);
   }
   // Set the type of the shadow_vmcs
   if (bit31) {
@@ -458,10 +456,6 @@ void nested_vmresume(struct registers *guest_regs) {
   // Adjust vm entry controls TODO : refactor
   vmm_adjust_vm_entry_controls();
 
-  VMW3(vmcs, ctrls.ex.virtual_processor_id,
-      (vmcs->ctrls.ex.virtual_processor_id.raw + 1 == 0) ? 2 :
-      vmcs->ctrls.ex.virtual_processor_id.raw + 1);
-
 #ifdef _NESTED_EPT
   // Set the mapping !
   ept_set_ctx(vm->index);
@@ -474,9 +468,6 @@ void nested_vmresume(struct registers *guest_regs) {
 #endif
 
   cpu_invvpid(0x1, vm->index + 1, 0);
-
-  // XXX
-  // vmcs_dump(vmcs);
 }
 
 void nested_vmlaunch(struct registers *guest_regs) {
@@ -489,21 +480,6 @@ void nested_vmlaunch(struct registers *guest_regs) {
   cpu_vmclear(nvm->vmcs_region);
   // copy ctrl fields + host fields from host configuration to the nvm
   vmcs_clone(nvm->vmcs);
-
-#ifdef _NESTED_EPT
-  // SMAP Build only if EPT is enabled
-  if (svmcs.ctrls.ex.secondary_vm_exec_control.enable_ept) {
-    nested_smap_build(nvm->index);
-  }
-  // Set the mapping !
-  ept_set_ctx(nvm->index);
-  uint64_t desc2[2] = {
-    0x0000000000000000,
-    0x000000000000ffff | 0x0000
-  };
-  uint64_t type2 = 0x2;
-  __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
-#endif
 
   // Copy the shadow to the guest
   nested_shadow_to_guest(nvm);
@@ -533,7 +509,22 @@ void nested_vmlaunch(struct registers *guest_regs) {
   vmm_adjust_vm_entry_controls();
 
 #ifdef _DEBUG_SERVER
-  debug_server_send_debug_set(EXIT_REASON_EXCEPTION_OR_NMI);
+  // debug_server_send_debug_all();
+#endif
+
+#ifdef _NESTED_EPT
+  // SMAP Build only if EPT is enabled
+  if (svmcs.ctrls.ex.secondary_vm_exec_control.enable_ept) {
+    nested_smap_build(nvm->index);
+  }
+  // Set the mapping !
+  ept_set_ctx(nvm->index);
+  uint64_t desc2[2] = {
+    0x0000000000000000,
+    0x000000000000ffff | 0x0000
+  };
+  uint64_t type2 = 0x2;
+  __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
 #endif
 
   nested_cpu_vmlaunch(guest_regs);
@@ -550,7 +541,7 @@ uint64_t nested_vmread(uint64_t field) {
       // The shadow has not been launched !
       cpu_vmptrld(rvm->shadow_ptr);
       // XXX
-      INFO("Reading the executive VMCS\n");
+      // INFO("Reading the executive VMCS\n");
     } else {
       cpu_vmptrld(v->vmcs_region);
     }
@@ -559,10 +550,6 @@ uint64_t nested_vmread(uint64_t field) {
   }
 
   value = cpu_vmread(field);
-
-  // XXX
-//  VMR(gs.rip);
-//  INFO("[0x%016X]reading 0x%x : value 0x%x\n", vmcs->gs.rip, field, value);
 
   cpu_vmptrld(vm->vmcs_region);
 
@@ -680,8 +667,6 @@ void nested_host_shadow_apply(struct vm *vm) {
 void nested_load_host(void) {
   uint64_t preempt_timer_value;
 
-  // DBG("HOST LOADING DUDES\n");
-
   // Update the shadow VMCS with the new guest state
   
   // Save preemption timer
@@ -734,7 +719,6 @@ void nested_load_host(void) {
   uint64_t type2 = 0x1; // Single context
   __asm__ __volatile__("invvpid %0, %%rcx" : : "m"(operand), "c"(type2) : "cc", "memory");
 
-  // XXX Set VM succeed
   nested_set_vm_succeed();
 
   // update vmx preemption timer
@@ -744,17 +728,17 @@ void nested_load_host(void) {
 
   vm->state = NESTED_HOST_RUNNING;
 
-  // XXX Eric dit que ça ne vaut pas le coup
-  cpu_write_cr2(0);
-
 #ifdef _DEBUG_SERVER
   // handle Monitor trap flag
   debug_server_mtf();
 #endif
+
 }
 
 void nested_load_guest(void) {
   uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
+
+  // DBG("GUEST LOADING DUDES\n");
 
   nested_shadow_to_guest(vm->child);
 

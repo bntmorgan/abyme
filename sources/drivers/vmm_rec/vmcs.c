@@ -870,6 +870,7 @@ void vmcs_host_config_host_state_fields(void) {
   VMW(hs.cr4, cpu_adjust64(cpu_read_cr4() | (1 << 18),
         MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
   VMW(hs.rsp, (uint64_t)&vmm_stack[VMM_STACK_SIZE]);
+  DBG("VMM stack @0x%016X\n", (uint64_t)&vmm_stack[VMM_STACK_SIZE]);
   VMW(hs.rip, (uint64_t)vmm_vm_exit_handler);
 
   VMW(hs.cs_selector, cpu_read_cs() & 0xf8);
@@ -902,7 +903,7 @@ void vmcs_host_config_host_state_fields(void) {
 
 void vmcs_host_config_vm_exec_control_fields(void) {
   uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS |
-      USE_IO_BITMAPS | CR3_LOAD_EXITING;
+      USE_IO_BITMAPS | CR3_LOAD_EXITING /*| USE_TSC_OFFSETTING*/;
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST |
       ENABLE_RDTSCP;
                              

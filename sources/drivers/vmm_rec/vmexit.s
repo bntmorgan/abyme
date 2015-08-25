@@ -28,12 +28,6 @@ vmm_vm_exit_handler:
   push %rax
 
   /*
-   * Set stack frame
-   */
-  mov %rsp, %rbp
-  add $0x88, %rbp /* pointing to TSC backup */
-
-  /*
    * Call our VM-Exit handler.
    * It takes the guest general purpose registers as a parameter (see gpr64_t).
    */
