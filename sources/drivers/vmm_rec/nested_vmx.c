@@ -340,7 +340,8 @@ void nested_ctrls_shadow_apply(struct vm *vm) {
   VMC(ctrls.ex.cr4_read_shadow, vm->vmcs, &svmcs);
 
   // Tells the vmm to add this to tsc offset
-  tsc_offset_adjust = svmcs.ctrls.ex.tsc_offset.raw;
+  // TODO see if this is necessary with more than one VMM virtualized
+  tsc_l1_offset = svmcs.ctrls.ex.tsc_offset.raw;
 
   // copy vapic page address : we don't virtualize it for the moment
   VMC(ctrls.ex.virtual_apic_page_addr, vm->vmcs, &svmcs);
@@ -474,6 +475,8 @@ void nested_vmlaunch(struct registers *guest_regs) {
   uint64_t preempt_timer_value = cpu_vmread(VMX_PREEMPTION_TIMER_VALUE);
   struct vm *nvm;
 
+  INFO("This is a VMLAUNCH\n");
+
   // Current shadow VMCS will be really executed, we allocate a VM for it
   vm_alloc(&nvm);
   // Clear the VMCS
@@ -508,10 +511,6 @@ void nested_vmlaunch(struct registers *guest_regs) {
   // Adjust vm entry controls TODO : refactor
   vmm_adjust_vm_entry_controls();
 
-#ifdef _DEBUG_SERVER
-  // debug_server_send_debug_all();
-#endif
-
 #ifdef _NESTED_EPT
   // SMAP Build only if EPT is enabled
   if (svmcs.ctrls.ex.secondary_vm_exec_control.enable_ept) {
@@ -525,6 +524,10 @@ void nested_vmlaunch(struct registers *guest_regs) {
   };
   uint64_t type2 = 0x2;
   __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
+#endif
+
+#ifdef _DEBUG_SERVER
+  debug_server_send_debug_all();
 #endif
 
   nested_cpu_vmlaunch(guest_regs);
@@ -711,13 +714,14 @@ void nested_load_host(void) {
 //    0x0000000000000000, 
 //    0x000000000000ffff | 0x0000
 //  };
-    struct {
-	uint64_t vpid : 16;
-	uint64_t rsvd : 48;
-	uint64_t gva;
-    } operand = { vm->index+1, 0, 0};
-  uint64_t type2 = 0x1; // Single context
-  __asm__ __volatile__("invvpid %0, %%rcx" : : "m"(operand), "c"(type2) : "cc", "memory");
+//  XXX Machine physique viré à l'arrache pour tester
+//    struct {
+//	uint64_t vpid : 16;
+//	uint64_t rsvd : 48;
+//	uint64_t gva;
+//    } operand = { vm->index+1, 0, 0};
+//  uint64_t type2 = 0x1; // Single context
+//  __asm__ __volatile__("invvpid %0, %%rcx" : : "m"(operand), "c"(type2) : "cc", "memory");
 
   nested_set_vm_succeed();
 
@@ -732,7 +736,6 @@ void nested_load_host(void) {
   // handle Monitor trap flag
   debug_server_mtf();
 #endif
-
 }
 
 void nested_load_guest(void) {

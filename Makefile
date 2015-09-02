@@ -104,7 +104,7 @@ umount:
 	sudo umount /mnt
 
 /mnt/EFI/%: binary/%
-	@echo "  [CP]    $^ -> $@"
+	@echo "[CP]    $^ -> $@"
 	@sudo mkdir -p $(dir $@)
 	@sudo cp $< $@
 

@@ -10,11 +10,6 @@ static uint8_t max_lvt_entry;
 static uint8_t max_phyaddr; // Physical address space
 static uint8_t apic_mode;
 
-enum apic_mode {
-  MODE_APIC,
-  MODE_X2APIC
-};
-
 void x2apic_print(void) {
   union x2apic_id id = {.raw =
     msr_read(MSR_ADDRESS_IA32_X2APIC_APICID)};
@@ -128,22 +123,26 @@ void apic_setup(void) {
   }
   la = (struct local_apic *)((apic_base.apic_base & max_address_mask) << 12);
   max_lvt_entry = la->version.max_lvt_entry + 1; // Local APIC Version reg doc
-  apic_mode = MODE_APIC;
+  apic_mode = APIC_MODE_APIC;
   if (cpuid_is_x2APIC_supported()) {
     INFO("x2APIC mode supported\n");
     if (apic_base.x2APIC_enable) {
       INFO("x2APIC mode enabled\n");
-      apic_mode = MODE_X2APIC;
+      apic_mode = APIC_MODE_X2APIC;
     }
   }
   switch (apic_mode) {
-    case MODE_APIC:
+    case APIC_MODE_APIC:
       // apic_print();
       break;
-    case MODE_X2APIC:
+    case APIC_MODE_X2APIC:
       // x2apic_print();
       break;
     default:
       ERROR("unknow APIC mode\n");
   }
 };
+
+int apic_get_mode(void) {
+  return apic_mode;
+}

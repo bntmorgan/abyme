@@ -2,6 +2,7 @@
 #include <efilib.h>
 
 #include "stdio.h"
+#include "debug.h"
 #include "string.h"
 #include "vmm.h"
 #include "vmx.h"
@@ -136,21 +137,6 @@ void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
   }
 }
 
-void debug_server_panic(uint8_t vmid, uint64_t code, uint64_t extra,
-    struct registers *guest_regs) {
-  message_vmm_panic *m = (message_vmm_panic*) &sb[0];
-  m->type = MESSAGE_VMM_PANIC;
-  m->vmid = vmid;
-  m->code = code;
-  m->extra = extra;
-  debug_server_send(m, sizeof(message_vmm_panic));
-  if (guest_regs != NULL) {
-    debug_server_run(guest_regs);
-  } else {
-    while(1);
-  }
-}
-
 void debug_server_init() {
   uint32_t i;
   
@@ -211,7 +197,7 @@ void debug_server_handle_memory_write(message_memory_write *mr) {
   r->vmid = vm->index;
   r->ok = 1;
 
-  debug_server_send(&r, sizeof(message_commit));
+  debug_server_send(sb, sizeof(message_commit));
 }
 
 void debug_server_handle_core_regs_read(message_core_regs_read *mr, struct registers *regs) {
@@ -297,18 +283,14 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr, struct registers *gu
   uint64_t v = 0;
   uint8_t *current_vmcs = cpu_vmptrst();
   uint8_t *write_vmcs;
-
-  message_commit *r = (message_commit*)&sb[0];
-  r->type = MESSAGE_COMMIT;
-  r->vmid = 0;
-  r->ok = 1;
+  uint8_t vmid = 0;
 
   if (mr->vmid < VM_NB) {
     write_vmcs = &vm_pool[mr->vmid].vmcs_region[0];
-    r->vmid = mr->vmid;
+    vmid = mr->vmid;
   } else {
     write_vmcs = vm->vmcs_region;
-    r->vmid = vm->index;
+    vmid = vm->index;
   }
   cpu_vmptrld(write_vmcs);
   while (s) {
@@ -351,7 +333,12 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr, struct registers *gu
     data += 1;
   }
   cpu_vmptrld(current_vmcs);
-  debug_server_send(&r, sizeof(message_commit));
+
+  message_commit *r = (message_commit*)&sb[0];
+  r->type = MESSAGE_COMMIT;
+  r->vmid = vmid;
+  r->ok = 1;
+  debug_server_send(sb, sizeof(message_commit));
 }
 
 void debug_server_send_debug_unset(uint8_t reason) {
@@ -380,7 +367,7 @@ void debug_server_handle_send_debug(message_send_debug *mr) {
   r->vmid = vm->index;
   r->ok = 1;
 
-  debug_server_send(&r, sizeof(r));
+  debug_server_send(sb, sizeof(message_commit));
 }
 
 void debug_server_run(struct registers *regs) {
@@ -437,9 +424,8 @@ void debug_server_putc(uint8_t value) {
 
   if (value == '\n' || current_size == MAX_INFO_SIZE) {
     m->type = MESSAGE_INFO;
-    m->vmid = vm->index;
+    m->vmid = debug_server_level;
     m->length = current_size;
-    m->level = debug_server_level;
     eth->send(sb, current_size + sizeof(message_info), EFI_82579LM_API_BLOCK);
     // XXX needs blocking send
     memset(&buf[0], 0, 0x1000); // Reset the buffer!

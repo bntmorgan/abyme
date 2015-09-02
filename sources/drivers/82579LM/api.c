@@ -41,10 +41,10 @@ static inline uint16_t ntohs(uint16_t data) {
 void _api_dump_eth_frame(void *frame, uint32_t payload_len) {
   // Addresses
   INFO("MAC Addresses\n");
-  dump((void *)frame, 6, 12, 0, 6);
+  dump((void *)frame, 6, 12, 8, 0, 6);
   // Type
   INFO("Type\n");
-  dump(((void *)frame) + 12, 2, 2, 0, 2);
+  dump(((void *)frame) + 12, 2, 2, 8, 0, 2);
   // Payload
   INFO("Payload len %d\n", payload_len);
   // dump(((void *)frame) + sizeof(eth_header), 1, payload_len, 0, 1);
@@ -65,6 +65,7 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
   eth_header *eh = (eth_header *)&frame[0];
   // XXX destination MAC address
   eth_addr daddr = {.n = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
+  // eth_addr daddr = {.n = {0xb4, 0xb5, 0x2f, 0xfc, 0x28, 0xce}}; // eth0 tatooine
   //eth_addr daddr = {.n = {0xce, 0x28, 0xfc, 0x2f, 0xb5, 0xb4}};
   eth_addr *laddr = eth_get_laddr();
   uint32_t i;

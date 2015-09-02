@@ -48,22 +48,23 @@ void dump_core_state(struct core_gpr *gpr, struct core_cr *cr) {
   printk("IA32_VMX_ENTRY_CTLS: %016X\n", msr_read(MSR_ADDRESS_IA32_VMX_ENTRY_CTLS));
 }
 
-void dump(void *fields, uint32_t fds, uint32_t fdss, uint64_t offset, uint32_t step) {
+void dump(void *fields, uint32_t fds, uint32_t fdss, uint32_t fpl, uint64_t
+    offset, uint32_t step) {
   uint32_t i, j;
   uint32_t cycles = fdss / fds;
   for (i = 0; i < cycles; i++) {
-    if (i % 4 == 0) {
+    if (i % fpl == 0) {
       printk("%08x: ", i * step + offset);
     }
     for (j = 0; j < fds; j++) {
       printk("%02x", *((uint8_t*)fields + i * fds + (fds - j - 1)));
     }
     printk(" ");
-    if (i % 4 == 3) {
+    if (i % fpl == fpl - 1) {
       printk("\n");
     }
   }
-  if (i % 4 != 3) {
+  if (i % fpl != fpl - 1) {
     printk("\n");
   }
 }

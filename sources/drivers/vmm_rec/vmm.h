@@ -13,7 +13,7 @@
 
 extern uint8_t *vmm_stack;
 
-extern int64_t tsc_offset_adjust;
+extern int64_t tsc_l1_offset;
 
 enum PAGING_MODE {
   PAGING_DISABLED,
@@ -129,11 +129,14 @@ struct vm {
   struct vm *child;
   // VMs owned by this VM
   struct vm *childs[VM_NB];
+  // Current TSC offset for this VM
+  int64_t tsc_offset;
 };
 
 void vmm_vm_exit_handler(void);
 void vmm_init(struct setup_state *state);
 void vmm_adjust_vm_entry_controls(void);
+void vmm_adjust_tsc(void);
 
 void vm_alloc(struct vm **v);
 void vm_free(struct vm *v);

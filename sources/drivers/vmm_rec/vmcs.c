@@ -903,10 +903,10 @@ void vmcs_host_config_host_state_fields(void) {
 
 void vmcs_host_config_vm_exec_control_fields(void) {
   uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS |
-      USE_IO_BITMAPS | CR3_LOAD_EXITING /*| USE_TSC_OFFSETTING*/;
+      USE_IO_BITMAPS | USE_TSC_OFFSETTING;
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST |
       ENABLE_RDTSCP;
-                             
+
   uint64_t eptp;
   uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER; // | NMI_EXITING;
 

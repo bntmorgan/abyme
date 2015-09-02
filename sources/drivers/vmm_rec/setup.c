@@ -83,6 +83,8 @@ void bsp_main(struct setup_state *state) {
   INFO("MSR BITMAP FOR MTRR DONE\n");
   msr_bitmap_set_write(MSR_ADDRESS_IA32_APIC_BASE);
   INFO("MSR BITMAP FOR APIC PROTECTION DONE\n");
+  msr_bitmap_set_read_write(MSR_ADDRESS_IA32_TSC_DEADLINE);
+  INFO("MSR BITMAP FOR TSC DEADLINE PROTECTION DONE\n");
   io_bitmap_setup();
   INFO("IO BITMAP DONE\n");
   // Ethernet card protection

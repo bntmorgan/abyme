@@ -8,6 +8,11 @@
 #define IO_APIC_DEFAULT_ADDR            0xfec00000
 #define APIC_DEFAULT_ADDR               0xfee00000
 
+enum apic_mode {
+  APIC_MODE_APIC,
+  APIC_MODE_X2APIC
+};
+
 union apic_base_msr {
   uint64_t raw;
   struct {
@@ -17,6 +22,22 @@ union apic_base_msr {
     uint64_t x2APIC_enable:1; // is current core the bsp
     uint64_t global_enable:1; // is apic enabled
     uint64_t apic_base:52; // mask with max phyaddr
+  };
+};
+
+enum apic_timer_mode {
+  APIC_TIMER_MODE_ONE_SHOT,
+  APIC_TIMER_MODE_ONE_PERIODIC,
+  APIC_TIMER_MODE_ONE_TSC_DEADLINE,
+  APIC_TIMER_MODE_ONE_RESERVED,
+};
+
+union apic_timer_register {
+  uint32_t raw;
+  struct {
+    uint32_t r0:17;
+    uint32_t mode:2;
+    uint32_t r1:13;
   };
 };
 
@@ -228,5 +249,6 @@ union x2apic_lvt_error {
 };
 
 void apic_setup(void);
+int apic_get_mode(void);
 
 #endif//__APIC_H__

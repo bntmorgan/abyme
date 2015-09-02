@@ -25,6 +25,13 @@
 #include "msr_bitmap.h"
 
 /**
+ * TSC DEALINE virtualization
+ */
+
+static uint64_t msr_tsc_deadline_adjusted = 0;
+static uint64_t msr_tsc_deadline_original = 0;
+
+/**
  * VMs pool
  */
 struct vm *vm_pool;
@@ -64,10 +71,8 @@ struct setup_state *setup_state;
 static uint64_t io_count = 0;
 static uint64_t cr3_count = 0;
 
-static uint64_t tsc_offset = 0;
-int64_t tsc_offset_adjust = 0;
-static uint64_t tsc_delta = 0;
 static uint64_t tsc_vmexit = 0;
+int64_t tsc_l1_offset = 0;
 
 enum VMM_PANIC {
   VMM_PANIC_RDMSR,
@@ -112,8 +117,6 @@ int get_cpu_mode(void) {
 }
 
 static inline void* get_instr_param_ptr(struct registers *guest_regs);
-static void vmm_panic(uint8_t core, uint64_t code, uint64_t extra, struct
-    registers *guest_regs);
 static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs);
 static inline uint8_t is_MTRR(uint64_t msr_addr);
 void vmm_vms_init(void);
@@ -174,6 +177,17 @@ void vm_free_all(void) {
   uint32_t i;
   for (i = 1; i < VM_NB; i++) {
     vm_allocated[i] = 0;
+  }
+}
+
+void vm_iterate(int (*cb) (struct vm *)) {
+  uint32_t i;
+  for (i = 0; i < VM_NB; i++) {
+    if (vm_allocated[i] == 1) {
+      if (!cb(&vm_pool[i])) {
+        break;
+      }
+    }
   }
 }
 
@@ -250,7 +264,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   uint8_t hook_override = 0;
 
   tsc_vmexit = cpu_rdtsc();
-  tsc_offset_adjust = 0;
 
   VMR2(gs.rsp, guest_regs.rsp);
   VMR2(gs.rip, guest_regs.rip);
@@ -265,8 +278,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   // check VMX abort
   uint32_t vmx_abort = ((uint32_t*)vm->vmcs_region)[1];
   if (vmx_abort) {
-    printk("VMX abort detected : %d\n", vmx_abort);
-    vmm_panic(rvm->state, 0, 0, &guest_regs);
+    ERROR("VMX abort detected : %d\n", vmx_abort);
   }
 
   // Check VM Entry failure
@@ -301,13 +313,32 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     return;
 // XXX Optimisation rappel de la NIM et EXternal interrupt
 //  } else if (exit_reason == EXIT_REASON_EXTERNAL_INTERRUPT) {
-//    INFO("External interrupt from 0x%x!\n", vm->index);
 //    VMR(info.intr_info);
 //    union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info.raw};
 //    VMR(info.intr_error_code);
 //    uint32_t error_code = vmcs->info.intr_error_code.raw;
-//    nested_interrupt_set(iif.vector, iif.type, error_code);
-//    return;
+//    INFO("External interrupt from 0x%x : \n  info(0x%x)\n  error_code(0x%x)\n",
+//        vm->index, iif.raw, error_code);
+//    if (iif.vector == 0xef) { // Local APIC timer
+//      if (apic_get_mode() == APIC_MODE_X2APIC) {
+//        union apic_timer_register timer_ctrl = 
+//            {.raw = msr_read(MSR_ADDRESS_IA32_X2APIC_LVT_TIMER)};
+//        uint64_t timer_init =
+//          msr_read(MSR_ADDRESS_IA32_X2APIC_LVT_INITIAL_COUNT);
+//        uint64_t timer_curr =
+//          msr_read(MSR_ADDRESS_IA32_X2APIC_LVT_CURRENT_COUNT);
+//        INFO("Timer:\n  ctrl(0x%016X)\n  init(0x%016X)\n  curr(0x%016X)\n",
+//            timer_ctrl.raw, timer_init, timer_curr);
+//        if (timer_ctrl.mode == APIC_TIMER_MODE_ONE_TSC_DEADLINE) {
+//          uint64_t reload = msr_read(MSR_ADDRESS_IA32_TSC_DEADLINE);
+//          uint64_t tsc = cpu_rdtsc();
+//          INFO("TSC deadline mode :\n  goal(0x%016X)\n  tsc(0x%016X)\n",
+//              reload, tsc);
+//        }
+//      }
+//    }
+    // nested_interrupt_set(iif.vector, iif.type, error_code);
+    // nested_interrupt_inject();
 //  } else if (exit_reason == EXIT_REASON_EXCEPTION_OR_NMI) {
 //    INFO("NMI interrupt from 0x%x!\n", vm->index);
 //    VMR(info.intr_info);
@@ -350,16 +381,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
   }
 
   if (rvm->state == NESTED_GUEST_RUNNING) {
-    //if (debug_server_level == 1) {
-      // static uint32_t lol = 0;
-      // if (lol < 2) {
-      //  LEVEL(1, "state %d, shadow_idx %d, nested_level %d, grip 0x%016X\n", rvm->state,
-      //      ns.shadow_idx, level, guest_regs.rip);
-      //  lol++;
-      // } else {
-      // ERROR("Here we are\n");
-      // }
-    //}
     // Forward to L1 host
     nested_load_host();
     return;
@@ -376,10 +397,52 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     return;
   }
 
+
   switch (exit_reason) {
     //
     // VMX Operations
     //
+    case EXIT_REASON_RDPMC:
+    case EXIT_REASON_RDTSC:
+    case EXIT_REASON_RSM:
+    case EXIT_REASON_MOV_DR:
+    case EXIT_REASON_INVALID_GUEST_STATE:
+    case EXIT_REASON_MSR_LOADING_FAILED:
+    case EXIT_REASON_MWAIT:
+    case EXIT_REASON_MONITOR_TRAP_FLAG:
+    case EXIT_REASON_MONITOR:
+    case EXIT_REASON_PAUSE:
+    case EXIT_REASON_MCE_DURING_VM_ENTRY:
+    case EXIT_REASON_TPR_BELOW_THRESHOLD:
+    case EXIT_REASON_APIC_ACCESS:
+    case EXIT_REASON_VIRTUALIZED_EOI:
+    case EXIT_REASON_ACCESS_GDTR_OR_IDTR:
+    case EXIT_REASON_ACCESS_LDTR_OR_TR:
+    case EXIT_REASON_EPT_VIOLATION:
+    case EXIT_REASON_INVEPT:
+    case EXIT_REASON_RDTSCP:
+    case EXIT_REASON_WBINVD:
+    case EXIT_REASON_APIC_WRITE:
+    case EXIT_REASON_RDRAND:
+    case EXIT_REASON_INVPCID:
+    case EXIT_REASON_VMFUNC:
+    case EXIT_REASON_RDSEED:
+    case EXIT_REASON_XSAVES:
+    case EXIT_REASON_XRSTORS:
+    case EXIT_REASON_INVLPG:
+    case EXIT_REASON_INVD:
+    case EXIT_REASON_HLT:
+    case EXIT_REASON_GETSEC:
+    case EXIT_REASON_TASK_SWITCH:
+    case EXIT_REASON_NMI_WINDOW:
+    case EXIT_REASON_INTR_WINDOW:
+    case EXIT_REASON_OTHER_SMI:
+    case EXIT_REASON_IO_SMI:
+    case EXIT_REASON_SIPI:
+    case EXIT_REASON_INIT_SIGNAL:
+    case EXIT_REASON_EXTERNAL_INTERRUPT:
+    case EXIT_REASON_EXCEPTION_OR_NMI:
+      break;
     case EXIT_REASON_VMXOFF:
       nested_vmxoff(&guest_regs);
       break;
@@ -447,7 +510,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       if (cpu_mode == MODE_LONG) {
         __asm__ __volatile__("xsetbv" : : "a"(guest_regs.rax), "c"(guest_regs.rcx), "d"(guest_regs.rdx));
       } else {
-        vmm_panic(rvm->state, VMM_PANIC_XSETBV, 0, &guest_regs);
+        ERROR("Guest using xsetbv outsite long mode!\n");
       }
       break;
     }
@@ -459,19 +522,15 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       VMR(gs.rflags);
       uint8_t iopl = (vmcs->gs.rflags.raw >> 12) & 3;
       if (cpu_mode == MODE_REAL || cpl <= iopl) {
-        // REP prefixed || String I/O
-        if ((exit_qualification & 0x20) || (exit_qualification & 0x10)) {
-          vmm_panic(rvm->state, VMM_PANIC_IO, 0, &guest_regs);
-        }
         uint8_t direction = exit_qualification & 8;
         uint8_t size = exit_qualification & 7;
         uint8_t string = exit_qualification & (1<<4);
         uint8_t rep = exit_qualification & (1<<5);
         uint16_t port = (exit_qualification >> 16) & 0xffff;
 
-        // Unsupported
+        // REP prefixed || String I/O Unsupported
         if (rep || string) {
-          vmm_panic(rvm->state, VMM_PANIC_IO, 4, &guest_regs);
+          ERROR("I/O instruction with rep prefix unsupported\n");
         }
 
         // out
@@ -485,7 +544,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
             } else if (size == 3) {
               __asm__ __volatile__("out %%eax, %%dx" : : "a"(v), "d"(port));
             } else {
-              vmm_panic(rvm->state, VMM_PANIC_IO, 1, &guest_regs);
+              ERROR("I/O size decoding error\n");
             }
           }
         // in
@@ -501,7 +560,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
               __asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port));
               guest_regs.rax = (guest_regs.rax & 0xffffffff00000000) | (v & 0xffffffff);
             } else {
-              vmm_panic(rvm->state, VMM_PANIC_IO, port, &guest_regs);
+              ERROR("I/O size decoding error\n");
             }
           } else {
             INFO("NIC I/O config space block\n");
@@ -512,13 +571,13 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
             } else if (size == 3) {
               guest_regs.rax = guest_regs.rax | 0xffffffff;
             } else {
-              vmm_panic(rvm->state, VMM_PANIC_IO, 2, &guest_regs);
+              ERROR("I/O size decoding error\n");
             }
           }
         }
       // Unsufficient privileges
       } else {
-        vmm_panic(rvm->state, VMM_PANIC_IO, 3, &guest_regs);
+        ERROR("Unsufficient privileges\n");
       }
       break;
     }
@@ -536,8 +595,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         guest_regs.rax = 0xC001C001C001C001;
         guest_regs.rbx = io_count;
         guest_regs.rcx = cr3_count;
-      } else if (guest_regs.rax == 0x99999999) {
-        vmm_panic(rvm->state, VMM_PANIC_RDMSR, 1234, &guest_regs);
       } else if (guest_regs.rax == 0x5) {
         // On intel platform, mwait is used instead of halt for cpu idle
         // and mwait instruction is able to change processor c-state.
@@ -566,7 +623,11 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_RDMSR: {
-      if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
+      // Adjust it with the current TSC offset
+      if (guest_regs.rcx == MSR_ADDRESS_IA32_TSC_DEADLINE) {
+        guest_regs.rax = (guest_regs.rax & (0xffffffff00000000)) | ((msr_tsc_deadline_original >> 0) & 0xffffffff);
+        guest_regs.rdx = (guest_regs.rdx & (0xffffffff00000000)) | ((msr_tsc_deadline_original >> 32) & 0xffffffff);
+      } else if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
         if (cpu_mode == MODE_LONG) {
           guest_regs.rdx = 0;
           guest_regs.rax = 0;
@@ -594,7 +655,17 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       break;
     }
     case EXIT_REASON_WRMSR: {
-      if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
+      // Adjust it with the current TSC offset
+      if (guest_regs.rcx == MSR_ADDRESS_IA32_TSC_DEADLINE) {
+        int64_t tsc_offset;
+        msr_tsc_deadline_original = guest_regs.rax | (guest_regs.rdx << 32);
+        VMR2(ctrls.ex.tsc_offset, tsc_offset);
+        msr_tsc_deadline_adjusted = msr_tsc_deadline_original - tsc_offset +
+          (cpu_rdtsc() - tsc_vmexit);
+        msr_write(MSR_ADDRESS_IA32_TSC_DEADLINE, msr_tsc_deadline_adjusted);
+//        INFO("Write to TSC DEADLINE DUDES original 0x%016X, adjusted 0x%016X, tsc is 0x%016X, offset is 0x%016X!!!\n",
+//            goal, goal - tsc_offset, cpu_rdtsc(), tsc_offset);
+      } else if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
         VMW(gs.ia32_efer, ((guest_regs.rdx << 32) & 0xffffffff00000000) |
             (guest_regs.rax & 0xffffffff));
       } else if (is_MTRR(guest_regs.rcx)) {
@@ -625,8 +696,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       uint8_t reg_num     = (exit_qualification >> 8) & 0xf;
 
       if (access_type != 0) {
-        INFO("Unsupported : access type != mov to CR\n");
-        vmm_panic(rvm->state, VMM_PANIC_CR_ACCESS, 0, &guest_regs);
+        ERROR("Unsupported : access type != mov to CR\n");
       }
 
       uint64_t value = ((uint64_t*)&guest_regs)[reg_num];
@@ -652,7 +722,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         uint8_t invvpid_desc[16] = {vmcs->ctrls.ex.virtual_processor_id.raw};
         __asm__ __volatile__("invvpid %1, %0" : : "r"((uint64_t)3), "m"(*invvpid_desc));
       } else {
-        vmm_panic(rvm->state, VMM_PANIC_CR_ACCESS, 0, &guest_regs);
+        ERROR("Invalid control register number for cr access\n");
       }
       break;
     }
@@ -667,14 +737,9 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       printk("rax = %016X\n",guest_regs.rax);
       break;
     case EXIT_REASON_TRIPLE_FAULT:
-      vmm_panic(rvm->state, 0,0,&guest_regs);
       break;
     default: {
-#ifdef _DEBUG_SERVER
-      if (debug_server) {
-        debug_server_vmexit(vm->index, exit_reason, &guest_regs);
-      }
-#endif
+      ERROR("Unsupported VMEXIT : 0x%08x\n", exit_reason);
     }
   }
 
@@ -690,11 +755,21 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
  * Called right after vmm_handle_vm_exit()
  */
 void vmm_adjust_tsc(void) {
-  uint64_t tso;
-  tsc_delta = cpu_rdtsc() - tsc_vmexit;
-  tsc_offset += tsc_delta;
-  tso = tsc_offset_adjust - tsc_offset;
-  VMW(ctrls.ex.tsc_offset, tso);
+  int64_t tsc_delta = tsc_vmexit - cpu_rdtsc(); // < 0 value
+  int cb(struct vm *vm) {
+    vm->tsc_offset += tsc_delta;
+    return 1;
+  }
+  // Apply new TSC offset to every active VM
+  vm_iterate(cb);
+  // Finally write the current tsc offset
+  if (vm == rvm) {
+    VMW(ctrls.ex.tsc_offset, vm->tsc_offset);
+  } else {
+    // Write in addition the TSC offset wanted by l1
+    VMW(ctrls.ex.tsc_offset, vm->tsc_offset + tsc_l1_offset);
+  }
+  // INFO("TSC offset 0x%016X\n", vm->tsc_offset);
 }
 
 /**
@@ -789,6 +864,9 @@ static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs)
       VMW(gs.rip, (guest_regs->rip & 0xffffffffffff0000) | tmp);
       break;
     }
+    // XXX red alert !!!!
+    case MODE_VIRTUAL_8086:
+      WARN("Incrementing virtual 8086 rip ... unsupported now, defaulting to protected mode\n");
     case MODE_PROTECTED: {
       uint32_t tmp = (uint32_t) guest_regs->rip;
       tmp = tmp + (uint32_t) exit_instruction_length;
@@ -805,7 +883,7 @@ static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs)
       break;
     }
     default :
-      vmm_panic(rvm->state, VMM_PANIC_UNKNOWN_CPU_MODE, 0, guest_regs);
+      ERROR("Unknown CPU mode\n");
   }
 }
 
@@ -822,13 +900,4 @@ void vmm_adjust_vm_entry_controls(void) {
     // Guest is not in IA32e mode
     VMW(ctrls.entry.controls, vm_entry_controls & ~(uint64_t)IA32E_MODE_GUEST);
   }
-}
-
-static void vmm_panic(uint8_t core, uint64_t code, uint64_t extra, struct
-    registers *guest_regs) {
-#ifdef _DEBUG_SERVER
-  if (debug_server) {
-    debug_server_panic(core, code, extra, guest_regs);
-  }
-#endif
 }

@@ -83,6 +83,8 @@ union msr_ia32_efer {
 #define MSR_ADDRESS_IA32_X2APIC_LVT_LINT0           0x835
 #define MSR_ADDRESS_IA32_X2APIC_LVT_LINT1           0x836
 #define MSR_ADDRESS_IA32_X2APIC_LVT_ERROR           0x837
+#define MSR_ADDRESS_IA32_X2APIC_LVT_INITIAL_COUNT   0x838
+#define MSR_ADDRESS_IA32_X2APIC_LVT_CURRENT_COUNT   0x839
 
 uint64_t msr_read(uint64_t msr_address);
 

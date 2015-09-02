@@ -2,6 +2,8 @@ sp 		:= $(sp).x
 dirstack_$(sp)	:= $(d)
 d		:= $(dir)
 
+dir	:= $(d)/netboot
+include	$(dir)/rules.mk
 dir	:= $(d)/challenge_cpuid
 include	$(dir)/rules.mk
 dir	:= $(d)/eth_recv

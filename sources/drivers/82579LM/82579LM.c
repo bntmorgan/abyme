@@ -231,8 +231,8 @@ int eth_init() {
   cpu_mem_writed(bar0 + REG_RDLEN, RX_DESC_COUNT * 16);
   cpu_mem_writed(bar0 + REG_RDH, 0);
   cpu_mem_writed(bar0 + REG_RDT, RX_DESC_COUNT - 1);
-  cpu_mem_writed(bar0 + REG_RCTL, RCTL_EN | RCTL_SBP | RCTL_UPE | RCTL_MPE
-      | RCTL_LBM_NONE | RTCL_RDMTS_HALF | RCTL_BAM | RCTL_SECRC | RCTL_BSIZE_2048);
+  cpu_mem_writed(bar0 + REG_RCTL, RCTL_EN | RCTL_SBP | /*RCTL_UPE | RCTL_MPE
+      | */RCTL_LBM_NONE | RTCL_RDMTS_HALF | RCTL_BAM | RCTL_SECRC | RCTL_BSIZE_2048);
   // Transmit setup
   for (i = 0; i < TX_DESC_COUNT; i++) {
     trans_desc *tx_desc = tx_descs + i;
