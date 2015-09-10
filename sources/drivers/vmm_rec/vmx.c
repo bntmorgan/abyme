@@ -8,6 +8,17 @@ void cpu_enable_vmxe(void) {
   cpu_write_cr4(cpu_read_cr4() | 0x00002000);
 }
 
+void cpu_vmxoff(void) {
+  uint8_t ok = 0;
+  __asm__ __volatile__(
+      "vmxoff;"
+      "setae %%cl ;"
+    : "=c" (ok));
+  if (ok == 0x0) {
+    panic("!#CPU VMXOFF\n");
+  }
+}
+
 void cpu_vmxon(uint8_t *region) {
   uint8_t ok = 0;
   __asm__ __volatile__(

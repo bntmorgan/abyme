@@ -4,6 +4,11 @@
 #include <efi.h>
 #include "types.h"
 
+struct idt_ptr {
+  uint64_t limit:16;
+  uint64_t base:64;
+} __attribute__((packed));
+
 union rflags {
   struct {
     uint64_t cf:1; // 0
@@ -92,49 +97,28 @@ union cr4 {
 };
 
 void cpu_read_gdt(uint8_t *gdt_ptr);
-
-void cpu_read_idt(uint8_t *idt_ptr);
-
+void cpu_read_idt(struct idt_ptr *idt_ptr);
+void cpu_write_idt(struct idt_ptr *idt_ptr);
 uint64_t cpu_read_cr0(void);
-
 uint64_t cpu_read_cr2(void);
-
 uint64_t cpu_read_cr3(void);
-
 uint64_t cpu_read_cr4(void);
-
 uint64_t cpu_read_cs(void);
-
 uint64_t cpu_read_ss(void);
-
 uint64_t cpu_read_ds(void);
-
 uint64_t cpu_read_es(void);
-
 uint64_t cpu_read_fs(void);
-
 uint64_t cpu_read_gs(void);
-
 uint64_t cpu_read_tr(void);
-
 uint64_t cpu_read_ldtr(void);
-
 uint64_t cpu_read_dr7(void);
-
 void cpu_write_cr0(uint64_t reg);
-
 void cpu_write_cr2(uint64_t reg);
-
 void cpu_write_cr3(uint64_t reg);
-
 void cpu_write_cr4(uint64_t reg);
-
 void cpu_enable_ne(void);
-
 void cpu_stop(void);
-
 uint64_t cpu_read_flags(void);
-
 uint64_t cpu_rdtsc(void);
 
 static inline void cpu_outportb(uint32_t port, uint8_t value) {

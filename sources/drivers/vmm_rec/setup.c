@@ -27,7 +27,11 @@
 #include "nested_vmx.h"
 #endif
 
+struct setup_state *setup_state;
+
 void bsp_main(struct setup_state *state) {
+
+  setup_state = state;
 
 #ifdef _DEBUG_SERVER
   debug_server_init();
@@ -58,12 +62,14 @@ void bsp_main(struct setup_state *state) {
   nested_vmx_shadow_bitmap_init();
 #endif
 
-  INFO("protected_begin 0x%X\n", state->protected_begin);
-  INFO("protected_end 0x%X\n", state->protected_end);
+  INFO("protected_begin 0x%X\n", setup_state->protected_begin);
+  INFO("protected_end 0x%X\n", setup_state->protected_end);
 
+  gdt_init();
   gdt_setup_guest_gdt();
   INFO("GUEST GDT DONE\n");
   gdt_setup_host_gdt();
+  gdt_print_host_gdt();
   INFO("HOST GDT DONE\n");
   paging_setup_host_paging();
   INFO("PAGING HOST DONE\n");
@@ -71,7 +77,7 @@ void bsp_main(struct setup_state *state) {
   INFO("MTRR CREATE RANGES DONE\n");
   mtrr_print_ranges();
   INFO("MTRR PRINT RANGES DONE\n");
-  ept_create_tables(state->protected_begin, state->protected_end);
+  ept_create_tables(setup_state->protected_begin, setup_state->protected_end);
   INFO("EPT CREATE TABLES DONE\n");
   // apic_setup();
   INFO("APIC SETUP DONE\n");
@@ -99,12 +105,12 @@ void bsp_main(struct setup_state *state) {
   // Wait for the end of APs initialization chain
   // TODO implement
 
-  vmm_init(state);
+  vmm_init();
   vmcs_init();
 
   vmm_setup(/* TODO #core */);
   INFO("SETUP DONE\n");
-  vmm_vm_setup_and_launch(state);
+  vmm_vm_setup_and_launch();
 }
 
 void vmm_setup() {
@@ -117,7 +123,7 @@ void vmm_setup() {
   INFO("VMXON DONE\n");
 }
 
-void vmm_vm_setup_and_launch(struct setup_state *state) {
+void vmm_vm_setup_and_launch(void) {
   // XXX notion de VM courante
   struct vm *v;
 
@@ -142,6 +148,7 @@ void vmm_vm_setup_and_launch(struct setup_state *state) {
   INFO("Setting executive msr bitmap\n");
   msr_bitmap_clone((uint8_t *)&msr_bitmap_pool[v->index]);
   VMW(ctrls.ex.msr_bitmap, (uint64_t)&msr_bitmap_pool[v->index]);
+
   INFO("Committing the configuration\n");
   vmcs_commit();
   INFO("READY TO GO!\n");
@@ -150,5 +157,6 @@ void vmm_vm_setup_and_launch(struct setup_state *state) {
   hook_main();
 
   INFO("vmlaunch\n");
-  cpu_vmlaunch(state->vm_RIP, state->vm_RSP, state->vm_RBP);
+
+  cpu_vmlaunch(setup_state->vm_RIP, setup_state->vm_RSP, setup_state->vm_RBP);
 }

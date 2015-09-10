@@ -10,6 +10,7 @@
 
 struct msr_bitmap *msr_bitmap;
 struct msr_bitmap *msr_bitmap_pool;
+struct msr_bitmap *msr_bitmap_shadow;
 
 void msr_bitmap_setup(void) {
   msr_bitmap = efi_allocate_pages(1);
@@ -57,7 +58,7 @@ void msr_bitmap_dump(struct msr_bitmap *bm) {
 }
 
 void msr_bitmap_set_write(uint64_t msr) {
-  if (msr <= 0x00001fff) {
+  if (msr < 0x00002000) {
     msr_bitmap->low_msrs_write_bitmap[msr / 8] |= (1 << (msr % 8));
   } else {
     uint64_t msr_index = msr - 0xc0000000;
@@ -107,4 +108,22 @@ void msr_bitmap_or(uint8_t *b_dst, uint8_t *b_src) {
   for (i = 0; i < 0x1000; i++) {
     b_dst[i] = ((uint8_t *)msr_bitmap)[i] | b_src[i];
   }
+}
+
+/**
+ * Checks if the current MSR access needs to be redirected to l1 host
+ */
+
+int msr_bitmap_write_host_redirect(uint64_t msr) {
+  return (msr < 0x2000) ?
+      msr_bitmap_shadow->low_msrs_write_bitmap[msr >> 3] & (1 << (msr % 8)) :
+      msr_bitmap_shadow->high_msrs_write_bitmap[(msr - 0xc0000000) >> 3]
+          & (1 << ((msr - 0xc0000000) % 8)) ;
+}
+
+int msr_bitmap_read_host_redirect(uint64_t msr) {
+  return (msr < 0x2000) ?
+      msr_bitmap_shadow->low_msrs_read_bitmap[msr >> 3] & (1 << (msr % 8)) :
+      msr_bitmap_shadow->high_msrs_read_bitmap[(msr - 0xc0000000) >> 3]
+          & (1 << ((msr - 0xc0000000) % 8)) ;
 }

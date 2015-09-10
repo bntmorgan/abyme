@@ -129,7 +129,7 @@ void nested_vmxon(uint8_t *vmxon_guest) {
     panic("#!NESTED_VMXON rev identifier is not valid\n");
   }
 
-  vm->state = NESTED_HOST_RUNNING;
+  rvm->state = NESTED_HOST_RUNNING;
 
   DBG("This is the VMXON dudes\n");
 }
@@ -304,7 +304,6 @@ void nested_ctrls_shadow_apply(struct vm *vm) {
   uint32_t exception_bitmap;
   uint32_t cr0_guest_host_mask, cr4_guest_host_mask;
   uint32_t entry_controls, exit_controls;
-  uint8_t *io_bitmap_a, *io_bitmap_b, *msr_bitmap;
 
   // Ajust pin based controls
   spnb.raw = svmcs.ctrls.ex.pin_based_vm_exec_control.raw;
@@ -359,7 +358,7 @@ void nested_ctrls_shadow_apply(struct vm *vm) {
   VMC(ctrls.ex.page_fault_error_code_match, vm->vmcs, &svmcs);
   VMC(ctrls.ex.virt_excep_info_addr, vm->vmcs, &svmcs);
 
-  // VMExit 
+  // VMExit
   VMC(ctrls.exit.msr_load_addr, vm->vmcs, &svmcs);
   VMC(ctrls.exit.msr_store_addr, vm->vmcs, &svmcs);
   VMC(ctrls.exit.msr_store_count, vm->vmcs, &svmcs);
@@ -380,13 +379,14 @@ void nested_ctrls_shadow_apply(struct vm *vm) {
   VMW3(vm->vmcs, ctrls.entry.controls, entry_controls);
 
   // Update executive io bitmap
-  io_bitmap_a = (uint8_t*)svmcs.ctrls.ex.io_bitmap_a.raw;
-  io_bitmap_b = (uint8_t*)svmcs.ctrls.ex.io_bitmap_b.raw;
+  io_bitmap_a_shadow = (uint8_t*)svmcs.ctrls.ex.io_bitmap_a.raw;
+  io_bitmap_b_shadow = (uint8_t*)svmcs.ctrls.ex.io_bitmap_b.raw;
   io_bitmap_or(&io_bitmap_a_pool[vm->index][0], &io_bitmap_b_pool[vm->index][0],
-      io_bitmap_a, io_bitmap_b);
-  // Update executive io bitmap
-  msr_bitmap = (uint8_t*)svmcs.ctrls.ex.msr_bitmap.raw;
-  msr_bitmap_or((uint8_t *)&msr_bitmap_pool[vm->index], msr_bitmap);
+      io_bitmap_a_shadow, io_bitmap_b_shadow);
+  // Update executive msr bitmap
+  msr_bitmap_shadow = (struct msr_bitmap*)svmcs.ctrls.ex.msr_bitmap.raw;
+  msr_bitmap_or((uint8_t*)&msr_bitmap_pool[vm->index],
+      (uint8_t*)msr_bitmap_shadow);
 
   // Other control fields
   VMC(ctrls.entry.intr_info_field, vm->vmcs, &svmcs);
@@ -710,18 +710,8 @@ void nested_load_host(void) {
   uint64_t type = 0x2;
   __asm__ __volatile__("invept %0, %1" : : "m"(desc), "r"(type));
 #endif
-//  uint64_t desc2[2] = {
-//    0x0000000000000000, 
-//    0x000000000000ffff | 0x0000
-//  };
-//  XXX Machine physique viré à l'arrache pour tester
-//    struct {
-//	uint64_t vpid : 16;
-//	uint64_t rsvd : 48;
-//	uint64_t gva;
-//    } operand = { vm->index+1, 0, 0};
-//  uint64_t type2 = 0x1; // Single context
-//  __asm__ __volatile__("invvpid %0, %%rcx" : : "m"(operand), "c"(type2) : "cc", "memory");
+  // DEACTIVATE IT the doesn't need to be invalidated
+  // cpu_invvpid(0x1, vm->index + 1, 0);
 
   nested_set_vm_succeed();
 
@@ -730,7 +720,7 @@ void nested_load_host(void) {
   // Write the right VPID
   VMW(ctrls.ex.virtual_processor_id, rvm->index + 1); // VPIDs starts at 0
 
-  vm->state = NESTED_HOST_RUNNING;
+  rvm->state = NESTED_HOST_RUNNING;
 
 #ifdef _DEBUG_SERVER
   // handle Monitor trap flag

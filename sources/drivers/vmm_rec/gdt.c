@@ -1,78 +1,104 @@
 #include "gdt.h"
 
 #include "cpu.h"
+#include "efiw.h"
 #include "stdio.h"
 #include "string.h"
 
-#define VMEM_GDT_SIZE 0x48
+#define VMEM_GDT_SIZE 3
 
-uint8_t host_gdt[VMEM_GDT_SIZE] __attribute((aligned(0x4)));
+struct segment_descriptor *host_gdt;
+struct segment_descriptor *guest_gdt;
 struct gdt_ptr_64 host_gdt_ptr;
 struct gdt_ptr_64 guest_gdt_ptr;
-
-void gdt_copy_entry(uint8_t *gdt_desc, struct gdt_entry *entry) {
-  entry->base         = (*((uint16_t *) (gdt_desc + 2)) <<  0) & 0x0000ffff;
-  entry->base        |= (*((uint8_t *)  (gdt_desc + 4)) << 16) & 0x00ff0000;
-  entry->base        |= (*((uint8_t *)  (gdt_desc + 7)) << 24) & 0xff000000;
-  entry->limit        = (*((uint16_t *) (gdt_desc + 0)) <<  0) & 0x0000ffff;
-  entry->limit       |= (*((uint8_t *)  (gdt_desc + 6)) << 16) & 0x000f0000;
-  entry->granularity  = (*((uint8_t *)  (gdt_desc + 6)) <<  0) & 0x000000f0;
-  entry->access       = (*((uint8_t *)  (gdt_desc + 5)) <<  0) & 0x000000ff;
-}
-
-void gdt_copy_desc(struct gdt_entry *entry, uint8_t *gdt_desc) {
-  *((uint16_t *) (gdt_desc + 2))  = (entry->base        >>  0) & 0x0000ffff;
-  *((uint8_t *)  (gdt_desc + 4))  = (entry->base        >> 16) & 0x000000ff;
-  *((uint8_t *)  (gdt_desc + 7))  = (entry->base        >> 24) & 0x000000ff;
-  *((uint16_t *) (gdt_desc + 0))  = (entry->limit       >>  0) & 0x0000ffff;
-  *((uint8_t *)  (gdt_desc + 6))  = (entry->limit       >> 16) & 0x0000000f;
-  *((uint8_t *)  (gdt_desc + 6)) |= (entry->granularity >>  0) & 0x000000f0;
-  *((uint8_t *)  (gdt_desc + 5))  = (entry->access      >>  0) & 0x000000ff;
-}
+uint32_t gdt_legacy_segment_descriptor = 0;
 
 void gdt_setup_guest_gdt(void) {
-  cpu_read_gdt((uint8_t *) &guest_gdt_ptr);
+  cpu_read_gdt((uint8_t *)&guest_gdt_ptr);
+  guest_gdt = (struct segment_descriptor*)guest_gdt_ptr.base;
+}
+
+void gdt_init(void) {
+  host_gdt = efi_allocate_pages(1);
+  memset(host_gdt, 0, 0x1000);
 }
 
 void gdt_setup_host_gdt(void) {
-  struct gdt_ptr_64 previous_gdt_ptr;
-  cpu_read_gdt((uint8_t *) &previous_gdt_ptr);
-  host_gdt_ptr.base = (uint64_t) &host_gdt[0];
-  host_gdt_ptr.limit = previous_gdt_ptr.limit;
-  if (host_gdt_ptr.limit >= VMEM_GDT_SIZE) {
-    panic("!#GDT SZ [%d]", host_gdt_ptr.limit);
-  }
-  /* Test the entries: we don't manage 16 bytes entries or non flat-entries. */
-  struct gdt_entry entry;
-  uint8_t *gdt_desc = (uint8_t *) host_gdt_ptr.base;
-  while (gdt_desc < (uint8_t *) host_gdt_ptr.base + host_gdt_ptr.limit) {
-    gdt_copy_entry(gdt_desc, &entry);
-    if (*((uint64_t *) gdt_desc) != 0x0) {
-      if (!((entry.access >> 4) & 0x1)) {
-        panic("!#GDT SD");
-      }
-      if (entry.base != 0x0) {
-        panic("!#GDT FLAT");
-      }
+  struct gdt_ptr_64 current_gdt_ptr;
+  // Read the current GDT ptr
+  cpu_read_gdt((uint8_t*)&current_gdt_ptr);
+  // Copy the current GDT
+  memcpy(host_gdt, (uint8_t *)current_gdt_ptr.base, current_gdt_ptr.limit + 1);
+  // Set host gdt_ptr
+  host_gdt_ptr.base = (uint64_t)host_gdt;
+  host_gdt_ptr.limit = current_gdt_ptr.limit;
+  INFO("Current GDT ptr limit 0x%x\n", host_gdt_ptr.limit);
+  // This GDT must be valid because we are in long mode. But TODO we need to
+  // check the descriptors (flatness, types and rights)
+  // We add a legacy code segment descriptor (to go down from long mode)
+  gdt_legacy_segment_descriptor = ((host_gdt_ptr.limit + 1) >> 3);
+  INFO("New descritpor index 0x%x\n", gdt_legacy_segment_descriptor);
+  struct segment_descriptor *dsc = &host_gdt[gdt_legacy_segment_descriptor];
+  // Flat code segment in legacy mode
+  dsc->limit0 = 0xffff;
+  dsc->limit1 = 0xf;
+  dsc->t = SEGMENT_DESCRIPTOR_TYPE_CODE;
+  dsc->a = 1; // XXX lol why ?
+  dsc->e = 1; // Expand down
+  dsc->w = 1; // Read/Write
+  dsc->s = 1; // Usable by the system
+  dsc->p = 1; // Present
+  dsc->g = 1; // limit << 12
+  // Add the segment
+  host_gdt_ptr.limit += 8;
+  INFO("New GDT ptr limit 0x%x\n", host_gdt_ptr.limit);
+}
+
+void gdt_print_gdt(struct gdt_ptr_64 *gdt_ptr) {
+  uint32_t i;
+  struct segment_descriptor *dsc= (struct segment_descriptor *)gdt_ptr->base;
+  struct segment_descriptor *d;
+  INFO("SIZE OF 0x%x\n", sizeof(struct segment_descriptor));
+  INFO("gdt: base=%08X limit=%08x\n", (uint64_t) gdt_ptr->base,
+      gdt_ptr->limit);
+  for (i = 0; i < ((gdt_ptr->limit + 1) >> 3); i++) {
+    d = &dsc[i];
+    printk("  Entry 0x%x: ", i);
+    printk("base(0x%08x), ", gdt_descriptor_get_base(d));
+    printk("limit(0x%05x), ", gdt_descriptor_get_limit(d));
+    printk("a(0x%x), ", d->a);
+    if (d->t == SEGMENT_DESCRIPTOR_TYPE_DATA) {
+      printk("r(0x%x), ", d->r);
+      printk("c(0x%x), ", d->c);
+    } else { // CODE
+      printk("w(0x%x), ", d->w);
+      printk("e(0x%x), ", d->e);
     }
-    gdt_desc = gdt_desc + 8;
+    printk("type(0x%x),\n", d->t);
+    printk("    s(0x%x), ", d->s);
+    printk("dpl(0x%x), ", d->dpl);
+    printk("p(0x%x), ", d->p);
+    printk("avl(0x%x), ", d->avl);
+    printk("l(0x%x), ", d->l);
+    printk("d/b(0x%x), ", d->b);
+    printk("g(0x%x)\n", d->g);
   }
-  memcpy(host_gdt, (uint8_t *) previous_gdt_ptr.base, previous_gdt_ptr.limit);
 }
 
 void gdt_print_host_gdt(void) {
-  struct gdt_entry entry;
-  uint8_t *gdt_desc = (uint8_t *) host_gdt_ptr.base;
-  printk("gdt: base=%08X limit=%8x\n", (uint64_t) host_gdt_ptr.base, host_gdt_ptr.limit);
-  while (gdt_desc < (uint8_t *) host_gdt_ptr.base + host_gdt_ptr.limit) {
-    gdt_copy_entry(gdt_desc, &entry);
-    printk("B:%08x L:%08x A:%02x G:%02x\n", entry.base, entry.limit, entry.access, entry.granularity);
-    gdt_desc = gdt_desc + 8;
-  }
+  gdt_print_gdt(&host_gdt_ptr);
 }
 
-void gdt_get_host_entry(uint64_t selector, struct gdt_entry *gdt_entry) {
-  gdt_copy_entry((uint8_t *) host_gdt_ptr.base + selector, gdt_entry);
+uint32_t gdt_descriptor_get_base(struct segment_descriptor *dsc) {
+  return dsc->base0 | ((uint32_t)dsc->base1 << 16) | ((uint32_t)dsc->base2 << 24);
+}
+
+uint32_t gdt_descriptor_get_limit(struct segment_descriptor *dsc) {
+  return (dsc->limit0 | ((uint32_t)(dsc->limit1 & 0xf) << 16)) & 0xfffff;
+}
+
+void gdt_get_host_entry(uint16_t selector, struct segment_descriptor **dsc) {
+  *dsc =  host_gdt + (selector >> 3);
 }
 
 uint64_t gdt_get_host_base(void) {
@@ -83,8 +109,8 @@ uint64_t gdt_get_host_limit(void) {
   return host_gdt_ptr.limit;
 }
 
-void gdt_get_guest_entry(uint64_t selector, struct gdt_entry *gdt_entry) {
-  gdt_copy_entry((uint8_t *) guest_gdt_ptr.base + selector, gdt_entry);
+void gdt_get_guest_entry(uint64_t selector, struct segment_descriptor **dsc) {
+  *dsc =  guest_gdt + (selector >> 3);
 }
 
 uint64_t gdt_get_guest_base(void) {

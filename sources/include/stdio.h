@@ -31,6 +31,12 @@ void _stdio_stop(void);
 #define DBG(...)
 #endif
 
+#define PRINT_FIELD_PREFIX(__pf__, __st__, __fd__) \
+  printk("%s%s: 0x%x\n", __pf__, #__fd__, (__st__)->__fd__);
+
+#define PRINT_FIELD(__st__, __fd__) \
+  PRINT_FIELD_PREFIX("  ", __st__, __fd__)
+
 void printk_string(int8_t *string, int8_t minimum_length, int8_t padding);
 
 void printk(char *format, ...);

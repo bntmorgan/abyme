@@ -13,7 +13,9 @@ int efi_loaded_image_info(EFI_HANDLE image_handle, struct efi_loaded_image
     *eli);
 void *efi_allocate_pool(uint64_t size);
 void *efi_allocate_pages(uint64_t count);
+void *efi_allocate_low_pages(uint64_t count);
 int efi_execute_image(EFI_HANDLE parent_image, uint8_t *buf, uint32_t size);
+void efi_reset_system(void);
 
 extern EFI_STATUS efiw_status;
 

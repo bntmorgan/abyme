@@ -7,6 +7,9 @@
 extern uint8_t (*io_bitmap_a_pool)[0x1000];
 extern uint8_t (*io_bitmap_b_pool)[0x1000];
 
+extern uint8_t *io_bitmap_a_shadow;
+extern uint8_t *io_bitmap_b_shadow;
+
 void io_bitmap_setup(void);
 
 void io_bitmap_set_for_port(uint64_t port);
@@ -15,5 +18,7 @@ void io_bitmap_clone_a_b(uint8_t *a, uint8_t *b);
 
 void io_bitmap_or(uint8_t *a_dst, uint8_t *a_src, uint8_t *b_dst,
     uint8_t *b_src);
+
+int io_bitmap_host_redirect(uint64_t port);
 
 #endif

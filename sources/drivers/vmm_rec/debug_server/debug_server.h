@@ -14,6 +14,7 @@ void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
     struct registers *guest_regs);
 void debug_server_panic(uint8_t vmid, uint64_t code, uint64_t extra,
     struct registers *guest_regs);
+void set_mtf(void);
 
 extern uint8_t debug_server;
 extern uint8_t debug_printk;
@@ -26,6 +27,12 @@ static inline void *message_check_type(message *m, uint8_t type) {
     return NULL;
   }
 }
+
+typedef struct _message_send_debug {
+  uint8_t type;
+  uint8_t vmid;
+  uint8_t send_debug[VM_NB][NB_EXIT_REASONS];
+} __attribute__((packed)) message_send_debug;
 
 void debug_server_run(struct registers *regs);
 

@@ -23,6 +23,7 @@
 #include "apic.h"
 #include "hook.h"
 #include "msr_bitmap.h"
+#include "io_bitmap.h"
 
 /**
  * TSC DEALINE virtualization
@@ -66,22 +67,11 @@ void vm_print(struct vm *v) {
 
 uint8_t *vmm_stack;
 
-struct setup_state *setup_state;
-
 static uint64_t io_count = 0;
 static uint64_t cr3_count = 0;
 
 static uint64_t tsc_vmexit = 0;
 int64_t tsc_l1_offset = 0;
-
-enum VMM_PANIC {
-  VMM_PANIC_RDMSR,
-  VMM_PANIC_WRMSR,
-  VMM_PANIC_CR_ACCESS,
-  VMM_PANIC_UNKNOWN_CPU_MODE,
-  VMM_PANIC_IO,
-  VMM_PANIC_XSETBV
-};
 
 int get_paging_mode(void) {
   VMR(gs.cr0);
@@ -121,9 +111,9 @@ static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs)
 static inline uint8_t is_MTRR(uint64_t msr_addr);
 void vmm_vms_init(void);
 
-void vmm_init(struct setup_state *state) {
+void vmm_init(void) {
   vmm_stack = efi_allocate_pages(VMM_STACK_SIZE >> 12);
-  setup_state = state;
+
   INFO("Setup state (rip 0x%016x, rsp 0x%016x, rbp 0x%016x, start 0x%016X, end 0x%016X, vmm stack(@0x%016X)\n",
       setup_state->vm_RIP, setup_state->vm_RSP, setup_state->vm_RBP,
       setup_state->protected_begin, setup_state->protected_end,
@@ -260,6 +250,19 @@ void vmm_vms_init(void) {
   memset(&vm_allocated[0], 0, VM_NB);
 }
 
+int vmm_host_redirect(uint32_t exit_reason, uint32_t exit_qualification, struct
+    registers *guest_regs) {
+  switch(exit_reason) {
+    case EXIT_REASON_WRMSR:
+      return msr_bitmap_write_host_redirect(guest_regs->rcx);
+    case EXIT_REASON_RDMSR:
+      return msr_bitmap_read_host_redirect(guest_regs->rcx);
+    case EXIT_REASON_IO_INSTRUCTION:
+      return io_bitmap_host_redirect((exit_qualification >> 16) & 0xffff);
+  }
+  return 1;
+}
+
 void vmm_handle_vm_exit(struct registers guest_regs) {
   uint8_t hook_override = 0;
 
@@ -374,13 +377,14 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     if (guest_physical_addr >= setup_state->protected_begin &&
         guest_physical_addr < setup_state->protected_end) {
       INFO("EPT VIOLATION FOR ME!\n");
-      // increment_rip(cpu_mode, &guest_regs);                                        
+      // increment_rip(cpu_mode, &guest_regs);
       ERROR("Unsupported EPT_VIOLATION\n");
       return;
     }
   }
 
-  if (rvm->state == NESTED_GUEST_RUNNING) {
+  if (rvm->state == NESTED_GUEST_RUNNING &&
+      vmm_host_redirect(exit_reason, exit_qualification, &guest_regs)) {
     // Forward to L1 host
     nested_load_host();
     return;
@@ -657,14 +661,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_WRMSR: {
       // Adjust it with the current TSC offset
       if (guest_regs.rcx == MSR_ADDRESS_IA32_TSC_DEADLINE) {
-        int64_t tsc_offset;
         msr_tsc_deadline_original = guest_regs.rax | (guest_regs.rdx << 32);
-        VMR2(ctrls.ex.tsc_offset, tsc_offset);
-        msr_tsc_deadline_adjusted = msr_tsc_deadline_original - tsc_offset +
-          (cpu_rdtsc() - tsc_vmexit);
-        msr_write(MSR_ADDRESS_IA32_TSC_DEADLINE, msr_tsc_deadline_adjusted);
-//        INFO("Write to TSC DEADLINE DUDES original 0x%016X, adjusted 0x%016X, tsc is 0x%016X, offset is 0x%016X!!!\n",
-//            goal, goal - tsc_offset, cpu_rdtsc(), tsc_offset);
       } else if (guest_regs.rcx == MSR_ADDRESS_IA32_EFER) {
         VMW(gs.ia32_efer, ((guest_regs.rdx << 32) & 0xffffffff00000000) |
             (guest_regs.rax & 0xffffffff));
@@ -756,8 +753,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
  */
 void vmm_adjust_tsc(void) {
   int64_t tsc_delta = tsc_vmexit - cpu_rdtsc(); // < 0 value
-  int cb(struct vm *vm) {
-    vm->tsc_offset += tsc_delta;
+  int cb(struct vm *v) {
+    v->tsc_offset += tsc_delta;
     return 1;
   }
   // Apply new TSC offset to every active VM
@@ -768,6 +765,17 @@ void vmm_adjust_tsc(void) {
   } else {
     // Write in addition the TSC offset wanted by l1
     VMW(ctrls.ex.tsc_offset, vm->tsc_offset + tsc_l1_offset);
+  }
+  // Adjust TSC DEADLINE
+  if (msr_tsc_deadline_original > 0) {
+    msr_tsc_deadline_adjusted = msr_tsc_deadline_original - rvm->tsc_offset;
+    msr_write(MSR_ADDRESS_IA32_TSC_DEADLINE, msr_tsc_deadline_adjusted);
+//    INFO("Write to TSC DEADLINE DUDES original 0x%016X, adjusted 0x%016X, tsc is 0x%016X, offset is 0x%016X!!!\n",
+//        msr_tsc_deadline_original, msr_tsc_deadline_adjusted, cpu_rdtsc(),
+//        rvm->tsc_offset);
+    if (msr_tsc_deadline_adjusted < cpu_rdtsc()) {
+      // WARN("DEADLINE HAS PASSED YOLOSSE\n");
+    }
   }
   // INFO("TSC offset 0x%016X\n", vm->tsc_offset);
 }

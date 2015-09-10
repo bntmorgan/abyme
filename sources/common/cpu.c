@@ -10,8 +10,12 @@ void cpu_read_gdt(uint8_t *gdt_ptr) {
   __asm__ __volatile__("sgdt %0" : : "m" (*gdt_ptr) : "memory");
 }
 
-void cpu_read_idt(uint8_t *idt_ptr) {
+void cpu_read_idt(struct idt_ptr *idt_ptr) {
   __asm__ __volatile__("sidt %0" : : "m" (*idt_ptr) : "memory");
+}
+
+void cpu_write_idt(struct idt_ptr *idt_ptr) {
+  __asm__ __volatile__("lidt %0" : : "m" (*idt_ptr) : "memory");
 }
 
 uint64_t cpu_read_cr0(void) {

@@ -15,33 +15,81 @@ struct gdt_ptr_64 {
   uint64_t base;
 } __attribute__((packed));
 
-struct gdt_entry {
-  uint32_t base;
-  uint32_t limit;
-  uint8_t access;
-  uint8_t granularity;
+enum segment_descriptor_type {
+  SEGMENT_DESCRIPTOR_TYPE_DATA = 0x0,
+  SEGMENT_DESCRIPTOR_TYPE_CODE = 0x1,
 };
 
+struct segment_descriptor {
+  uint16_t limit0;
+  uint16_t base0;
+  uint8_t base1;
+  union {
+    struct {
+      uint8_t a:1;
+      uint8_t :1;
+      uint8_t :1;
+      uint8_t t:1;
+      uint8_t s:1;
+      uint8_t dpl:2;
+      uint8_t p:1;
+    };
+    struct {
+      uint8_t type:4;
+      uint8_t access_rights:4;
+    };
+    struct {
+      uint8_t :1;
+      uint8_t w:1;
+      uint8_t r:1;
+      uint8_t :5;
+    };
+    struct {
+      uint8_t :1;
+      uint8_t e:1;
+      uint8_t c:1;
+      uint8_t :5;
+    };
+  }; // Byte 5
+  union {
+    struct {
+      uint8_t limit1:4;
+      uint8_t avl:1;
+      uint8_t l:1;
+      uint8_t :1;
+      uint8_t g:1;
+    };
+    struct {
+      uint8_t :4;
+      uint8_t granularity:4;
+    };
+    struct {
+      uint8_t :6;
+      uint8_t d:1;
+      uint8_t :1;
+    };
+    struct {
+      uint8_t :6;
+      uint8_t b:1;
+      uint8_t :1;
+    };
+  }; // Byte 6
+  uint8_t base2;
+} __attribute__((packed));
+
 void gdt_setup_guest_gdt(void);
-
 void gdt_setup_host_gdt(void);
-
 void gdt_print_host_gdt(void);
-
-void gdt_get_host_entry(uint64_t selector, struct gdt_entry *gdt_entry);
-
+void gdt_get_host_entry(uint16_t selector, struct segment_descriptor **dsc);
 uint64_t gdt_get_host_base(void);
-
 uint64_t gdt_get_host_limit(void);
-
-void gdt_get_guest_entry(uint64_t selector, struct gdt_entry *gdt_entry);
-
+void gdt_get_guest_entry(uint64_t selector, struct segment_descriptor **dsc);
 uint64_t gdt_get_guest_base(void);
-
 uint64_t gdt_get_guest_limit(void);
+uint32_t gdt_descriptor_get_base(struct segment_descriptor *dsc);
+uint32_t gdt_descriptor_get_limit(struct segment_descriptor *dsc);
+void gdt_init(void);
 
-void gdt_copy_desc(struct gdt_entry *entry, uint8_t *gdt_desc);
-
-void gdt_copy_entry(uint8_t *gdt_desc, struct gdt_entry *entry);
+extern uint32_t gdt_legacy_segment_descriptor;
 
 #endif

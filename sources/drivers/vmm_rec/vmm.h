@@ -134,7 +134,7 @@ struct vm {
 };
 
 void vmm_vm_exit_handler(void);
-void vmm_init(struct setup_state *state);
+void vmm_init(void);
 void vmm_adjust_vm_entry_controls(void);
 void vmm_adjust_tsc(void);
 

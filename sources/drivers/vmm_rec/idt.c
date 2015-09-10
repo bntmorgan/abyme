@@ -8,7 +8,7 @@ extern void *isr;
 void idt_debug_bios(void) {
   struct idt_ptr p;
   INFO("BIOS idt\n");
-  cpu_read_idt((uint8_t *)&p);
+  cpu_read_idt(&p);
   idt_dump(&p);
 }
 
@@ -21,6 +21,29 @@ void idt_debug_host(void) {
 
 // VMM IDT
 struct idt_gdsc idt[IDT_LOW_IT] __attribute((aligned(0x8)));
+
+enum idt_exceptions {
+  IDT_DIVIDE_ERROR,
+  IDT_DEBUG,
+  IDT_NMI_INTERRUPT,
+  IDT_BREAKPOINT,
+  IDT_OVERFLOW,
+  IDT_BOUND_RANGE_EXEEDED,
+  IDT_INVALID_OPCODE,
+  IDT_DEVICE_NOT_AVAILABLE,
+  IDT_DOUBLE_FAULT,
+  IDT_COPROCESSOR_SEGMENT_OVERRUN,
+  IDT_INVALID_TSS,
+  IDT_SEGMENT_NOT_PRESENT,
+  IDT_STACK_SEGMENT_FAULT,
+  IDT_GENERAL_PROTECTION,
+  IDT_PAGE_FAULT,
+  IDT_RESERVED,
+  IDT_FLOATING_POINT_ERROR,
+  IDT_ALIGNMENT_CHECK,
+  IDT_MACHINE_CHECK,
+  IDT_SMID_FLOATING_POINT_EXCEPTION
+};
 
 void idt_get_idt_ptr(struct idt_ptr *ptr) {
   ptr->base = (uint64_t)&idt[0];
@@ -83,11 +106,93 @@ void idt_dump(struct idt_ptr *p) {
   INFO("<<<< IDT\n");
 }
 
+#define IDT_PRINT(__T__) \
+  INFO(#__T__ "\n");
+
+void idt_decode(struct idt_isr_stack *is) {
+  INFO("int number 0x%x\n", is->number);
+  INFO("ERROR CODE 0x%x\n", is->error_code);
+  INFO("RIP 0x%x\n", is->rip);
+  INFO("cs 0x%x\n", is->cs);
+  INFO("rsp 0x%x\n", is->rsp);
+  INFO("ss 0x%x\n", is->ss);
+  switch(is->number) {
+    case IDT_DIVIDE_ERROR:
+      IDT_PRINT(IDT_DIVIDE_ERROR);
+      break;
+    case IDT_DEBUG:
+      IDT_PRINT(IDT_DEBUG);
+      break;
+    case IDT_NMI_INTERRUPT:
+      IDT_PRINT(IDT_NMI_INTERRUPT);
+      break;
+    case IDT_BREAKPOINT:
+      IDT_PRINT(IDT_BREAKPOINT);
+      break;
+    case IDT_OVERFLOW:
+      IDT_PRINT(IDT_OVERFLOW);
+      break;
+    case IDT_BOUND_RANGE_EXEEDED:
+      IDT_PRINT(IDT_BOUND_RANGE_EXEEDED);
+      break;
+    case IDT_INVALID_OPCODE:
+      IDT_PRINT(IDT_INVALID_OPCODE);
+      break;
+    case IDT_DEVICE_NOT_AVAILABLE:
+      IDT_PRINT(IDT_DEVICE_NOT_AVAILABLE);
+      break;
+    case IDT_DOUBLE_FAULT:
+      IDT_PRINT(IDT_DOUBLE_FAULT);
+      break;
+    case IDT_COPROCESSOR_SEGMENT_OVERRUN:
+      IDT_PRINT(IDT_COPROCESSOR_SEGMENT_OVERRUN);
+      break;
+    case IDT_INVALID_TSS:
+      IDT_PRINT(IDT_INVALID_TSS);
+      break;
+    case IDT_SEGMENT_NOT_PRESENT:
+      IDT_PRINT(IDT_SEGMENT_NOT_PRESENT);
+      break;
+    case IDT_STACK_SEGMENT_FAULT:
+      IDT_PRINT(IDT_STACK_SEGMENT_FAULT);
+      break;
+    case IDT_GENERAL_PROTECTION:
+      IDT_PRINT(IDT_GENERAL_PROTECTION);
+      break;
+    case IDT_PAGE_FAULT: {
+      IDT_PRINT(IDT_PAGE_FAULT);
+      uint64_t cr2 = cpu_read_cr2();
+      union idt_error_code_page_fault code = {.raw = is->error_code};
+      INFO("Access to @0x%016X\n", cr2);
+      INFO("Error code:");
+      PRINT_FIELD(&code, p);
+      PRINT_FIELD(&code, wr);
+      PRINT_FIELD(&code, us);
+      PRINT_FIELD(&code, rsvd);
+      PRINT_FIELD(&code, id);
+      PRINT_FIELD(&code, pk);
+      PRINT_FIELD(&code, r0);
+      INFO("Unsupported\n");
+      break;
+    }
+    case IDT_RESERVED:
+      IDT_PRINT(IDT_RESERVED);
+      break;
+    case IDT_FLOATING_POINT_ERROR:
+      IDT_PRINT(IDT_FLOATING_POINT_ERROR);
+      break;
+    case IDT_ALIGNMENT_CHECK:
+      IDT_PRINT(IDT_ALIGNMENT_CHECK);
+      break;
+    case IDT_MACHINE_CHECK:
+      IDT_PRINT(IDT_MACHINE_CHECK);
+      break;
+    case IDT_SMID_FLOATING_POINT_EXCEPTION:
+      IDT_PRINT(IDT_SMID_FLOATING_POINT_EXCEPTION);
+      break;
+  }
+}
+
 void interrupt_handler(struct idt_isr_stack is) {
-  INFO("ISR int number 0x%x\n", is.number);
-  INFO("ISR ERROR CODE 0x%x\n", is.error_code);
-  INFO("ISR RIP 0x%x\n", is.rip);
-  INFO("ISR cs 0x%x\n", is.cs);
-  INFO("ISR rsp 0x%x\n", is.rsp);
-  INFO("ISR ss 0x%x\n", is.ss);
+  idt_decode(&is);
 }

@@ -743,11 +743,11 @@ void vmcs_free(uint32_t index);
 
 void vmcs_clone(struct vmcs *v);
 
-void vmcs_commit();
+void vmcs_commit(void);
 
 void vmcs_dump(struct vmcs *v);
 
-void vmcs_update();
+void vmcs_update(void);
 
 void vmcs_collect_shadow(struct vmcs *gvmcs);
 

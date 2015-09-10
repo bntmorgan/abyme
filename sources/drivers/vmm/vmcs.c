@@ -83,7 +83,7 @@ void vmcs_fill_guest_state_fields(void) {
   cpu_vmwrite(GUEST_GDTR_BASE, gdt_get_guest_base());
   cpu_vmwrite(GUEST_GDTR_LIMIT, gdt_get_guest_limit());
 
-  cpu_read_idt((uint8_t *) &idt_ptr);
+  cpu_read_idt(&idt_ptr);
   cpu_vmwrite(GUEST_IDTR_BASE, idt_ptr.base);
   cpu_vmwrite(GUEST_IDTR_LIMIT, idt_ptr.limit);
 
@@ -143,7 +143,7 @@ void vmcs_fill_host_state_fields(void) {
 
   cpu_vmwrite(HOST_GDTR_BASE, gdt_get_host_base());
 
-  cpu_read_idt((uint8_t *) &idt_ptr);
+  cpu_read_idt(&idt_ptr);
   cpu_vmwrite(HOST_IDTR_BASE, idt_ptr.base);
 
   cpu_vmwrite(HOST_IA32_SYSENTER_CS, msr_read(MSR_ADDRESS_IA32_SYSENTER_CS));

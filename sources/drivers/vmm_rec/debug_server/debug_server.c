@@ -10,6 +10,8 @@
 #include "cpu.h"
 #include "debug_server.h"
 #include "efiw.h"
+#include "debug_protocol.h"
+#include "gdt.h"
 
 #define MAX_INFO_SIZE 1024
 
@@ -30,6 +32,11 @@ static uint8_t mtf = 0;
 static uint8_t *rb = NULL;
 static uint8_t *sb = NULL;
 
+// Reboot function pointer
+void (*reboot)(void);
+extern void soft_reboot(void);
+extern void soft_reboot_end(void);
+
 /**
  * Logging
  */
@@ -47,7 +54,8 @@ void debug_server_log_cr3_flush(struct registers *regs) {
   m->length = DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t);
   for (i = 0; i < DEBUG_SERVER_CR3_SIZE / DEBUG_SERVER_CR3_PER_MESSAGE; i++) {
     // Copy DEBUG_SERVER_CR3_PER_MESSAGE cr3
-    memcpy(data, &log_cr3_table[i * DEBUG_SERVER_CR3_PER_MESSAGE], DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t));
+    memcpy(data, &log_cr3_table[i * DEBUG_SERVER_CR3_PER_MESSAGE],
+        DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t));
     // Send the message
     // INFO("Send\n");
     debug_server_send(sb, sizeof(message_user_defined));
@@ -139,15 +147,21 @@ void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
 
 void debug_server_init() {
   uint32_t i;
-  
+
   // Info message buffer
   rb = efi_allocate_pages(1);
   sb = efi_allocate_pages(1);
+
+  // Reboot code page
+  reboot = efi_allocate_low_pages(1);
+  INFO("Reboot real mode space allocated in @0x%016X\n", reboot);
+  memcpy(reboot, soft_reboot, (soft_reboot_end - soft_reboot));
 
   /* Init exit reasons for which we need to send a debug message */
   memset(&send_debug[0][0], 0, NB_EXIT_REASONS * VM_NB);
   for (i = 0; i < VM_NB; i++) {
     send_debug[i][EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED] = 1;
+    send_debug[i][EXIT_REASON_MONITOR_TRAP_FLAG] = 1;
     send_debug[i][EXIT_REASON_VMCALL] = 1;
   }
 
@@ -173,7 +187,8 @@ void debug_server_init() {
 }
 
 void debug_server_handle_memory_read(message_memory_read *mr) {
-  uint64_t length = (mr->length + sizeof(message_memory_data) > eth->mtu) ? eth->mtu - sizeof(message_memory_data) : mr->length;
+  uint64_t length = (mr->length + sizeof(message_memory_data) > eth->mtu) ?
+    eth->mtu - sizeof(message_memory_data) : mr->length;
   // Handle message memory request
   message_memory_data *r = (message_memory_data *)sb;
   r->type = MESSAGE_MEMORY_DATA;
@@ -187,7 +202,8 @@ void debug_server_handle_memory_read(message_memory_read *mr) {
 
 void debug_server_handle_memory_write(message_memory_write *mr) {
   // We don't trust the length in the received message
-  uint64_t length = (mr->length + sizeof(message_memory_write) > eth->mtu) ? eth->mtu - sizeof(message_memory_write) : mr->length;
+  uint64_t length = (mr->length + sizeof(message_memory_write) > eth->mtu) ?
+    eth->mtu - sizeof(message_memory_write) : mr->length;
 
   uint8_t *b = (uint8_t *)mr + sizeof(message_memory_write);
   memcpy((uint8_t *)mr->address, b, length);
@@ -200,7 +216,8 @@ void debug_server_handle_memory_write(message_memory_write *mr) {
   debug_server_send(sb, sizeof(message_commit));
 }
 
-void debug_server_handle_core_regs_read(message_core_regs_read *mr, struct registers *regs) {
+void debug_server_handle_core_regs_read(message_core_regs_read *mr, struct
+    registers *regs) {
   message_core_regs_data *m = (message_core_regs_data*) &sb[0];
   m->type = MESSAGE_CORE_REGS_DATA,
   m->vmid = vm->index;
@@ -274,7 +291,8 @@ void debug_server_handle_vmcs_read(message_vmcs_read *mr) {
   debug_server_send(sb, size);
 }
 
-void debug_server_handle_vmcs_write(message_vmcs_write *mr, struct registers *guest_regs) {
+void debug_server_handle_vmcs_write(message_vmcs_write *mr,
+    struct registers *guest_regs) {
   uint8_t *data = (uint8_t*)mr + sizeof(message_vmcs_write);
   // Size
   uint8_t s = *((uint8_t*)data);
@@ -341,6 +359,17 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr, struct registers *gu
   debug_server_send(sb, sizeof(message_commit));
 }
 
+void debug_server_handle_reset(message_reset *mr) {
+  INFO("RESET the system\n");
+  // Shut down VMX
+  cpu_vmxoff();
+  // GO GO GO K..O..
+  __asm__ __volatile__("pushw %%ax" : :
+      "a"(gdt_legacy_segment_descriptor << 3));
+  reboot();
+  __asm__ __volatile__("add 0x2, %rsp");
+}
+
 void debug_server_send_debug_unset(uint8_t reason) {
   uint32_t i;
   for (i = 0; i < VM_NB; i++) {
@@ -398,6 +427,9 @@ void debug_server_run(struct registers *regs) {
         case MESSAGE_SEND_DEBUG:
           debug_server_handle_send_debug((message_send_debug*)mr);
           break;
+        case MESSAGE_RESET:
+          debug_server_handle_reset((message_reset*)mr);
+          break;
         default: {
           // nothing
         }
@@ -444,6 +476,10 @@ void debug_server_disable_putc() {
   putc = &no_putc;
 }
 
+void set_mtf(void) {
+  mtf = 1;
+}
+
 uint8_t ismtf(void) {
   return mtf;
 }
@@ -452,6 +488,7 @@ void debug_server_mtf(void) {
   // monitor trap flag handling
   VMR(ctrls.ex.cpu_based_vm_exec_control);
   if (ismtf()) {
+    INFO("WE SET THE MOTHERFUCKING MTF !\n");
     VMW(ctrls.ex.cpu_based_vm_exec_control,
         vmcs->ctrls.ex.cpu_based_vm_exec_control.raw | MONITOR_TRAP_FLAG);
   } else {

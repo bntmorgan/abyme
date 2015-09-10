@@ -4,6 +4,7 @@
 #include "setup.h"
 
 #include "cpu.h"
+#include "idt.h"
 #include "cpuid.h"
 #include "stdio.h"
 #include "paging.h"
@@ -25,6 +26,8 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
   __asm__ __volatile__("mov %%rbp, %0" : "=m" (state.vm_RBP));
   state.protected_begin = (uint64_t) &_protected_begin;
   state.protected_end = (uint64_t) &_protected_end;
+  state.cr3 = cpu_read_cr3();
+  cpu_read_idt(&state.idt_ptr);
 
   // Install smp, install vmm, activate ap cores, launch VM
   bsp_main(&state);

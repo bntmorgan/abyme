@@ -2,11 +2,7 @@
 #define __IDT_H__
 
 #include "types.h"
-
-struct idt_ptr {
-  uint64_t limit:16;
-  uint64_t base:64;
-} __attribute__((packed));
+#include "cpu.h"
 
 struct idt_gdsc {
   uint32_t o0:16;
@@ -43,5 +39,18 @@ void idt_debug_bios(void);
 void idt_debug_host(void);
 void idt_get_idt_ptr(struct idt_ptr *ptr);
 void idt_create(void);
+
+union idt_error_code_page_fault {
+  struct {
+    uint32_t p:1;
+    uint32_t wr:1;
+    uint32_t us:1;
+    uint32_t rsvd:1;
+    uint32_t id:1;
+    uint32_t pk:1;
+    uint32_t r0:26;
+  };
+  uint32_t raw;
+};
 
 #endif

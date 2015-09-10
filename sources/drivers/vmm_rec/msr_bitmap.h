@@ -26,4 +26,9 @@ void msr_bitmap_dump(struct msr_bitmap *bm);
 void msr_bitmap_clone(uint8_t *b);
 void msr_bitmap_or(uint8_t *b_dst, uint8_t *b_src);
 
+int msr_bitmap_write_host_redirect(uint64_t msr);
+int msr_bitmap_read_host_redirect(uint64_t msr);
+
+extern struct msr_bitmap *msr_bitmap_shadow;
+
 #endif

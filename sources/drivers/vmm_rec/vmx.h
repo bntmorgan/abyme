@@ -8,6 +8,8 @@ void cpu_enable_vmxe(void);
 
 void cpu_vmxon(uint8_t *region);
 
+void cpu_vmxoff(void);
+
 void cpu_vmclear(uint8_t *region);
 
 void cpu_vmptrld(uint8_t *region);

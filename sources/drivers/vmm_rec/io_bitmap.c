@@ -7,6 +7,8 @@
 
 uint8_t *io_bitmap_a;
 uint8_t *io_bitmap_b;
+uint8_t *io_bitmap_a_shadow;
+uint8_t *io_bitmap_b_shadow;
 
 uint8_t (*io_bitmap_a_pool)[0x1000];
 uint8_t (*io_bitmap_b_pool)[0x1000];
@@ -57,4 +59,10 @@ uint64_t io_bitmap_get_ptr_a(void) {
 
 uint64_t io_bitmap_get_ptr_b(void) {
   return (uint64_t) &io_bitmap_b[0];
+}
+
+int io_bitmap_host_redirect(uint64_t port) {
+  return (port < 0x8000) ?
+      io_bitmap_a_shadow[port >> 3] & (1 << (port % 8)) :
+      io_bitmap_b_shadow[(port - 0x8000) >> 3] & (1 << ((port - 0x8000) % 8)) ;
 }

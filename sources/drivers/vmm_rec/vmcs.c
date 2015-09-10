@@ -304,7 +304,7 @@ void vmcs_dump(struct vmcs *v) {
 /**
  * Forced VMREAD every fields of the VMCS
  */
-void vmcs_update() {
+void vmcs_update(void) {
   // Execution controls
   VMRF(ctrls.ex.virtual_processor_id);
   VMRF(ctrls.ex.posted_int_notif_vector);
@@ -540,7 +540,7 @@ void vmcs_collect_shadow(struct vmcs *gvmcs) {
 /**
  * VMWRITE every modified field of the VMCS
  */
-void vmcs_commit() {
+void vmcs_commit(void) {
   // Execution controls
   VMF(ctrls.ex.virtual_processor_id);
   VMF(ctrls.ex.posted_int_notif_vector);
@@ -860,11 +860,12 @@ void vmcs_encoding_init(struct vmcs *v) {
 }
 
 void vmcs_host_config_host_state_fields(void) {
-  struct gdt_entry gdt_entry;
+  struct segment_descriptor *dsc;
   struct idt_ptr idt_ptr;
 
   VMW(hs.cr0, cpu_adjust64(cpu_read_cr0(), MSR_ADDRESS_VMX_CR0_FIXED0,
         MSR_ADDRESS_VMX_CR0_FIXED1));
+  // XXX TODO duplicate UEFI PAGE TABLES
   VMW(hs.cr3, paging_get_host_cr3());
   // TODO Bit 18 OSXSAVE Activation du XCR0 -> proxifier le XSETBV
   VMW(hs.cr4, cpu_adjust64(cpu_read_cr4() | (1 << 18),
@@ -881,12 +882,12 @@ void vmcs_host_config_host_state_fields(void) {
   VMW(hs.gs_selector, cpu_read_gs() & 0xf8);
   VMW(hs.tr_selector, 0x8 & 0xf8);
 
-  gdt_get_host_entry(cpu_read_fs(), &gdt_entry);
-  VMW(hs.fs_base, gdt_entry.base);
-  gdt_get_host_entry(cpu_read_gs(), &gdt_entry);
-  VMW(hs.gs_base, gdt_entry.base);
-  gdt_get_host_entry(0x8, &gdt_entry);
-  VMW(hs.tr_base, gdt_entry.base);
+  gdt_get_host_entry(cpu_read_fs(), &dsc);
+  VMW(hs.fs_base, gdt_descriptor_get_base(dsc));
+  gdt_get_host_entry(cpu_read_gs(), &dsc);
+  VMW(hs.gs_base, gdt_descriptor_get_base(dsc));
+  gdt_get_host_entry(0x8, &dsc);
+  VMW(hs.tr_base, gdt_descriptor_get_base(dsc));
 
   VMW(hs.gdtr_base, gdt_get_host_base());
 
@@ -957,53 +958,61 @@ void vmcs_host_config_vm_exec_control_fields(void) {
 }
 
 void vmcs_host_config_guest_state_fields() {
-  struct gdt_entry gdt_entry;
+  struct segment_descriptor *dsc;
   struct idt_ptr idt_ptr;
   uint64_t msr;
   uint64_t sel;
 
-  VMW(gs.cr0, cpu_adjust64(cpu_read_cr0(), MSR_ADDRESS_VMX_CR0_FIXED0, MSR_ADDRESS_VMX_CR0_FIXED1));
+  VMW(gs.cr0, cpu_adjust64(cpu_read_cr0(), MSR_ADDRESS_VMX_CR0_FIXED0,
+        MSR_ADDRESS_VMX_CR0_FIXED1));
   VMW(gs.cr3, cpu_read_cr3());
-  VMW(gs.cr4, cpu_adjust64(cpu_read_cr4(), MSR_ADDRESS_VMX_CR4_FIXED0, MSR_ADDRESS_VMX_CR4_FIXED1));
+  VMW(gs.cr4, cpu_adjust64(cpu_read_cr4(), MSR_ADDRESS_VMX_CR4_FIXED0,
+        MSR_ADDRESS_VMX_CR4_FIXED1));
   VMW(gs.dr7, cpu_read_dr7());
   VMW(gs.rflags, (1 << 1));
 
   sel = cpu_read_cs();
-  gdt_get_guest_entry(sel, &gdt_entry);
+  gdt_get_guest_entry(sel, &dsc);
   VMW(gs.cs_selector, sel);
-  VMW(gs.cs_base, gdt_entry.base);
-  VMW(gs.cs_limit, gdt_entry.limit);
-  VMW(gs.cs_ar_bytes, (gdt_entry.granularity << 8) | (gdt_entry.access << 0));
+  VMW(gs.cs_base, gdt_descriptor_get_base(dsc));
+  VMW(gs.cs_limit, gdt_descriptor_get_limit(dsc));
+  VMW(gs.cs_ar_bytes, (dsc->granularity << 12) | (dsc->access_rights << 4) |
+      (dsc->type << 0));
   sel = cpu_read_ss();
-  gdt_get_guest_entry(sel, &gdt_entry);
+  gdt_get_guest_entry(sel, &dsc);
   VMW(gs.ss_selector, sel);
-  VMW(gs.ss_base, gdt_entry.base);
-  VMW(gs.ss_limit, gdt_entry.limit);
-  VMW(gs.ss_ar_bytes, (gdt_entry.granularity << 8) | (gdt_entry.access << 0));
+  VMW(gs.ss_base, gdt_descriptor_get_base(dsc));
+  VMW(gs.ss_limit, gdt_descriptor_get_limit(dsc));
+  VMW(gs.ss_ar_bytes, (dsc->granularity << 12) | (dsc->access_rights << 4) |
+      (dsc->type << 0));
   sel = cpu_read_ds();
-  gdt_get_guest_entry(sel, &gdt_entry);
+  gdt_get_guest_entry(sel, &dsc);
   VMW(gs.ds_selector, sel);
-  VMW(gs.ds_base, gdt_entry.base);
-  VMW(gs.ds_limit, gdt_entry.limit);
-  VMW(gs.ds_ar_bytes, (gdt_entry.granularity << 8) | (gdt_entry.access << 0));
+  VMW(gs.ds_base, gdt_descriptor_get_base(dsc));
+  VMW(gs.ds_limit, gdt_descriptor_get_limit(dsc));
+  VMW(gs.ds_ar_bytes, (dsc->granularity << 12) | (dsc->access_rights << 4) |
+      (dsc->type << 0));
   sel = cpu_read_es();
-  gdt_get_guest_entry(sel, &gdt_entry);
+  gdt_get_guest_entry(sel, &dsc);
   VMW(gs.es_selector, sel);
-  VMW(gs.es_base, gdt_entry.base);
-  VMW(gs.es_limit, gdt_entry.limit);
-  VMW(gs.es_ar_bytes, (gdt_entry.granularity << 8) | (gdt_entry.access << 0));
+  VMW(gs.es_base, gdt_descriptor_get_base(dsc));
+  VMW(gs.es_limit, gdt_descriptor_get_limit(dsc));
+  VMW(gs.es_ar_bytes, (dsc->granularity << 12) | (dsc->access_rights << 4) |
+      (dsc->type << 0));
   sel = cpu_read_fs();
-  gdt_get_guest_entry(sel, &gdt_entry);
+  gdt_get_guest_entry(sel, &dsc);
   VMW(gs.fs_selector, sel);
-  VMW(gs.fs_base, gdt_entry.base);
-  VMW(gs.fs_limit, gdt_entry.limit);
-  VMW(gs.fs_ar_bytes, (gdt_entry.granularity << 8) | (gdt_entry.access << 0));
+  VMW(gs.fs_base, gdt_descriptor_get_base(dsc));
+  VMW(gs.fs_limit, gdt_descriptor_get_limit(dsc));
+  VMW(gs.fs_ar_bytes, (dsc->granularity << 12) | (dsc->access_rights << 4) |
+      (dsc->type << 0));
   sel = cpu_read_gs();
-  gdt_get_guest_entry(sel, &gdt_entry);
+  gdt_get_guest_entry(sel, &dsc);
   VMW(gs.gs_selector, sel);
-  VMW(gs.gs_base, gdt_entry.base);
-  VMW(gs.gs_limit, gdt_entry.limit);
-  VMW(gs.gs_ar_bytes, (gdt_entry.granularity << 8) | (gdt_entry.access << 0));
+  VMW(gs.gs_base, gdt_descriptor_get_base(dsc));
+  VMW(gs.gs_limit, gdt_descriptor_get_limit(dsc));
+  VMW(gs.gs_ar_bytes, (dsc->granularity << 12) | (dsc->access_rights << 4) |
+      (dsc->type << 0));
 
   /* TODO Verify if these values are correct. */
   VMW(gs.ldtr_selector, 0);
@@ -1015,10 +1024,10 @@ void vmcs_host_config_guest_state_fields() {
   VMW(gs.tr_limit, 0xffff);
   VMW(gs.tr_ar_bytes, 0x8b);
 
-  VMW(gs.gdtr_base, gdt_get_guest_base());
-  VMW(gs.gdtr_limit, gdt_get_guest_limit());
+  VMW(gs.gdtr_base, gdt_get_host_base());
+  VMW(gs.gdtr_limit, gdt_get_host_limit());
 
-  cpu_read_idt((uint8_t *) &idt_ptr);
+  cpu_read_idt(&idt_ptr);
   VMW(gs.idtr_base, idt_ptr.base);
   VMW(gs.idtr_limit, idt_ptr.limit);
 
@@ -1038,7 +1047,8 @@ void vmcs_host_config_guest_state_fields() {
   // Init and compute vmx_preemption_timer_value
   tsc_freq_MHz = ((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
   tsc_divider = msr_read(MSR_ADDRESS_IA32_VMX_MISC) & 0x7;
-  vmcs_set_vmx_preemption_timer_value(hc, VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
+  vmcs_set_vmx_preemption_timer_value(hc,
+      VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
 }
 
 void vmcs_host_config_vm_exit_control_fields(void) {
