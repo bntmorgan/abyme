@@ -3,6 +3,9 @@ AR						:= ar
 OBJDUMP				:= objdump
 PYTHON				:= python3
 USB						:= /dev/sdb1
+# SSD Optimisation
+BUILD_DIR			:= /tmp/build
+BINARY_DIR		:= /tmp/binary
 
 INCLUDE_DIR			:= sources/include
 
@@ -37,11 +40,11 @@ LD_FLAGS_ALL		:= -nostdlib -T $(EFI_LDS) -shared -Bsymbolic -L$(EFI_PATH) \
 		$(EFI_CRT_OBJS) -znocombreloc -fPIC --no-undefined
 
 define SRC_2_OBJ
-  $(foreach src,$(1),$(patsubst sources/%,build/%,$(src)))
+  $(foreach src,$(1),$(patsubst sources/%,$(BUILD_DIR)/%,$(src)))
 endef
 
 define SRC_2_BIN
-  $(foreach src,$(1),$(patsubst sources/%,binary/%,$(src)))
+  $(foreach src,$(1),$(patsubst sources/%,$(BINARY_DIR)/%,$(src)))
 endef
 
 all: targets
@@ -54,17 +57,17 @@ OBJECTS :=
 dir	:= sources
 include	$(dir)/rules.mk
 
-build/%.o: sources/%.s
+$(BUILD_DIR)/%.o: sources/%.s
 	@echo "[CC] $< -> $@"
 	@mkdir -p $(dir $@)
 	@$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_TARGET) -o $@ -c $<
 
-build/%.o: sources/%.c
+$(BUILD_DIR)/%.o: sources/%.c
 	@echo "[CC] $< -> $@"
 	@mkdir -p $(dir $@)
 	@$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_TARGET) -o $@ -c $<
 
-binary/%.efi: binary/%.elf
+$(BINARY_DIR)/%.efi: $(BINARY_DIR)/%.elf
 	@echo "[OC] $@"
 	@objcopy -j .padding_begin -j .text -j .sdata -j .data \
 		-j .dynamic -j .dynsym  -j .rel \
@@ -73,17 +76,17 @@ binary/%.efi: binary/%.elf
 	  $< $@
 	@strip $@
 
-binary/%.elf:
+$(BINARY_DIR)/%.elf:
 	@echo "[LD] $@"
 	@mkdir -p $(dir $@)
 	@$(LD) $(LD_FLAGS_ALL) $(LD_OBJECTS) -o $@ $(EFI_LIBS_TARGET) $(EFI_LIBS)
 
-binary/%.a:
+$(BINARY_DIR)/%.a:
 	@echo "[AR] $@"
 	@mkdir -p $(dir $@)
 	@$(AR) rc $@ $(LD_OBJECTS)
 
-targets: $(patsubst sources/%, binary/%, $(TARGETS))
+targets: $(patsubst sources/%, $(BINARY_DIR)/%, $(TARGETS))
 
 clean:
 	@rm -f $(TARGETS) $(OBJECTS)
@@ -103,12 +106,12 @@ mount:
 umount:
 	sudo umount /mnt
 
-/mnt/EFI/%: binary/%
+/mnt/EFI/%: $(BINARY_DIR)/%
 	@echo "[CP]    $^ -> $@"
 	@sudo mkdir -p $(dir $@)
 	@sudo cp $< $@
 
-vmware: all vmware-mount $(patsubst binary/%, /mnt/EFI/%, $(TARGETS)) \
+vmware: all vmware-mount $(patsubst $(BINARY_DIR)/%, /mnt/EFI/%, $(TARGETS)) \
 	shell vmware-umount
 
 vmware-mount:
@@ -130,7 +133,7 @@ qemu: launch
 pre-launch:
 	rm -fr img/hda-contents
 	mkdir img/hda-contents
-	cp -r binary/ img/hda-contents
+	cp -r $(BINARY_DIR)/ img/hda-contents
 	cp -r sources/shell_scripts/* img/hda-contents
 
 launch: pre-launch
