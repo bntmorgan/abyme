@@ -2,6 +2,15 @@
 #define __VMM_SETUP_H__
 
 #include "idt.h"
+#include "vmx.h"
+#include "gdt.h"
+
+#define REBOOT \
+  cpu_vmxoff(); \
+  __asm__ __volatile__("pushw %%ax" : : \
+      "a"(gdt_legacy_segment_descriptor << 3)); \
+  setup_reboot(); \
+  __asm__ __volatile__("add 0x2, %rsp");
 
 struct setup_state {
   uint64_t protected_begin;
@@ -22,5 +31,7 @@ void vmm_setup(void);
 void vmm_create_vmxon_region(void);
 
 void vmm_vm_setup_and_launch();
+
+extern void (*setup_reboot)(void);
 
 #endif

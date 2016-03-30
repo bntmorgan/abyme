@@ -18,6 +18,7 @@
 #include "msr_bitmap.h"
 #include "io_bitmap.h"
 #include "idt.h"
+#include "efiw.h"
 #include "apic.h"
 #include "hook.h"
 #ifdef _DEBUG_SERVER
@@ -29,9 +30,19 @@
 
 struct setup_state *setup_state;
 
+// Reboot function pointer
+void (*setup_reboot)(void) = 0x0;
+extern void soft_reboot(void);
+extern void soft_reboot_end(void);
+
 void bsp_main(struct setup_state *state) {
 
   setup_state = state;
+
+  // Reboot code page
+  setup_reboot = efi_allocate_low_pages(1);
+  INFO("Reboot real mode space allocated in @0x%016X\n", setup_reboot);
+  memcpy(setup_reboot, soft_reboot, (soft_reboot_end - soft_reboot));
 
 #ifdef _DEBUG_SERVER
   debug_server_init();
@@ -47,11 +58,13 @@ void bsp_main(struct setup_state *state) {
   }
 #endif
 
+  INFO("PCI SETUP\n");
+  pci_init();
   INFO("CPUID SETUP\n");
   cpuid_setup();
   INFO("PAT SETUP\n");
   pat_setup();
-  // dmar_init();
+  dmar_init();
 
   INFO("IDT SETUP\n");
   idt_create();
