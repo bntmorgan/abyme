@@ -64,8 +64,8 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
   uint32_t size = len + sizeof(eth_header);
   eth_header *eh = (eth_header *)&frame[0];
   // XXX destination MAC address
-  eth_addr daddr = {.n = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
-  // eth_addr daddr = {.n = {0xb4, 0xb5, 0x2f, 0xfc, 0x28, 0xce}}; // eth0 tatooine
+  // eth_addr daddr = {.n = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
+  eth_addr daddr = {.n = {0xb4, 0xb5, 0x2f, 0xfc, 0x28, 0xce}}; // eth0 tatooine
   //eth_addr daddr = {.n = {0xce, 0x28, 0xfc, 0x2f, 0xb5, 0xb4}};
   eth_addr *laddr = eth_get_laddr();
   uint32_t i;
