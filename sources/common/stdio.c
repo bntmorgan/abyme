@@ -2,9 +2,7 @@
 
 #include "screen.h"
 #include "stdlib.h"
-//#include "keyboard.h"
 #include "systab.h"
-#include "efiw.h"
 
 void (*putc)(uint8_t) = &screen_print;
 
@@ -122,11 +120,7 @@ void printk_bin(uint32_t size, char *sep, uint8_t *data) {
 }
 
 void _stdio_stop(void) {
-#ifndef _DEBUG_SERVER // XXX
   __asm__ __volatile__("cli");
   __asm__ __volatile__("hlt");
   while (1);
-#else
-  __asm__ __volatile__("vmcall");
-#endif
 }

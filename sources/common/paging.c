@@ -169,6 +169,11 @@ int paging_iterate(uint64_t cr3, int (*cb)(uint64_t *, uint64_t, uint8_t)) {
   return 0;
 }
 
+uint8_t walk_is_in_page(uint64_t l, uint64_t p, uint8_t size) {
+  uint64_t mask = (1 << size) - 1;
+  return (p & ~mask) == (l & ~mask);
+}
+
 int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **e, uint64_t *a, uint8_t *s) {
   max_phyaddr = cpuid_get_maxphyaddr();
   // INFO("Max phy 0x%016x, 0x%016x\n", max_phyaddr, PAGING_MAXPHYADDR(max_phyaddr));
