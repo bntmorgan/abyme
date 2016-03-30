@@ -3,6 +3,7 @@
 #include "stdint.h"
 #include "cpuid.h"
 #include "stdio.h"
+#include "error.h"
 
 static struct local_apic *la;
 static union apic_base_msr apic_base;

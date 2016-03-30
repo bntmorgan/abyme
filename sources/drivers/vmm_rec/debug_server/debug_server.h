@@ -15,6 +15,7 @@ void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
 void debug_server_panic(uint8_t vmid, uint64_t code, uint64_t extra,
     struct registers *guest_regs);
 void set_mtf(void);
+void debug_server_reboot(void);
 
 extern uint8_t debug_server;
 extern uint8_t debug_printk;

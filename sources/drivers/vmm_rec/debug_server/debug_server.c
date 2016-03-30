@@ -12,6 +12,7 @@
 #include "efiw.h"
 #include "debug_protocol.h"
 #include "gdt.h"
+#include "error.h"
 
 #define MAX_INFO_SIZE 1024
 
@@ -31,11 +32,6 @@ static uint8_t mtf = 0;
 // Messages buffer
 static uint8_t *rb = NULL;
 static uint8_t *sb = NULL;
-
-// Reboot function pointer
-void (*reboot)(void);
-extern void soft_reboot(void);
-extern void soft_reboot_end(void);
 
 /**
  * Logging
@@ -58,7 +54,7 @@ void debug_server_log_cr3_flush(struct registers *regs) {
         DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t));
     // Send the message
     // INFO("Send\n");
-    debug_server_send(sb, sizeof(message_user_defined));
+    debug_server_send(sb, sizeof(message_user_defined) + m->length);
     // Run the debug server
     // INFO("Run\n");
     // debug_server_run(regs);
@@ -134,7 +130,7 @@ void debug_server_core_regs_read(struct core_regs *cr, struct registers *regs) {
 
 void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
     struct registers *guest_regs) {
-  if (send_debug[vmid][exit_reason]) {
+  if (send_debug[vmid][exit_reason] || exit_reason == EXIT_REASON_VMLAUNCH) {
     message_vmexit *ms = (message_vmexit*)&sb[0];
     ms->type = MESSAGE_VMEXIT;
     ms->vmid = vmid;
@@ -152,16 +148,11 @@ void debug_server_init() {
   rb = efi_allocate_pages(1);
   sb = efi_allocate_pages(1);
 
-  // Reboot code page
-  reboot = efi_allocate_low_pages(1);
-  INFO("Reboot real mode space allocated in @0x%016X\n", reboot);
-  memcpy(reboot, soft_reboot, (soft_reboot_end - soft_reboot));
-
   /* Init exit reasons for which we need to send a debug message */
   memset(&send_debug[0][0], 0, NB_EXIT_REASONS * VM_NB);
   for (i = 0; i < VM_NB; i++) {
     send_debug[i][EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED] = 1;
-    send_debug[i][EXIT_REASON_MONITOR_TRAP_FLAG] = 1;
+    // send_debug[i][EXIT_REASON_MONITOR_TRAP_FLAG] = 1;
     send_debug[i][EXIT_REASON_VMCALL] = 1;
   }
 
@@ -207,6 +198,9 @@ void debug_server_handle_memory_write(message_memory_write *mr) {
 
   uint8_t *b = (uint8_t *)mr + sizeof(message_memory_write);
   memcpy((uint8_t *)mr->address, b, length);
+
+  // XXX flush wb caches
+  __asm__ __volatile__("wbinvd");
 
   message_commit *r = (message_commit*)&sb[0];
   r->type = MESSAGE_COMMIT;
@@ -361,13 +355,7 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr,
 
 void debug_server_handle_reset(message_reset *mr) {
   INFO("RESET the system\n");
-  // Shut down VMX
-  cpu_vmxoff();
-  // GO GO GO K..O..
-  __asm__ __volatile__("pushw %%ax" : :
-      "a"(gdt_legacy_segment_descriptor << 3));
-  reboot();
-  __asm__ __volatile__("add 0x2, %rsp");
+  REBOOT;
 }
 
 void debug_server_send_debug_unset(uint8_t reason) {
@@ -488,12 +476,8 @@ void debug_server_mtf(void) {
   // monitor trap flag handling
   VMR(ctrls.ex.cpu_based_vm_exec_control);
   if (ismtf()) {
-    INFO("WE SET THE MOTHERFUCKING MTF !\n");
-    VMW(ctrls.ex.cpu_based_vm_exec_control,
-        vmcs->ctrls.ex.cpu_based_vm_exec_control.raw | MONITOR_TRAP_FLAG);
+    vmm_mtf_set();
   } else {
-    VMW(ctrls.ex.cpu_based_vm_exec_control,
-        vmcs->ctrls.ex.cpu_based_vm_exec_control.raw &
-        ~(uint32_t)MONITOR_TRAP_FLAG);
+    vmm_mtf_unset();
   }
 }
