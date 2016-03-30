@@ -149,6 +149,9 @@ void vm_child_del(struct vm *pv, struct vm *cv);
 void vm_child_shadow_set(struct vm *v);
 void vm_child_shadow_get(struct vm *pv, struct vm **cv);
 
+void vmm_mtf_unset(void);
+void vmm_mtf_set(void);
+
 int get_paging_mode(void);
 int get_cpu_mode(void);
 

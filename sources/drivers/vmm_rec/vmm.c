@@ -24,6 +24,10 @@
 #include "hook.h"
 #include "msr_bitmap.h"
 #include "io_bitmap.h"
+#include "error.h"
+
+// XXX
+#include "dmar.h"
 
 /**
  * TSC DEALINE virtualization
@@ -114,7 +118,9 @@ void vmm_vms_init(void);
 void vmm_init(void) {
   vmm_stack = efi_allocate_pages(VMM_STACK_SIZE >> 12);
 
-  INFO("Setup state (rip 0x%016x, rsp 0x%016x, rbp 0x%016x, start 0x%016X, end 0x%016X, vmm stack(@0x%016X)\n",
+  INFO("Setup state : rip(0x%016x), rsp(0x%016x), rbp(0x%016x),\n"
+      "    protected_begin(0x%016X), protected_end(0x%016X), "
+      "vmm stack(@0x%016X)\n",
       setup_state->vm_RIP, setup_state->vm_RSP, setup_state->vm_RBP,
       setup_state->protected_begin, setup_state->protected_end,
       (uint64_t)&vmm_stack[VMM_STACK_SIZE]);
@@ -250,6 +256,9 @@ void vmm_vms_init(void) {
   memset(&vm_allocated[0], 0, VM_NB);
 }
 
+/**
+ * Compute if we haev to redirect the VMExit to the l1 host
+ */
 int vmm_host_redirect(uint32_t exit_reason, uint32_t exit_qualification, struct
     registers *guest_regs) {
   switch(exit_reason) {
@@ -265,6 +274,9 @@ int vmm_host_redirect(uint32_t exit_reason, uint32_t exit_qualification, struct
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
   uint8_t hook_override = 0;
+
+  // XXX OLOL OwNED!
+  // vmcs_encoding_init_all();
 
   tsc_vmexit = cpu_rdtsc();
 
@@ -286,23 +298,29 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 
   // Check VM Entry failure
   if (vmcs->info.reason.vm_entry_failure) {
-    vmcs_update();
+    vmcs_force_update();
     vmcs_dump(vmcs);
     // TODO decode the exit reason which gives the reason of the failure
     ERROR("VM entry failure\n");
   }
-
-#ifdef _DEBUG_SERVER
-  debug_server_vmexit(vm->index, exit_reason, &guest_regs);
-#endif
 
   // Boot hook
   if (hook_boot[exit_reason] != 0) {
     hook_override = (hook_boot[exit_reason])(&guest_regs);
   }
 
+#ifdef _DEBUG_SERVER
+  if (debug_server) {
+    debug_server_vmexit(vm->index, exit_reason, &guest_regs);
+  }
+#endif
+
   // If we override we return to the VM
   if (hook_override) {
+    if (hook_override == HOOK_OVERRIDE_STAY) {
+      INFO("Boot override, no rip increment !\n");
+      return;
+    }
     increment_rip(cpu_mode, &guest_regs);
     return;
   }
@@ -707,11 +725,11 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       } else if (cr_num == 3) {
         cr3_count++;
 #ifdef _DEBUG_SERVER
-        // if (debug_server) {
-        //   désactivation de l'expérience
-        //   VMR(gs.cr3);
-        //   debug_server_log_cr3_add(&guest_regs, vmcs->gs.cr3);
-        // }
+        // experience CR3
+        if (debug_server) {
+          VMR(gs.cr3);
+          debug_server_log_cr3_add(&guest_regs, vmcs->gs.cr3.raw);
+        }
 #endif
         VMW(gs.cr3, value);
         // We need to invalidate TLBs, see doc INTEL vol 3C chap 28.3.3.3
@@ -794,6 +812,11 @@ void vmm_adjust_paging(void) {
     VMW(gs.pdpte1, cr3[1]);
     VMW(gs.pdpte2, cr3[2]);
     VMW(gs.pdpte3, cr3[3]);
+  } else {
+    VMW(gs.pdpte0, 0);
+    VMW(gs.pdpte1, 0);
+    VMW(gs.pdpte2, 0);
+    VMW(gs.pdpte3, 0);
   }
 }
 
@@ -908,4 +931,20 @@ void vmm_adjust_vm_entry_controls(void) {
     // Guest is not in IA32e mode
     VMW(ctrls.entry.controls, vm_entry_controls & ~(uint64_t)IA32E_MODE_GUEST);
   }
+#ifdef _DEBUG_SERVER
+  // handle Monitor trap flag
+  debug_server_mtf();
+#endif
+}
+
+void vmm_mtf_set(void) {
+  INFO("WE SET THE MOTHERFUCKING MTF !\n");
+  VMW(ctrls.ex.cpu_based_vm_exec_control,
+      vmcs->ctrls.ex.cpu_based_vm_exec_control.raw | MONITOR_TRAP_FLAG);
+}
+
+void vmm_mtf_unset(void) {
+  VMW(ctrls.ex.cpu_based_vm_exec_control,
+      vmcs->ctrls.ex.cpu_based_vm_exec_control.raw &
+      ~(uint32_t)MONITOR_TRAP_FLAG);
 }
