@@ -136,8 +136,7 @@ void print_proc_based_2(union proc_based_2 *c) {
   printk("    enable_xsaves_xrstors: 0x%x\n", c->enable_xsaves_xrstors);
 }
 
-void vmcs_dump(struct vmcs *v) {
-  INFO("VMCS dump(0x%016X)\n", v);
+void vmcs_dump_ctrls(struct vmcs *v) {
   printk("Execution controls\n");
   VMP(v, ctrls.ex.virtual_processor_id);
   VMP(v, ctrls.ex.posted_int_notif_vector);
@@ -182,6 +181,24 @@ void vmcs_dump(struct vmcs *v) {
   VMP(v, ctrls.ex.cr3_target_value1);
   VMP(v, ctrls.ex.cr3_target_value2);
   VMP(v, ctrls.ex.cr3_target_value3);
+  printk("Vm exit controls\n");
+  VMP(v, ctrls.exit.msr_store_addr);
+  VMP(v, ctrls.exit.msr_load_addr);
+  VMP(v, ctrls.exit.controls);
+  print_exit_controls(&v->ctrls.exit.controls);
+  VMP(v, ctrls.exit.msr_store_count);
+  VMP(v, ctrls.exit.msr_load_count);
+  printk("VM entry controls\n");
+  VMP(v, ctrls.entry.msr_load_addr);
+  VMP(v, ctrls.entry.controls);
+  print_entry_controls(&v->ctrls.entry.controls);
+  VMP(v, ctrls.entry.msr_load_count);
+  VMP(v, ctrls.entry.intr_info_field);
+  VMP(v, ctrls.entry.exception_error_code);
+  VMP(v, ctrls.entry.instruction_len);
+}
+
+void vmcs_dump_gs(struct vmcs *v) {
   printk("Guest state\n");
   VMP(v, gs.es_selector);
   VMP(v, gs.cs_selector);
@@ -240,10 +257,13 @@ void vmcs_dump(struct vmcs *v) {
   VMP(v, gs.interruptibility_info);
   VMP(v, gs.activity_state);
   VMP(v, gs.smbase);
-  VMP(v, gs.sysenter_cs);
+  VMP(v, gs.ia32_sysenter_cs);
   VMP(v, gs.vmcs_link_pointer);
   VMP(v, gs.interrupt_status);
   VMP(v, gs.vmx_preemption_timer_value);
+}
+
+void vmcs_dump_hs(struct vmcs *v) {
   printk("Host state\n");
   VMP(v, hs.es_selector);
   VMP(v, hs.cs_selector);
@@ -268,21 +288,9 @@ void vmcs_dump(struct vmcs *v) {
   VMP(v, hs.ia32_sysenter_eip);
   VMP(v, hs.rsp);
   VMP(v, hs.rip);
-  printk("Vm exit controls\n");
-  VMP(v, ctrls.exit.msr_store_addr);
-  VMP(v, ctrls.exit.msr_load_addr);
-  VMP(v, ctrls.exit.controls);
-  print_exit_controls(&v->ctrls.exit.controls);
-  VMP(v, ctrls.exit.msr_store_count);
-  VMP(v, ctrls.exit.msr_load_count);
-  printk("VM entry controls\n");
-  VMP(v, ctrls.entry.msr_load_addr);
-  VMP(v, ctrls.entry.controls);
-  print_entry_controls(&v->ctrls.entry.controls);
-  VMP(v, ctrls.entry.msr_load_count);
-  VMP(v, ctrls.entry.intr_info_field);
-  VMP(v, ctrls.entry.exception_error_code);
-  VMP(v, ctrls.entry.instruction_len);
+}
+
+void vmcs_dump_info(struct vmcs *v) {
   printk("VM exit info\n");
   VMP(v, info.guest_physical_address);
   VMP(v, info.vm_instruction_error);
@@ -301,10 +309,18 @@ void vmcs_dump(struct vmcs *v) {
   VMP(v, info.guest_linear_address);
 }
 
+void vmcs_dump(struct vmcs *v) {
+  INFO("VMCS dump(0x%016X)\n", v);
+  void vmcs_dump_ctrls(struct vmcs *v);
+  void vmcs_dump_gs(struct vmcs *v);
+  void vmcs_dump_hs(struct vmcs *v);
+  void vmcs_dump_info(struct vmcs *v);
+}
+
 /**
  * Forced VMREAD every fields of the VMCS
  */
-void vmcs_update(void) {
+void vmcs_force_update(void) {
   // Execution controls
   VMRF(ctrls.ex.virtual_processor_id);
   VMRF(ctrls.ex.posted_int_notif_vector);
@@ -404,7 +420,7 @@ void vmcs_update(void) {
   VMRF(gs.interruptibility_info);
   VMRF(gs.activity_state);
   VMRF(gs.smbase);
-  VMRF(gs.sysenter_cs);
+  VMRF(gs.ia32_sysenter_cs);
   VMRF(gs.vmcs_link_pointer);
   VMRF(gs.interrupt_status);
   VMRF(gs.vmx_preemption_timer_value);
@@ -524,7 +540,7 @@ void vmcs_collect_shadow(struct vmcs *gvmcs) {
   VMR(gs.interruptibility_info);
   VMR(gs.activity_state);
   VMR(gs.smbase);
-  VMR(gs.sysenter_cs);
+  VMR(gs.ia32_sysenter_cs);
   VMR(gs.vmcs_link_pointer);
   VMR(gs.interrupt_status);
   // Other control fields
@@ -640,7 +656,7 @@ void vmcs_commit(void) {
   VMF(gs.interruptibility_info);
   VMF(gs.activity_state);
   VMF(gs.smbase);
-  VMF(gs.sysenter_cs);
+  VMF(gs.ia32_sysenter_cs);
   VMF(gs.vmcs_link_pointer);
   VMF(gs.interrupt_status);
   VMF(gs.vmx_preemption_timer_value);
@@ -697,6 +713,13 @@ void vmcs_commit(void) {
   VMF(info.io_rdi);
   VMF(info.io_rip);
   VMF(info.guest_linear_address);
+}
+
+void vmcs_encoding_init_all(void) {
+  uint32_t i;
+  for (i = 0; i < VM_NB; i++) {
+    vmcs_encoding_init(&vmcs_cache_pool[i]);
+  }
 }
 
 void vmcs_encoding_init(struct vmcs *v) {
@@ -800,7 +823,7 @@ void vmcs_encoding_init(struct vmcs *v) {
   VMCSE(v, gs.interruptibility_info, GUEST_INTERRUPTIBILITY_INFO);
   VMCSE(v, gs.activity_state, GUEST_ACTIVITY_STATE);
   VMCSE(v, gs.smbase, GUEST_SMBASE);
-  VMCSE(v, gs.sysenter_cs, GUEST_SYSENTER_CS);
+  VMCSE(v, gs.ia32_sysenter_cs, GUEST_SYSENTER_CS);
   VMCSE(v, gs.vmcs_link_pointer, VMCS_LINK_POINTER);
   VMCSE(v, gs.interrupt_status, GUEST_INTERRUPT_STATUS);
   VMCSE(v, gs.vmx_preemption_timer_value, VMX_PREEMPTION_TIMER_VALUE);
@@ -904,7 +927,7 @@ void vmcs_host_config_host_state_fields(void) {
 
 void vmcs_host_config_vm_exec_control_fields(void) {
   uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS |
-      USE_IO_BITMAPS | USE_TSC_OFFSETTING;
+      USE_IO_BITMAPS | USE_TSC_OFFSETTING | CR3_LOAD_EXITING;
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST |
       ENABLE_RDTSCP;
 
@@ -922,6 +945,8 @@ void vmcs_host_config_vm_exec_control_fields(void) {
       && (((msr_read(MSR_ADDRESS_IA32_VMX_TRUE_PROCBASED_CTLS) >> 15) & 3)) ==
       0){
     procbased_ctls &= ~(CR3_LOAD_EXITING | CR3_STORE_EXITING);
+    // DEMO !
+    procbased_ctls |= CR3_LOAD_EXITING;
   } else {
     panic("#!PROCBASED_CTLS CR3_LOAD_EXITING or CR3_STORE_EXITING required\n");
   }
@@ -1032,7 +1057,7 @@ void vmcs_host_config_guest_state_fields() {
   VMW(gs.idtr_limit, idt_ptr.limit);
 
   VMW(gs.ia32_debugctl, msr_read(MSR_ADDRESS_IA32_DEBUGCTL));
-  VMW(gs.sysenter_cs, msr_read(MSR_ADDRESS_IA32_SYSENTER_CS));
+  VMW(gs.ia32_sysenter_cs, msr_read(MSR_ADDRESS_IA32_SYSENTER_CS));
 
   msr = msr_read(MSR_ADDRESS_IA32_EFER);
   VMW(gs.ia32_efer, msr);

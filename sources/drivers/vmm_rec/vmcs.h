@@ -451,6 +451,28 @@ union proc_based_2 {
   uint32_t raw;
 };
 
+union access_rights {
+  struct {
+    uint32_t type:4;
+    uint32_t s:1;
+    uint32_t dpl:2;
+    uint32_t p:1;
+    uint32_t r0:4;
+    uint32_t avl:1;
+    uint32_t l:1;
+    uint32_t d:1;
+    uint32_t g:1;
+    uint32_t unusable:1;
+    uint32_t r1:15;
+  };
+  struct {
+    uint32_t :14;
+    uint32_t b:1;
+    uint32_t :17;
+  };
+  uint32_t raw;
+};
+
 struct field_16 {
   uint16_t raw;
 };
@@ -475,6 +497,10 @@ struct field_64 {
 #define VMC2(__name_dst__, __name_src__, __dst__, __src__) \
   (__dst__)->__name_dst__##_enc.d = 1; \
   (__dst__)->__name_dst__.raw = (__src__)->__name_src__.raw;
+#define VMD(__name__) \
+  vmcs->__name__##_enc.d = 1;
+#define VMD2(__vmcs__, __name__) \
+  __vmcs__->__name__##_enc.d = 1;
 #define VMW(__name__, __val__) \
   vmcs->__name__##_enc.d = 1; \
   vmcs->__name__.raw = (__val__);
@@ -485,7 +511,8 @@ struct field_64 {
   __type__ __name__; \
   union vmcs_field_encoding __name__##_enc
 #define VMCSE(__vmcs__, __name__, __encoding__) \
-  (__vmcs__)->__name__##_enc.raw = __encoding__;
+  (__vmcs__)->__name__##_enc.raw = __encoding__; \
+  (__vmcs__)->__name__##_enc.meta = 0x0;
 #define VMR(__name__) \
   if (!vmcs->__name__##_enc.r && !vmcs->__name__##_enc.d) { \
     vmcs->__name__.raw = cpu_vmread(vmcs->__name__##_enc.raw); \
@@ -504,8 +531,13 @@ struct field_64 {
     cpu_vmwrite(vmcs->__name__##_enc.raw, vmcs->__name__.raw); \
   }
 #define VMP(__vmcs__, __name__) \
-  printk("  "#__name__"[%x, %x]: 0x%016X\n", (__vmcs__)->__name__##_enc.d, \
-      (__vmcs__)->__name__##_enc.r, (__vmcs__)->__name__.raw);
+  if ((__vmcs__)->__name__##_enc.r || (__vmcs__)->__name__##_enc.d) { \
+    printk("  "#__name__"[%x, %x]: 0x%016X\n", (__vmcs__)->__name__##_enc.d, \
+        (__vmcs__)->__name__##_enc.r, (__vmcs__)->__name__.raw); \
+  } else { \
+    printk("  "#__name__"[%x, %x]: ------------------\n", \
+        (__vmcs__)->__name__##_enc.d, (__vmcs__)->__name__##_enc.r); \
+  }
 #define VMPF(__vmcs__, __name__) \
   printk("  "#__name__" : 0x%016X\n", (__vmcs__)->__name__.raw); \
   printk("  - d(0x%x)\n  - r(0x%x)\n  - enc(0x%08x)\n", \
@@ -561,18 +593,18 @@ struct vmcs_guest_state {
   VMCSF(struct field_32, tr_limit);
   VMCSF(struct field_32, gdtr_limit);
   VMCSF(struct field_32, idtr_limit);
-  VMCSF(struct field_32, es_ar_bytes);
-  VMCSF(struct field_32, cs_ar_bytes);
-  VMCSF(struct field_32, ss_ar_bytes);
-  VMCSF(struct field_32, ds_ar_bytes);
-  VMCSF(struct field_32, fs_ar_bytes);
-  VMCSF(struct field_32, gs_ar_bytes);
-  VMCSF(struct field_32, ldtr_ar_bytes);
-  VMCSF(struct field_32, tr_ar_bytes);
+  VMCSF(union access_rights, es_ar_bytes);
+  VMCSF(union access_rights, cs_ar_bytes);
+  VMCSF(union access_rights, ss_ar_bytes);
+  VMCSF(union access_rights, ds_ar_bytes);
+  VMCSF(union access_rights, fs_ar_bytes);
+  VMCSF(union access_rights, gs_ar_bytes);
+  VMCSF(union access_rights, ldtr_ar_bytes);
+  VMCSF(union access_rights, tr_ar_bytes);
   VMCSF(struct field_32, interruptibility_info);
   VMCSF(struct field_32, activity_state);
   VMCSF(struct field_32, smbase);
-  VMCSF(struct field_32, sysenter_cs);
+  VMCSF(struct field_32, ia32_sysenter_cs);
   VMCSF(struct field_32, vmx_preemption_timer_value);
   // Natural-width fields
   VMCSF(union cr0, cr0);
@@ -732,31 +764,24 @@ struct vmcs {
 } __attribute__((packed));
 
 void vmcs_dump_vcpu(void);
-
 void vmcs_set_vmx_preemption_timer_value(struct vmcs *v, uint64_t time_microsec);
-
 void vmcs_init(void);
-
 void vmcs_alloc(uint32_t *index, uint8_t **region, struct vmcs **cache);
-
 void vmcs_free(uint32_t index);
-
 void vmcs_clone(struct vmcs *v);
-
 void vmcs_commit(void);
-
+void vmcs_dump_ctrls(struct vmcs *v);
+void vmcs_dump_gs(struct vmcs *v);
+void vmcs_dump_hs(struct vmcs *v);
+void vmcs_dump_info(struct vmcs *v);
 void vmcs_dump(struct vmcs *v);
-
-void vmcs_update(void);
-
+void vmcs_force_update(void);
 void vmcs_collect_shadow(struct vmcs *gvmcs);
-
 void vmcs_create_vmcs_regions(void);
-
 void vmcs_encoding_init(struct vmcs *v);
+void vmcs_encoding_init_all(void);
 
 extern uint8_t *vmxon;
-
 extern struct vmcs *vmcs_cache_pool;
 extern uint8_t (*vmcs_region_pool)[0x1000];
 extern struct vmcs *vmcs;
