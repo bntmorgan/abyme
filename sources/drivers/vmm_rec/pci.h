@@ -12,6 +12,12 @@
 #define PCI_CONFIG_ADDR                 0xcf8
 #define PCI_CONFIG_DATA                 0xcfc
 
+typedef struct _pci_device_addr {
+  uint8_t bus;
+  uint8_t device;
+  uint8_t function;
+} pci_device_addr;
+
 static inline uint32_t pci_make_addr(uint32_t id) {
   return 0x80000000 | id;
 }
@@ -24,5 +30,13 @@ uint32_t pci_readd(uint32_t id, uint32_t reg);
 void pci_writeb(uint32_t id, uint32_t reg, uint8_t data);
 void pci_writew(uint32_t id, uint32_t reg, uint16_t data);
 void pci_writed(uint32_t id, uint32_t reg, uint32_t data);
+uint64_t pci_mmconfig_base(void);
+void pci_init(void);
+uint16_t pci_mm_readw(uint32_t id, uint32_t reg);
+uint32_t pci_mm_readd(uint32_t id, uint32_t reg);
+uint64_t pci_mm_readq(uint32_t id, uint32_t reg);
+uint16_t pci_bar_readw(uint64_t bar, uint32_t reg);
+uint32_t pci_bar_readd(uint64_t bar, uint32_t reg);
+uint64_t pci_bar_readq(uint64_t bar, uint32_t reg);
 
 #endif
