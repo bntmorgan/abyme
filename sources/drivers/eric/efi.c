@@ -6,10 +6,12 @@
 #include "debug.h"
 #include "stdio.h"
 
+#include "efiw.h"
+
 #define ERIC_VENDOR_ID  0x1AA5
 #define ERIC_DEVICE_ID  0xE51C
 
-// 
+//
 // stdio putc pointer
 //
 extern void (*putc)(uint8_t);
@@ -60,7 +62,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   // Powerup PIO & MMI_extO
   pci_writew(id, PCI_CONFIG_COMMAND, 0x7);
   // pci_writeb(id, PCI_CONFIG_INTERRUPT_LINE, 0x5);
-  
+
   INFO("COMMAND 0x%04x\n", pci_readw(id, PCI_CONFIG_COMMAND));
 
   pci_get_device_info(&info, id);
@@ -101,14 +103,10 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   pci_writed(id, PCI_CONFIG_EXPANSION_ROM_BASE_ADDRESS,
       ((uint32_t)(uintptr_t)rom) | 1);
 
-  INFO("BAR0 address 0x%08x\n", bar0);
-  // dump(bar0, 2, 0x10, (uint32_t)(uintptr_t)bar0, 2); 
-  INFO("BAR1 address 0x%08x\n", bar1);
-  // dump(bar1, 2, 0x10, (uint32_t)(uintptr_t)bar1, 2); 
-  INFO("BAR2 address 0x%08x\n", bar2);
-  // dump(bar2, 2, 0x10, (uint32_t)(uintptr_t)bar2, 2); 
-  INFO("ROM address 0x%08x\n", rom);
-  // dump(rom, 2, 0x10, (uint32_t)(uintptr_t)rom, 2); 
+  INFO("BAR0 address (0x%08x)\n", bar0);
+  dump(bar0, 2, 0x10, 8, (uint32_t)(uintptr_t)bar0, 2);
+  INFO("ROM address (0x%08x)\n", rom);
+  dump(rom, 2, 0x10, 8, (uint32_t)(uintptr_t)rom, 2);
 
   // Add an unload handler
   status = uefi_call_wrapper(BS->HandleProtocol, 4, &image_handle,
@@ -132,6 +130,9 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   status = uefi_call_wrapper(BS->InstallProtocolInterface, 4, &image_handle,
       &guid_eric, (EFI_INTERFACE_TYPE)NULL, &proto);
   ASSERT (!EFI_ERROR(status));
+
+  uint32_t *fct = efi_allocate_pages(1);
+  INFO("FAKE contexte table (0x%016X)\n", fct);
 
   // eric_disable_debug();
 

@@ -35,7 +35,7 @@ int flash_init(protocol_flash *proto) {
   // Controller Hub (PCH).
   // Root Complex Register Block address
   rcba = *(uint32_t*)(device_base | 0xf0);
-  INFO("RCBA = 0x%X\n", rcba);
+  INFO("RCRBA = 0x%X\n", rcba);
 
   rcrb = rcba & 0xffffc000;
 
