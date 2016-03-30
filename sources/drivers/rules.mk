@@ -10,15 +10,21 @@ dir	:= $(d)/pcie_root_port
 include	$(dir)/rules.mk
 dir	:= $(d)/eric
 include	$(dir)/rules.mk
+dir	:= $(d)/host_bridge
+include	$(dir)/rules.mk
 dir	:= $(d)/82579LM
 include	$(dir)/rules.mk
-dir	:= $(d)/vmm
-include	$(dir)/rules.mk
-dir	:= $(d)/vmm_supervisor
-include	$(dir)/rules.mk
+# dir	:= $(d)/vmm
+# include	$(dir)/rules.mk
+# dir	:= $(d)/vmm_supervisor
+# include	$(dir)/rules.mk
 dir	:= $(d)/vmm_rec
 include	$(dir)/rules.mk
+dir	:= $(d)/vmm_rec_iommu
+include	$(dir)/rules.mk
 dir	:= $(d)/vmm_rec_none
+include	$(dir)/rules.mk
+dir	:= $(d)/vmm_rec_env
 include	$(dir)/rules.mk
 dir	:= $(d)/vmm_rec_0
 include	$(dir)/rules.mk

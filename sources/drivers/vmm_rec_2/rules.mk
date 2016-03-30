@@ -9,9 +9,6 @@ OBJS_$(d)				:= $(call SRC_2_OBJ, $(d)/ids.o)
 
 OBJECTS 				+= $(OBJS_$(d))
 
-LIBVMM_PATH 		:= binary/drivers/vmm_rec
-LIBVMM_SRC_PATH	:= sources/drivers/vmm_rec
-
 $(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -I$(d)/vmm_rec -D_DEBUG_SERVER \
 											-U_NO_PRINTK
 

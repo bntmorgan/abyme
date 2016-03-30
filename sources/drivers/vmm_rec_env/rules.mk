@@ -5,7 +5,8 @@ d               := $(dir)
 TARGET					:= $(call SRC_2_BIN, $(d)/efi.efi)
 TARGET_ELF		  := $(call SRC_2_BIN, $(d)/efi.elf)
 TARGETS 				+= $(TARGET)
-OBJS_$(d)				:= $(call SRC_2_OBJ, $(d)/ids.o)
+OBJS_$(d)				:= $(call SRC_2_OBJ, $(d)/ids.o $(d)/env.o $(d)/env_flash.o \
+		$(d)/env_md5.o $(d)/md5.o)
 
 OBJECTS 				+= $(OBJS_$(d))
 

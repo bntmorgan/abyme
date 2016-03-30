@@ -6,6 +6,9 @@ USB						:= /dev/sdb1
 # SSD Optimisation
 BUILD_DIR			:= /tmp/build
 BINARY_DIR		:= /tmp/binary
+# Lib VMM
+LIBVMM_PATH 		:= $(BINARY_DIR)/drivers/vmm_rec
+LIBVMM_SRC_PATH	:= sources/drivers/vmm_rec
 
 INCLUDE_DIR			:= sources/include
 
@@ -95,7 +98,19 @@ info:
 	@echo Targets [$(TARGETS)]
 	@echo Objects [$(OBJECTS)]
 
-usb: all mount $(patsubst binary/%, /mnt/EFI/%, $(TARGETS)) shell umount
+usb: all mount $(patsubst $(BINARY_DIR)/%, /mnt/EFI/%, $(TARGETS)) shell umount
+
+#/mnt/kvm.ko: ../muse/linux-4.1.6/arch/x86/kvm/kvm.ko
+#	sudo cp $^ $@
+#
+#/mnt/kvm-intel.ko: ../muse/linux-4.1.6/arch/x86/kvm/kvm-intel.ko
+#	sudo cp $^ $@
+#
+#../muse/linux-4.1.6/arch/x86/kvm/kvm.ko:
+#	make -C ../muse/linux-4.1.6
+#
+#../muse/linux-4.1.6/arch/x86/kvm/kvm-intel.ko:
+#	make -C ../muse/linux-4.1.6
 
 shell:
 	sudo cp sources/shell_scripts/*.nsh /mnt
