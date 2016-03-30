@@ -52,9 +52,9 @@ uint8_t paging_get_frame_address(uint64_t entry, uint64_t type, uint64_t *addres
 //
 
 // Page sizes
-#define PAGING_ENTRY_PDPTE        0
-#define PAGING_ENTRY_PDE          1
-#define PAGING_ENTRY_PTE          2
+#define PAGING_ENTRY_PDPTE       30
+#define PAGING_ENTRY_PDE         21
+#define PAGING_ENTRY_PTE         12
 
 // Linear address
 #define PAGING_LINEAR_PML4E(x)          ((x >> 39) & 0x1ff)
@@ -140,5 +140,7 @@ static inline uint64_t *paging_get_pde(uint64_t e, uint64_t linear) {
 static inline uint64_t *paging_get_pte(uint64_t e, uint64_t linear) {
   return ((uint64_t *)(e & PAGING_PDE_PT_ADDR)) + PAGING_LINEAR_PTE(linear);
 }
+
+uint8_t walk_is_in_page(uint64_t l, uint64_t p, uint8_t size);
 
 #endif
