@@ -77,9 +77,12 @@ struct segment_descriptor {
   uint8_t base2;
 } __attribute__((packed));
 
+void gdt_print_gdt(struct gdt_ptr_64 *gdt_ptr);
 void gdt_setup_guest_gdt(void);
 void gdt_setup_host_gdt(void);
 void gdt_print_host_gdt(void);
+void gdt_get_entry(struct segment_descriptor *gdt, uint64_t selector, struct
+    segment_descriptor **dsc);
 void gdt_get_host_entry(uint16_t selector, struct segment_descriptor **dsc);
 uint64_t gdt_get_host_base(void);
 uint64_t gdt_get_host_limit(void);

@@ -97,8 +97,13 @@ uint32_t gdt_descriptor_get_limit(struct segment_descriptor *dsc) {
   return (dsc->limit0 | ((uint32_t)(dsc->limit1 & 0xf) << 16)) & 0xfffff;
 }
 
+void gdt_get_entry(struct segment_descriptor *gdt, uint64_t selector, struct
+    segment_descriptor **dsc) {
+  *dsc =  gdt + (selector >> 3);
+}
+
 void gdt_get_host_entry(uint16_t selector, struct segment_descriptor **dsc) {
-  *dsc =  host_gdt + (selector >> 3);
+  gdt_get_entry(host_gdt, selector, dsc);
 }
 
 uint64_t gdt_get_host_base(void) {
@@ -110,7 +115,7 @@ uint64_t gdt_get_host_limit(void) {
 }
 
 void gdt_get_guest_entry(uint64_t selector, struct segment_descriptor **dsc) {
-  *dsc =  guest_gdt + (selector >> 3);
+  gdt_get_entry(guest_gdt, selector, dsc);
 }
 
 uint64_t gdt_get_guest_base(void) {
