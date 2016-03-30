@@ -11,6 +11,7 @@
 #include "efiw.h"
 #include "msr.h"
 #include "vmm.h"
+#include "error.h"
 
 struct ept_tables {
   uint64_t PML4[512]                                 __attribute__((aligned(0x1000)));
@@ -33,7 +34,7 @@ static struct ept_tables *ept_tables;
 
 uint8_t *trap_pci;
 uint8_t *trap_bar;
-  
+
 static const struct memory_range *memory_range;
 
 static uint8_t ctx = 0;
@@ -80,12 +81,12 @@ void ept_remap(uint64_t virt, uint64_t phy, uint8_t rights, uint8_t c) {
     panic("!#EPT protected_zone doesn't fit in %d PDPT entries\n", EPTN);
   }
 
-  INFO("PDPT(%d), PD(%d), PT(%d), virt(@0x%016X) => phy(@0x%016X)\n",
-      PDPT_offset, PD_offset, PT_offset, virt, phy);
+  INFO("ctx(0x%02x), PDPT(%d), PD(%d), PT(%d), virt(@0x%016X) => "
+      "phy(@0x%016X)\n", c, PDPT_offset, PD_offset, PT_offset, virt, phy);
   // XXX Save the cache level...
   ept_tables->PML40_PDPT0_N_PD_PT[c][PDPT_offset][PD_offset][PT_offset] = phy |
     (rights & 0x7);
-} 
+}
 
 /**
  * Juste relink the pages the TLB are handled via VPIDs
@@ -98,7 +99,7 @@ void ept_set_ctx(uint8_t c) {
     ERROR("Invalid context number\n");
   }
   for (j = 0; j < EPTN; j++) {
-    ept_tables->PML4_PDPT[0][j] = 
+    ept_tables->PML4_PDPT[0][j] =
       ((uint64_t) &ept_tables->PML40_PDPT0_N_PD[ctx][j][0]) | 0x07;
   }
   // DBG("CTX 0x%x set\n", ctx);
@@ -121,6 +122,9 @@ void ept_perm(uint64_t address, uint32_t pages, uint8_t rights, uint8_t c) {
   uint16_t PDPT_offset_end = get_PDPT_offset(p_end);
   uint16_t PD_offset_begin = get_PD_offset(p_begin);
   uint16_t PT_offset_begin = get_PT_offset(p_begin);
+
+  INFO("ctx(0x%02x), virt(@0x%016X), rights(0x%02x), pages(0x%02x)\n", c,
+      address, rights, pages);
 
   if (PML4_offset_end > 0) {
     panic("!#EPT protected_zone doesn't fit in the first PML4 entry\n", EPTN);
@@ -223,12 +227,12 @@ void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
       if (i == 0) {
         // Under 512 giga bytes : 2 MB mapped
         if (j < EPTN) {
-          // Under 4 gigabytes first context PD 
-          ept_tables->PML4_PDPT[i][j] = 
+          // Under 4 gigabytes first context PD
+          ept_tables->PML4_PDPT[i][j] =
             ((uint64_t) &ept_tables->PML40_PDPT0_N_PD[0][j][0]) | 0x07;
         } else {
           // Under 512 giga bytes : 2 MB mapped
-          ept_tables->PML4_PDPT[i][j] = 
+          ept_tables->PML4_PDPT[i][j] =
             ((uint64_t) &ept_tables->PML40_PDPT_PD[j - EPTN][0]) | 0x07;
         }
         for (k = 0; k < 512; k++) {
@@ -277,7 +281,7 @@ void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
   // Protect the VMM memory space
   // Map 4kB pages for all contexts
   for (m = 0; m < VM_NB; m++) {
-    ept_perm(p_begin + 0x1000, (p_end - p_begin) >> 12, 0x0, m);
+    ept_perm(p_begin, (p_end - p_begin) >> 12, 0x0, m);
   }
 
   // Compute the cache policy thanks to the mtrrs ranges
@@ -290,10 +294,7 @@ void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
 #ifdef _DEBUG_SERVER
   if (debug_server) {
     uint64_t MMCONFIG_base;
-    uint8_t MMCONFIG_length;
-    uint16_t MMCONFIG_mask;
     uint64_t base_addr;
-    uint64_t MMCONFIG;
 
     /* Initialize traps with 0xff */
     for (i = 0; i < sizeof(trap_pci); i++) {
@@ -301,28 +302,7 @@ void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
       trap_bar[i] = 0xff;
     }
 
-    /* MMCONFIG_length : bit 1:2 of PCIEXBAR (offset 60) */
-    MMCONFIG_length = (pci_readb(0,0x60) & 0x6) >> 1;
-
-    /* MMCONFIG corresponds to bits 38 to 28 of the pci base address
-       MMCONFIG_length decrease to 27 or 26 the lsb of MMCONFIG */
-    switch (MMCONFIG_length) {
-      case 0:
-        MMCONFIG_mask = 0xF07F;
-        break;
-      case 1:
-        MMCONFIG_mask = 0xF87F;
-        break;
-      case 2:
-        MMCONFIG_mask = 0xFC7F;
-        break;
-      default:
-        panic("Bad MMCONFIG Length\n");
-    }
-
-    /* MMCONFIG : bit 38:28-26 of PCIEXBAR (offset 60) -> 14:4-2 of PCIEXBAR + 3 */
-    MMCONFIG = pci_readw(0,0x63) & MMCONFIG_mask;
-    MMCONFIG_base = ((uint64_t)MMCONFIG << 16);
+    MMCONFIG_base = pci_mmconfig_base();
 
     INFO("MMCONFIG : base(@0x%016X)\n", MMCONFIG_base);
     base_addr = MMCONFIG_base + PCI_MAKE_MMCONFIG(eth->pci_addr.bus,
@@ -333,10 +313,10 @@ void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
     // XXX For the moment the VMs can use the network card with the UEFI driver
     // for debug purpose
     for (m = 0; m < VM_NB; m++) {
-      ept_remap(base_addr, (uint64_t)&trap_pci[0], 0x7, m);
+      ept_remap(base_addr, (uint64_t)&trap_pci[0], 0x0, m);
       // XXX We only hide bar0 which is not use anymore by the network driver
       ept_remap(eth->bar0, (uint64_t)&trap_bar[0], 0x7, m);
-      // XXX TODO here we should protect dynamically allocate pages 
+      // XXX TODO here we should protect dynamically allocate pages
       // * page tables
       // * Ethernet buffers
       // * Ethernet memory space
@@ -529,4 +509,14 @@ inline static uint16_t get_PD_offset(uint64_t addr)
 inline static uint16_t get_PT_offset(uint64_t addr)
 {
   return ((addr >> 12) & 0x1FF);
+}
+
+// XXX TODO mieux que ça bordel
+void ept_inv_tlb(void) {
+  uint64_t desc[2] = {
+    0x0000000000000000,
+    0x000000000000ffff | 0x0000
+  };
+  uint64_t type = 0x2;
+  __asm__ __volatile__("invept %0, %1" : : "m"(desc), "r"(type));
 }
