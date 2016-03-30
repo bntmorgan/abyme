@@ -10,6 +10,24 @@ enum NESTED_STATE {
   NESTED_GUEST_RUNNING
 };
 
+#define NESTED_READ_ONLY_DATA_FIELDS \
+          GUEST_PHYSICAL_ADDRESS, \
+          GUEST_PHYSICAL_ADDRESS_HIGH, \
+          VM_INSTRUCTION_ERROR, \
+          VM_EXIT_REASON, \
+          VM_EXIT_INTR_INFO, \
+          VM_EXIT_INTR_ERROR_CODE, \
+          IDT_VECTORING_INFO_FIELD, \
+          IDT_VECTORING_ERROR_CODE, \
+          VM_EXIT_INSTRUCTION_LEN, \
+          VMX_INSTRUCTION_INFO, \
+          EXIT_QUALIFICATION, \
+          IO_RCX, \
+          IO_RSI, \
+          IO_RDI, \
+          IO_RIP, \
+          GUEST_LINEAR_ADDRESS
+
 extern uint8_t level;
 
 void nested_recover_state(void);

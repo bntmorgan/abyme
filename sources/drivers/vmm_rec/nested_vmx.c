@@ -19,6 +19,7 @@
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
 #endif
+#include "error.h"
 
 // Current level
 uint8_t level;
@@ -51,7 +52,7 @@ void nested_vmx_shadow_bitmap_init(void) {
 
 /**
  * Event injection
- */ 
+ */
 
 static uint8_t charged = 0;
 static uint32_t error_code = 0;
@@ -281,7 +282,7 @@ void nested_guest_shadow_apply(struct vm *nvm) {
   VMC(gs.interruptibility_info, nvm->vmcs, &svmcs);
   VMC(gs.activity_state, nvm->vmcs, &svmcs);
   VMC(gs.smbase, nvm->vmcs, &svmcs);
-  VMC(gs.sysenter_cs, nvm->vmcs, &svmcs);
+  VMC(gs.ia32_sysenter_cs, nvm->vmcs, &svmcs);
   VMC(gs.vmcs_link_pointer, nvm->vmcs, &svmcs);
   VMC(gs.interrupt_status, nvm->vmcs, &svmcs);
   vmcs = bvmcs;
@@ -290,7 +291,7 @@ void nested_guest_shadow_apply(struct vm *nvm) {
 void nested_shadow_collect(void) {
   struct vmcs *bvmcs = vmcs;
   vmcs = &svmcs;
-  vmcs_update();
+  vmcs_force_update();
   vmcs = bvmcs;
 }
 
@@ -401,11 +402,11 @@ void nested_ctrls_shadow_apply(struct vm *vm) {
   uint64_t bit31 = *(uint32_t *)rvm->shadow_ptr & (1 << 31);
   // Activate VMCS shadowing if any
   if (sec_ctrl) {
-    VMW3(vm->vmcs, crtls.ex.secondary_vm_exec_control,
-        vmcs->crtls.ex.secondary_vm_exec_control.raw | VMCS_SHADOWING);
+    VMW3(vm->vmcs, ctrls.ex.secondary_vm_exec_control,
+        vmcs->ctrls.ex.secondary_vm_exec_control.raw | VMCS_SHADOWING);
   } else {
-    VMW3(vm->vmcs, crtls.ex.secondary_vm_exec_control,
-        vmcs->crtls.ex.secondary_vm_exec_control.raw & ~VMCS_SHADOWING);
+    VMW3(vm->vmcs, ctrls.ex.secondary_vm_exec_control,
+        vmcs->ctrls.ex.secondary_vm_exec_control.raw & ~VMCS_SHADOWING);
   }
   // Set the type of the shadow_vmcs
   if (bit31) {
@@ -418,7 +419,7 @@ void nested_ctrls_shadow_apply(struct vm *vm) {
 
 void nested_shadow_to_guest(struct vm *nvm) {
   // Clone encodings with field dirtyness
-  vmcs_clone(&svmcs);
+  vmcs_clone(&svmcs); // XXX why dude ?
   cpu_vmptrld(rvm->shadow_ptr);
   // Collect vmcs shadow fields
   nested_shadow_collect();
@@ -526,10 +527,6 @@ void nested_vmlaunch(struct registers *guest_regs) {
   __asm__ __volatile__("invept %0, %1" : : "m"(desc2), "r"(type2));
 #endif
 
-#ifdef _DEBUG_SERVER
-  debug_server_send_debug_all();
-#endif
-
   nested_cpu_vmlaunch(guest_regs);
 }
 
@@ -568,9 +565,6 @@ void nested_vmwrite(uint64_t field, uint64_t value) {
   cpu_vmptrld(vm->vmcs_region);
 
   nested_set_vm_succeed();
-  // XXX
-//  VMR(gs.rip);
-//  DBG("[0x%016X]0x%x = 0x%x\n", vmcs->gs.rip, field, value);
 }
 
 /**
@@ -635,7 +629,7 @@ void nested_shadow_update(struct vmcs *svmcs, struct vm *vm) {
   VMC(gs.interruptibility_info, svmcs, vm->vmcs);
   VMC(gs.activity_state, svmcs, vm->vmcs);
   VMC(gs.smbase, svmcs, vm->vmcs);
-  VMC(gs.sysenter_cs, svmcs, vm->vmcs);
+  VMC(gs.ia32_sysenter_cs, svmcs, vm->vmcs);
   VMC(gs.vmcs_link_pointer, svmcs, vm->vmcs);
   VMC(gs.interrupt_status, svmcs, vm->vmcs);
 }
@@ -662,23 +656,125 @@ void nested_host_shadow_apply(struct vm *vm) {
   VMC2(gs.idtr_base, hs.idtr_base, vm->vmcs, &svmcs);
   VMC2(gs.sysenter_esp, hs.ia32_sysenter_esp, vm->vmcs, &svmcs);
   VMC2(gs.sysenter_eip, hs.ia32_sysenter_eip, vm->vmcs, &svmcs);
-  VMC2(gs.sysenter_cs, hs.ia32_sysenter_cs, vm->vmcs, &svmcs);
+  VMC2(gs.ia32_sysenter_cs, hs.ia32_sysenter_cs, vm->vmcs, &svmcs);
   VMC2(gs.rsp, hs.rsp, vm->vmcs, &svmcs);
   VMC2(gs.rip, hs.rip, vm->vmcs, &svmcs);
+
+  // Ajust certain Guest State fields according to Chapter 27.5 Volume 3 of
+  // Intel programming manual
+
+  VMW3(vm->vmcs, gs.dr7, 0x400);
+  VMW3(vm->vmcs, gs.ia32_debugctl, 0);
+  VMW3(vm->vmcs, gs.ia32_sysenter_cs, 0);
+
+  VMW3(vm->vmcs, gs.cs_base, 0);
+  VMW3(vm->vmcs, gs.ss_base, 0);
+  VMW3(vm->vmcs, gs.ds_base, 0);
+
+  VMW3(vm->vmcs, gs.cs_limit, 0xffffffff);
+  VMW3(vm->vmcs, gs.ss_limit, 0xffffffff);
+  VMW3(vm->vmcs, gs.ds_limit, 0xffffffff);
+  VMW3(vm->vmcs, gs.es_limit, 0xffffffff);
+  VMW3(vm->vmcs, gs.fs_limit, 0xffffffff);
+  VMW3(vm->vmcs, gs.gs_limit, 0xffffffff);
+  VMW3(vm->vmcs, gs.tr_limit, 0x00000067);
+
+  // Sgement type, DPL, P
+
+  // Dirty it
+  VMD2(vm->vmcs, gs.cs_ar_bytes);
+  VMD2(vm->vmcs, gs.ss_ar_bytes);
+  VMD2(vm->vmcs, gs.ds_ar_bytes);
+  VMD2(vm->vmcs, gs.es_ar_bytes);
+  VMD2(vm->vmcs, gs.fs_ar_bytes);
+  VMD2(vm->vmcs, gs.gs_ar_bytes);
+  VMD2(vm->vmcs, gs.tr_ar_bytes);
+  VMD2(vm->vmcs, gs.ldtr_ar_bytes);
+
+  vm->vmcs->gs.cs_ar_bytes.type = 11;
+  vm->vmcs->gs.ss_ar_bytes.type = 3;
+  vm->vmcs->gs.ds_ar_bytes.type = 3;
+  vm->vmcs->gs.es_ar_bytes.type = 3;
+  vm->vmcs->gs.fs_ar_bytes.type = 3;
+  vm->vmcs->gs.gs_ar_bytes.type = 3;
+  vm->vmcs->gs.tr_ar_bytes.type = 11;
+
+  vm->vmcs->gs.cs_ar_bytes.s = 1;
+  vm->vmcs->gs.ss_ar_bytes.s = 1;
+  vm->vmcs->gs.ds_ar_bytes.s = 1;
+  vm->vmcs->gs.es_ar_bytes.s = 1;
+  vm->vmcs->gs.fs_ar_bytes.s = 1;
+  vm->vmcs->gs.gs_ar_bytes.s = 1;
+  vm->vmcs->gs.tr_ar_bytes.s = 0;
+
+  vm->vmcs->gs.cs_ar_bytes.dpl = 0;
+  vm->vmcs->gs.ss_ar_bytes.dpl = 0;
+  vm->vmcs->gs.ds_ar_bytes.dpl = 0;
+  vm->vmcs->gs.es_ar_bytes.dpl = 0;
+  vm->vmcs->gs.fs_ar_bytes.dpl = 0;
+  vm->vmcs->gs.gs_ar_bytes.dpl = 0;
+  vm->vmcs->gs.tr_ar_bytes.dpl = 0;
+
+  vm->vmcs->gs.cs_ar_bytes.p = 1;
+  vm->vmcs->gs.ss_ar_bytes.p = 1;
+  vm->vmcs->gs.ds_ar_bytes.p = 1;
+  vm->vmcs->gs.es_ar_bytes.p = 1;
+  vm->vmcs->gs.fs_ar_bytes.p = 1;
+  vm->vmcs->gs.gs_ar_bytes.p = 1;
+  vm->vmcs->gs.tr_ar_bytes.p = 1;
+
+  // "host address-space size" VM-exit control value
+  vm->vmcs->gs.cs_ar_bytes.l =
+    svmcs.ctrls.exit.controls.host_address_space_size;
+
+  // ! "host address-space size" VM-exit control value
+  vm->vmcs->gs.cs_ar_bytes.d =
+    ~svmcs.ctrls.exit.controls.host_address_space_size;
+  vm->vmcs->gs.ss_ar_bytes.d = 1;
+  vm->vmcs->gs.ds_ar_bytes.d = 1;
+  vm->vmcs->gs.es_ar_bytes.d = 1;
+  vm->vmcs->gs.fs_ar_bytes.d = 1;
+  vm->vmcs->gs.gs_ar_bytes.d = 1;
+  vm->vmcs->gs.tr_ar_bytes.d = 0;
+
+  vm->vmcs->gs.cs_ar_bytes.g = 1;
+  vm->vmcs->gs.ss_ar_bytes.g = 1;
+  vm->vmcs->gs.ds_ar_bytes.g = 1;
+  vm->vmcs->gs.es_ar_bytes.g = 1;
+  vm->vmcs->gs.fs_ar_bytes.g = 1;
+  vm->vmcs->gs.gs_ar_bytes.g = 1;
+  vm->vmcs->gs.tr_ar_bytes.g = 0;
+
+  VMD2(vm->vmcs, gs.ldtr_selector);
+  vm->vmcs->gs.ldtr_ar_bytes.raw = 0;
+  vm->vmcs->gs.ldtr_ar_bytes.unusable = 1;
+
+  VMW3(vm->vmcs, gs.gdtr_limit, 0xffff);
+  VMW3(vm->vmcs, gs.idtr_limit, 0xffff);
+
+  VMW3(vm->vmcs, gs.pending_dbg_exceptions, 0);
+
+  VMW3(vm->vmcs, gs.rflags, 0x2);
+
+  // XXX no info on that
+  VMW3(vm->vmcs, gs.interruptibility_info, 0);
+  VMW3(vm->vmcs, gs.interrupt_status, 0);
+  VMW3(vm->vmcs, gs.activity_state, 0);
+  VMW3(vm->vmcs, gs.smbase, 0);
 }
 
 void nested_load_host(void) {
   uint64_t preempt_timer_value;
 
   // Update the shadow VMCS with the new guest state
-  
+
   // Save preemption timer
   VMR2(gs.vmx_preemption_timer_value, preempt_timer_value);
 
   // Init a VMCS encodings
   vmcs_encoding_init(&svmcs);
   // Collect every filds of the current VMCS
-  vmcs_update();
+  vmcs_force_update();
   // copy all fields updated by vm_exit from guest_vmcs to shadow_vmcs
   nested_shadow_update(&svmcs, vm);
   // Set the shadow as the current vmcs
@@ -691,7 +787,7 @@ void nested_load_host(void) {
   // Reset the shadow vmcs
   vmcs_encoding_init(&svmcs);
   // Collect every shadow vmcs fields
-  vmcs_update();
+  vmcs_force_update();
   // Copy host fields from the shadow VMCS to the guest part of the VMCS
   nested_host_shadow_apply(rvm);
   // load host VMCS
@@ -722,9 +818,18 @@ void nested_load_host(void) {
 
   rvm->state = NESTED_HOST_RUNNING;
 
+  // XXX YOLO
+  // INFO("HOST LOADED DUDES\n");
+  // vmcs_commit();
+  // vmcs_force_update();
+  // INFO("\n\n   YOLO shadow\n\n");
+  // vmcs_dump_hs(&svmcs);
+  // INFO("\n\n   YOLO executive\n\n");
+  // vmcs_dump_gs(vmcs);
+
 #ifdef _DEBUG_SERVER
-  // handle Monitor trap flag
-  debug_server_mtf();
+//   debug_server_send_debug_all();
+//   set_mtf();
 #endif
 }
 
@@ -742,11 +847,6 @@ void nested_load_guest(void) {
 
   // Set the current child VM as the current running VM
   vm_set(vm->child);
-
-#ifdef _DEBUG_SERVER
-  // handle Monitor trap flag
-  debug_server_mtf();
-#endif
 }
 
 void nested_set_vm_succeed(void) {
