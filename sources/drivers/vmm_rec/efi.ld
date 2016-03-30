@@ -17,7 +17,7 @@ SECTIONS
 
   .text : ALIGN(0x1000) {
     *crt0-efi-*.o(.text)
-    build/*/vmm_rec/efi.o(.text)
+    /tmp/build/drivers/vmm_rec/efi.o(.text)
 
     /* PADDING */
     FILL(0x90)
