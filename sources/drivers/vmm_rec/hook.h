@@ -5,6 +5,12 @@
 
 #define HOOK_MAX_EXIT_REASON 65
 
+enum hook_override_modes {
+  HOOK_OVERRIDE_NONE,
+  HOOK_OVERRIDE_SKIP, // Skip instruction
+  HOOK_OVERRIDE_STAY // Stay
+};
+
 void hook_main(void) __attribute__((weak));
 
 typedef int (*vmexit_hook_boot)(struct registers *);
