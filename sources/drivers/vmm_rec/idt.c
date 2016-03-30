@@ -2,6 +2,7 @@
 #include "cpu.h"
 #include "string.h"
 #include "stdio.h"
+#include "error.h"
 
 extern void *isr;
 
@@ -158,6 +159,7 @@ void idt_decode(struct idt_isr_stack *is) {
       break;
     case IDT_GENERAL_PROTECTION:
       IDT_PRINT(IDT_GENERAL_PROTECTION);
+      ERROR("Unsupported\n");
       break;
     case IDT_PAGE_FAULT: {
       IDT_PRINT(IDT_PAGE_FAULT);
@@ -172,7 +174,7 @@ void idt_decode(struct idt_isr_stack *is) {
       PRINT_FIELD(&code, id);
       PRINT_FIELD(&code, pk);
       PRINT_FIELD(&code, r0);
-      INFO("Unsupported\n");
+      ERROR("Unsupported\n");
       break;
     }
     case IDT_RESERVED:
