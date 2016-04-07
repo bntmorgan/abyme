@@ -1,4 +1,4 @@
-CC						:= gcc
+cc						:= gcc
 AR						:= ar
 OBJDUMP				:= objdump
 PYTHON				:= python3
@@ -116,7 +116,7 @@ shell:
 	sudo cp sources/shell_scripts/*.nsh /mnt
 
 mount:
-	sudo mount $(USB) /mnt
+	sudo mount $(USB) /mnt --rw
 
 umount:
 	sudo umount /mnt
@@ -146,11 +146,20 @@ vmware-compile:
 qemu: launch
 
 pre-launch:
-	rm -fr img/hda-contents
-	mkdir img/hda-contents
-	cp -r $(BINARY_DIR)/ img/hda-contents
+	mkdir -p img/hda-contents/EFI
+	cp -r $(BINARY_DIR)/* img/hda-contents/EFI
 	cp -r sources/shell_scripts/* img/hda-contents
+	./run_qemu
 
 launch: pre-launch
-	qemu-system-x86_64 -bios /usr/share/ovmf/ovmf_x64.bin -m 4G \
-		-hda fat:qemu/hda-contents -cpu host -enable-kvm
+	qemu-system-x86_64 -bios /usr/share/ovmf/ovmf_x64.bin -m 16G \
+		           -hda fat:img/hda-contents -cpu host -enable-kvm \
+			   -net nic,model=e1000 \
+			   -net tap,ifname=tap0,script=no,downscript=no 
+	sudo /etc/qemu-ifdown tap0
+
+qemu_clean:
+	sudo netctl disable bridge
+	sudo netctl stop bridge
+	sudo modprobe -r tun
+	sudo sysctl net.ipv4.ip_forward=0
