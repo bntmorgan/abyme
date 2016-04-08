@@ -149,7 +149,7 @@ pre-launch:
 	mkdir -p img/hda-contents/EFI
 	cp -r $(BINARY_DIR)/* img/hda-contents/EFI
 	cp -r sources/shell_scripts/* img/hda-contents
-	./run_qemu
+	./run_qemu.sh
 
 launch: pre-launch
 	qemu-system-x86_64 -bios /usr/share/ovmf/ovmf_x64.bin -m 16G \

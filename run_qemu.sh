@@ -34,8 +34,8 @@ fi
 
 ## Copy the two scripts for Qemu
 echo 'Copy of qemu-ifup and qemu-ifdown'
-sudo cp ./kvm/qemu-ifup /etc/qemu-ifup
-sudo cp ./kvm/qemu-ifdown /etc/qemu-ifdown
+sudo cp ./kvm/qemu-ifup.sh /etc/qemu-ifup
+sudo cp ./kvm/qemu-ifdown.sh /etc/qemu-ifdown
 
 echo 'Add tap interface'
 TAP=`ip tuntap show`
