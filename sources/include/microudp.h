@@ -1,5 +1,5 @@
-#ifndef __microupd_h__
-#define __microupd_h__
+#ifndef __MICROUDP_H__
+#define __MICROUDP_H__
 
 // Note : Milkymist : https://github.com/m-labs/milkymist/blob/master/software/libnet/microudp.c
 #include <efi.h>

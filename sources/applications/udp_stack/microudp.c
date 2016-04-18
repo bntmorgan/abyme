@@ -1,4 +1,4 @@
-#include "microupd.h"
+#include "microudp.h"
 
 
 static unsigned char my_mac[6];
@@ -19,7 +19,7 @@ static void fill_eth_header(ethernet_header *h, const uint8_t *destmac,
 	h->ethertype = ethertype;
 }
 
-static void process_arp(void) {
+void process_arp(void) {
 	if(rxbuffer->frame.contents.arp.opcode == ARP_OPCODE_REQUEST) {
 		if(rxbuffer->frame.contents.arp.target_ip == my_ip) {
 			int i;	
