@@ -1,6 +1,7 @@
 #ifndef __microupd_h__
 #define __microupd_h__
 
+// Note : Milkymist : https://github.com/m-labs/milkymist/blob/master/software/libnet/microudp.c
 #include <efi.h>
 
 #include "types.h"
@@ -8,13 +9,20 @@
 #define ETHERTYPE_ARP 					0x0806 	// Code ethertype pour ARP
 #define ETHERTYPE_IP 						0x0800 	// Code ethertype pour IP
 
+struct ethernet_header {
+	//uint8_t preamble[8];
+	uint8_t destmac[6];
+	uint8_t srcmac[6];
+	uint16_t ethertype;
+} __attribute__((packed));
+
 #define ARP_HWTYPE_ETHERNET 		0x0001	// Hardware type : 0x0001 pour Ethernet
 #define ARP_PROTO_IP        		0x0800	// Protocol type : 0x0800 pour IP
 
 #define ARP_HW_SIZE							0x06		// Size of hardware address
 #define ARP_PROTO_SIZE					0x04		// Size of network address
 
-// #define ARP_OPCODE_REQUEST  	0x0001	// Operation Code request
+#define ARP_OPCODE_REQUEST  	0x0001	// Operation Code request
 #define ARP_OPCODE_REPLY    		0x0002	// Operation Code reply
 
 // Define ARP frame
