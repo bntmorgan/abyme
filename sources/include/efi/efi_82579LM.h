@@ -18,8 +18,12 @@ typedef union _debug_message {
 } debug_message;
 
 typedef struct _protocol_82579LM {
+  // Deprecated
   uint32_t (*send)(const void *, uint32_t, uint8_t);
   uint32_t (*recv)(void *, uint32_t, uint8_t);
+  // Ethernet send and receive
+  void (*eth_send)(const void *buf, uint16_t len, uint8_t block);
+  uint32_t (*eth_recv)(void *buf, uint32_t len, uint8_t block);
   int (*get_level)(void);
   int (*uninstall)(void);
   struct {
@@ -29,6 +33,7 @@ typedef struct _protocol_82579LM {
   } pci_addr;
   uint64_t bar0;
   uint64_t mtu;
+  uint8_t  mac_addr[6];
 } protocol_82579LM;
 
 extern uint8_t *bar0;

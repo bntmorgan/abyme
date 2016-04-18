@@ -208,6 +208,7 @@ int eth_init() {
   laddr.n[3] = (uint8_t)(laddr_l >> 24);
   laddr.n[4] = (uint8_t)(laddr_h >> 0);
   laddr.n[5] = (uint8_t)(laddr_h >> 8);
+  memcpy(&proto.mac_addr[0], &laddr.n[0], 6);
   INFO("MAC addr %02x:%02x:%02x:%02x:%02x:%02x\n", laddr.n[0],
       laddr.n[1], laddr.n[2], laddr.n[3], laddr.n[4], laddr.n[5]);
   // cpu_mem_writed(bar0 + REG_CTRL, cpu_mem_readd(bar0 + REG_CTRL) | CTRL_SLU);

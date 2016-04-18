@@ -6,6 +6,9 @@
 #include "types.h"
 #include "addr.h"
 #include "pci.h"
+#include "api.h"
+
+extern protocol_82579LM proto;
 
 //
 // Intel® 82579 Gigabit Ethernet PHY Datasheet v2.1
