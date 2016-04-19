@@ -9,6 +9,10 @@
 #define ETHERTYPE_ARP 					0x0806 	// Code ethertype pour ARP
 #define ETHERTYPE_IP 						0x0800 	// Code ethertype pour IP
 
+static inline uint16_t htons(uint16_t data) {
+  return ((data >> 8) & 0xff) | ((data << 8) & 0xff00);
+}
+
 struct ethernet_header {
 	//uint8_t preamble[8];
 	uint8_t destmac[6];
@@ -22,7 +26,7 @@ struct ethernet_header {
 #define ARP_HW_SIZE							0x06		// Size of hardware address
 #define ARP_PROTO_SIZE					0x04		// Size of network address
 
-#define ARP_OPCODE_REQUEST  	0x0001	// Operation Code request
+#define ARP_OPCODE_REQUEST  	  0x0001	// Operation Code request
 #define ARP_OPCODE_REPLY    		0x0002	// Operation Code reply
 
 // Define ARP frame
@@ -37,7 +41,7 @@ struct arp_frame {
 	uint8_t target_mac[6];
 	uint32_t target_ip;
 	uint8_t padding[18];
-} __attribute__((packed)) arp_frame;
+} __attribute__((packed));
 
 #define IP_IPV4									0x45		// IPv4 version + Header length
 #define IP_DONT_FRAGMENT				0x4000	// Flags don't fragment
@@ -56,7 +60,7 @@ struct ip_header {
 	uint16_t checksum;
 	uint32_t src_ip;
 	uint32_t dst_ip;
-} __attribute__((packed)) ip_header;
+} __attribute__((packed));
 
 // Define UDP header
 struct udp_header {
@@ -68,12 +72,13 @@ struct udp_header {
 
 // Define UDP frame
 struct udp_frame {
-	ip_header ip;
-	udp_header udp;
+	struct ip_header ip;
+	struct udp_header udp;
 	char payload[];
 } __attribute__((packed)) udp_frame;
 
 /* ARP cache - one entry only */
-static uint8_t cached_mac[6];
-static uint32_t cached_ip;
+// static uint8_t cached_mac[6];
+// static uint32_t cached_ip;
 
+#endif//__MICROUDP_H__
