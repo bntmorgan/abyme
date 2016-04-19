@@ -18,7 +18,7 @@ struct ethernet_header {
 	uint8_t destmac[6];
 	uint8_t srcmac[6];
 	uint16_t ethertype;
-} __attribute__((packed));
+} __attribute__((packed)) ethernet_header;
 
 #define ARP_HWTYPE_ETHERNET 		0x0001	// Hardware type : 0x0001 pour Ethernet
 #define ARP_PROTO_IP        		0x0800	// Protocol type : 0x0800 pour IP
@@ -26,7 +26,7 @@ struct ethernet_header {
 #define ARP_HW_SIZE							0x06		// Size of hardware address
 #define ARP_PROTO_SIZE					0x04		// Size of network address
 
-#define ARP_OPCODE_REQUEST  	  0x0001	// Operation Code request
+#define ARP_OPCODE_REQUEST  		0x0001	// Operation Code request
 #define ARP_OPCODE_REPLY    		0x0002	// Operation Code reply
 
 // Define ARP frame
@@ -74,11 +74,22 @@ struct udp_header {
 struct udp_frame {
 	struct ip_header ip;
 	struct udp_header udp;
-	char payload[];
+	uint8_t payload[];
 } __attribute__((packed)) udp_frame;
 
-/* ARP cache - one entry only */
-// static uint8_t cached_mac[6];
-// static uint32_t cached_ip;
+struct ethernet_frame {
+	struct ethernet_header eth_header;
+	union {
+		struct arp_frame arp;
+		struct udp_frame udp;
+	} contents;
+} __attribute__((packed)) ethernet_frame;
+
+typedef union {
+	struct ethernet_frame frame;
+	uint8_t raw[1532];
+} ethernet_buffer;
+
+void microudp_start(uint8_t *macaddr, uint32_t ip);
 
 #endif//__MICROUDP_H__
