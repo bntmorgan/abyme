@@ -277,7 +277,7 @@ void eth_send(const void *buf, uint16_t len, uint8_t block) {
   // Write new tx descriptor
   tx_desc->addr = (uint64_t)(uintptr_t)b;
   tx_desc->len = len;
-  tx_desc->cmd = CMD_EOP | CMD_IFCS | CMD_RS;
+  tx_desc->cmd = CMD_EOP | CMD_IFCS | CMD_RS | CMD_IC;
   tx_desc->status = 0;
   // Increment the current tx decriptor
   idx = (idx + 1) & (TX_DESC_COUNT - 1);
