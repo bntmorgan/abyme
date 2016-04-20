@@ -116,7 +116,7 @@ shell:
 	sudo cp sources/shell_scripts/*.nsh /mnt
 
 mount:
-	sudo mount $(USB) /mnt --rw
+	sudo mount $(USB) /mnt
 
 umount:
 	sudo umount /mnt
