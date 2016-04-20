@@ -24,7 +24,9 @@ dir	:= $(d)/shadowck
 include	$(dir)/rules.mk
 dir	:= $(d)/mp
 include	$(dir)/rules.mk
-dir := $(d)/udp_stack
+# dir := $(d)/udp_stack
+# include $(dir)/rules.mk
+dir := $(d)/ping
 include $(dir)/rules.mk
 
 d		:= $(dirstack_$(sp))
