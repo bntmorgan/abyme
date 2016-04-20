@@ -130,7 +130,7 @@ int eth_setup() {
     INFO("Failed to allocate rx_bufs\n");
     return -1;
   }
-  tx_bufs = efi_allocate_pages((TX_DESC_COUNT * NET_BUF_SIZE) / 0x1000 + ((RX_DESC_COUNT * NET_BUF_SIZE) % 0x1000 != 0.0));
+  tx_bufs = efi_allocate_pages((TX_DESC_COUNT * NET_BUF_SIZE) / 0x1000 + ((TX_DESC_COUNT * NET_BUF_SIZE) % 0x1000 != 0.0));
   if (!rx_bufs) {
     INFO("Failed to allocate tx_bufs\n");
     return -1;
@@ -277,8 +277,11 @@ void eth_send(const void *buf, uint16_t len, uint8_t block) {
   // Write new tx descriptor
   tx_desc->addr = (uint64_t)(uintptr_t)b;
   tx_desc->len = len;
-  tx_desc->cmd = CMD_EOP | CMD_IFCS | CMD_RS | CMD_IC;
+  tx_desc->cmd = CMD_EOP | CMD_IFCS | CMD_RS;
   tx_desc->status = 0;
+  // Flush data cache line
+  cpu_clflush(tx_desc);
+
   // Increment the current tx decriptor
   idx = (idx + 1) & (TX_DESC_COUNT - 1);
   cpu_mem_writed(bar0 + REG_TDT, idx);
@@ -317,6 +320,8 @@ uint32_t eth_recv(void *buf, uint32_t len, uint8_t block) {
       l += len;
     }
     rx_desc->status = 0;
+    // Flush data cache line
+    cpu_clflush(rx_desc);
     cpu_mem_writed(bar0 + REG_RDT, idx);
     idx = (idx + 1) & (RX_DESC_COUNT - 1);
   }
