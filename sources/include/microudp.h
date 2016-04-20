@@ -6,6 +6,9 @@
 
 #include "types.h"
 
+#define IP_TO_INT(_a_, _b_, _c_, _d_) \
+  (((_d_) << 24) | ((_c_) << 16) | ((_b_) << 8) | ((_a_) << 0))
+
 #define ETHERTYPE_ARP 					0x0806 	// Code ethertype pour ARP
 #define ETHERTYPE_IP 						0x0800 	// Code ethertype pour IP
 
