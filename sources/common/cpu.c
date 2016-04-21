@@ -133,6 +133,6 @@ void cpu_stop(void) {
 
 uint64_t cpu_rdtsc(void) {
   uint32_t tscl, tsch;
-  __asm__ __volatile__("rdtsc" : "=d"(tsch), "=a"(tscl));  
+  __asm__ __volatile__("rdtsc" : "=d"(tsch), "=a"(tscl));
   return ((uint64_t)tsch) << 32 | tscl;
 }

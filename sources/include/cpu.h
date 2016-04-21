@@ -195,6 +195,10 @@ static inline uint64_t cpu_mem_readq(void *p) {
   return *(volatile uint64_t *)(p);
 }
 
+static inline void cpu_clflush(void *linear) {
+  __asm__ __volatile__("clflush %0" : : "m"(linear));
+}
+
 ///* BOCHS magic breakpoint */
 ////#define BREAKPOINT() __asm__ __volatile__("xchg %bx, %bx")
 //void cpu_outportb(uint32_t port, uint8_t value);

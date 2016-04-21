@@ -927,7 +927,7 @@ void vmcs_host_config_host_state_fields(void) {
 
 void vmcs_host_config_vm_exec_control_fields(void) {
   uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS |
-      USE_IO_BITMAPS | USE_TSC_OFFSETTING | CR3_LOAD_EXITING;
+      USE_IO_BITMAPS | USE_TSC_OFFSETTING;
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST |
       ENABLE_RDTSCP;
 
@@ -945,8 +945,6 @@ void vmcs_host_config_vm_exec_control_fields(void) {
       && (((msr_read(MSR_ADDRESS_IA32_VMX_TRUE_PROCBASED_CTLS) >> 15) & 3)) ==
       0){
     procbased_ctls &= ~(CR3_LOAD_EXITING | CR3_STORE_EXITING);
-    // DEMO !
-    procbased_ctls |= CR3_LOAD_EXITING;
   } else {
     panic("#!PROCBASED_CTLS CR3_LOAD_EXITING or CR3_STORE_EXITING required\n");
   }
