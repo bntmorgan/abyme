@@ -9,7 +9,6 @@
 #define BUF_SIZE					1500
 
 uint8_t buf2[BUF_SIZE];
-uint8_t buf1[BUF_SIZE];
 
 void efi_initialize_ethframe(union ethernet_buffer* buffer, \
 														 protocol_82579LM *eth) {
@@ -19,11 +18,11 @@ void efi_initialize_ethframe(union ethernet_buffer* buffer, \
   // Dst address
 	INFO("Dest mac address\n");
 	for (i = 0; i < 6; i++) {
-  	buffer->frame.eth_header.destmac[i] = 0xff;
-  	printk("%02x ", buffer->frame.eth_header.destmac[i]);
+		buffer->frame.eth_header.destmac[i] = 0xff;
+		printk("%02x ", buffer->frame.eth_header.destmac[i]);
 	}
 	printk("\n");
-	
+
 	// Src address
   INFO("Source mac address\n");
   for (i = 0; i < 6; i++) {
@@ -40,11 +39,11 @@ void print_arpframe(struct arp_frame arp) {
   printk("  protosize(0x%02x)\n", arp.protosize);
   printk("  opcode(0x%04x)\n", htons(arp.opcode));
   printk("  sender_mac(0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x)\n",
-						arp.sender_mac[0], arp.sender_mac[1], arp.sender_mac[2],  
+						arp.sender_mac[0], arp.sender_mac[1], arp.sender_mac[2],
 						arp.sender_mac[3], arp.sender_mac[4], arp.sender_mac[5]);
   printk("  sender_ip(0x%08x)\n", arp.sender_ip);
-  printk("  target_mac(0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x)\n", 
-						arp.target_mac[0], arp.target_mac[1], arp.target_mac[2], 
+  printk("  target_mac(0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x)\n",
+						arp.target_mac[0], arp.target_mac[1], arp.target_mac[2],
 						arp.target_mac[3], arp.target_mac[4], arp.target_mac[5]);
   printk("  target_ip(0x%08x)\n", arp.target_ip);
 }
@@ -66,7 +65,7 @@ uint32_t efi_start_arp(union ethernet_buffer *buffer, protocol_82579LM *eth) {
 
 	INFO("Sending with new ethernet API ! %d \n", len);
 	eth->eth_send(buf2, len+sizeof(struct ethernet_header), 1);
-	
+
 	// Wait for the reply
   memset(&buf2[0], 0, 1500);
 	buffer = (union ethernet_buffer *)&buf2[0];
@@ -76,9 +75,9 @@ uint32_t efi_start_arp(union ethernet_buffer *buffer, protocol_82579LM *eth) {
 	print_arpframe(buffer->frame.contents.arp);
   INFO("RECEIVE\n");
 
-	// Set the cache	
-	microudp_set_cache(buffer->frame.contents.arp.sender_mac);	
-	
+	// Set the cache
+	microudp_set_cache(buffer->frame.contents.arp.sender_mac);
+
 	return 0;
 }
 
@@ -86,28 +85,47 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image, systab);
 	EFI_STATUS status;
   protocol_82579LM *eth;
-	
+
 	// Initialize sending buffer
   memset(&buf2[0], 0, 1500);
 
 	// Initialize ethernet buffer
 	union ethernet_buffer *buffer = (union ethernet_buffer *)&buf2[0];
-  
+
 	// Identify the ethernet protocol
 	EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID;
-	
+
 	// Locate it
   status = LibLocateProtocol(&guid_82579LM, (void **)&eth);
   if (EFI_ERROR(status)) {
     INFO("FAILED LOL LocateProtocol\n");
     return -1;
   }
-	
-	// Initialize mac address
-	efi_initialize_ethframe(buffer, eth);
-		
-	// Start dhcp client
-	efi_start_arp(buffer, eth);	
 
-  return EFI_SUCCESS;
+	// Initialize mac address
+	//efi_initialize_ethframe(buffer, eth);
+	microudp_start(eth->mac_addr, SERVER_IP);
+
+	uint8_t data[5] = {'c','a','c','a',0x0a};
+	uint32_t len;
+	while((len=microudp_fill(buffer, 6666, 6666, data, 5)) == 0) {
+		len = microudp_start_arp(buffer, CLIENT_IP);
+		INFO("Sending ARP with new ethernet API ! size : %d \n", len);
+		eth->eth_send(buf2, len, 1);
+		// Wait for the reply
+		memset(&buf2[0], 0, 1500);
+		buffer = (union ethernet_buffer *)&buf2[0];
+
+		eth->eth_recv(buf2, 42, 1);
+
+		// Set the cache
+		microudp_set_cache(buffer->frame.contents.arp.sender_mac);
+		memset(&buf2[0], 0, 1500);
+		buffer = (union ethernet_buffer *)&buf2[0];
+	}
+
+	INFO("Sending UDP with new ethernet API ! size : %d \n", len);
+	eth->eth_send(buf2, len, 1);
+
+	return EFI_SUCCESS;
 }

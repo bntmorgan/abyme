@@ -1,6 +1,7 @@
-#include "microudp.h"
 #include "stdio.h"
 #include "string.h"
+#include "microudp.h"
+#include "arp.h"
 
 uint8_t my_mac[6];
 uint32_t my_ip;
@@ -42,20 +43,43 @@ uint16_t ip_checksum(uint32_t r, void *buffer, uint32_t length, int32_t complete
 
 void microudp_start(uint8_t *macaddr, uint32_t ip)
 {
+	uint32_t i;
 	// Set MAC address
 	memcpy(&my_mac[0], &macaddr[0], 6);
-	
+
 	// Set IP address
 	my_ip = ip;
-	
+
 	// Define the ARP cache
-	cached_ip = SERVER_IP;
-	memcpy(&cached_mac[0], 0, 6);
+	cached_ip = 0;
+  for (i = 0; i < 6; i++) {
+		cached_mac[i] = 0xff;
+	}
+}
+
+void microudp_initialize_ethframe(union ethernet_buffer* buffer) {
+  uint32_t i;
+  // We copy source mac address
+  memcpy(&buffer->frame.eth_header.srcmac[0], &my_mac[0], 6);
+  // Dst address
+	memcpy(&buffer->frame.eth_header.destmac[0], &cached_mac[0], 6);
+  INFO("Dest mac address\n");
+  for (i = 0; i < 6; i++) {
+    printk("%02x ", buffer->frame.eth_header.destmac[i]);
+  }
+  printk("\n");
+
+	// Src address
+  INFO("Source mac address\n");
+  for (i = 0; i < 6; i++) {
+    printk("%02x ", buffer->frame.eth_header.srcmac[i]);
+  }
+  printk("\n");
 }
 
 void microudp_set_cache(uint8_t *macaddr) {
   uint32_t i;
-	INFO("Client MAC address\n");
+	INFO("New client MAC address\n");
   for (i = 0; i < 6; i++) {
     printk("%02x ", macaddr[i]);
   }
@@ -63,12 +87,32 @@ void microudp_set_cache(uint8_t *macaddr) {
 	memcpy(&cached_mac[0], &macaddr[0], 6);
 }
 
-uint16_t microudp_fill_udp(union ethernet_buffer* buffer, uint16_t src_port, \
-														uint16_t dst_port, /* XXX voir si cached IP */ \
-														uint32_t dst_ip, uint8_t *data, uint32_t len) {
+uint32_t microudp_start_arp(union ethernet_buffer *buffer, uint32_t ip) {
+	// Send an ARP request
+	INFO("START ARP\n");
+	cached_ip = ip;
+	microudp_initialize_ethframe(buffer);
+  uint32_t len = arp_request(buffer, ip);
+
+	return len+sizeof(ethernet_header);
+}
+
+uint16_t microudp_fill(union ethernet_buffer* buffer, uint16_t src_port,
+													 uint16_t dst_port, uint8_t *data, uint32_t len) {
 	struct pseudo_header h;
 	uint32_t r;
-	
+
+	if((cached_mac[0] == 0xff) && (cached_mac[1] == 0xff) && (cached_mac[2] == 0xff)
+		&& (cached_mac[3] == 0xff) && (cached_mac[4] == 0xff) && (cached_mac[5] == 0xff)) {
+		INFO("No address MAC\n");
+		return 0;
+	}
+
+	INFO("Address MAC found, ok to send\n");
+	microudp_initialize_ethframe(buffer);
+
+	buffer->frame.eth_header.ethertype = htons(ETHERTYPE_IP);
+
 	buffer->frame.contents.udp.ip.version = IP_IPV4;
 	buffer->frame.contents.udp.ip.diff_services=0;
 	buffer->frame.contents.udp.ip.total_length=htons(sizeof(struct udp_frame)+len);
@@ -78,8 +122,8 @@ uint16_t microudp_fill_udp(union ethernet_buffer* buffer, uint16_t src_port, \
 	buffer->frame.contents.udp.ip.proto=IP_PROTO_UDP;
 	buffer->frame.contents.udp.ip.checksum=0;
 	buffer->frame.contents.udp.ip.src_ip=my_ip;
-	buffer->frame.contents.udp.ip.dst_ip=dst_ip;
-	
+	buffer->frame.contents.udp.ip.dst_ip=cached_ip;
+
 	buffer->frame.contents.udp.udp.src_port = htons(src_port);
 	buffer->frame.contents.udp.udp.dst_port = htons(dst_port);
 	buffer->frame.contents.udp.udp.length = htons(sizeof(struct udp_header)+len);
@@ -87,19 +131,19 @@ uint16_t microudp_fill_udp(union ethernet_buffer* buffer, uint16_t src_port, \
 	memcpy(&buffer->frame.contents.udp.payload[0], &data[0], len);
 	buffer->frame.contents.udp.ip.checksum = htons(ip_checksum(0, &buffer->frame.contents.udp.ip, sizeof(struct ip_header), 1));
 
-	// Checksum	
+	// Checksum
 	h.proto = buffer->frame.contents.udp.ip.proto;
 	h.src_ip = buffer->frame.contents.udp.ip.src_ip;
 	h.dst_ip = buffer->frame.contents.udp.ip.dst_ip;
-	h.length = buffer->frame.contents.udp.udp.length; 
+	h.length = buffer->frame.contents.udp.udp.length;
 	h.zero = 0;
 	r = ip_checksum(0, &h, sizeof(struct pseudo_header), 0);
 	if(len & 1) {
 		buffer->frame.contents.udp.payload[len]=0;
 		len++;
-	}		
+	}
 	r = ip_checksum(r, &buffer->frame.contents.udp.udp, sizeof(struct udp_header)+len, 1);
 	buffer->frame.contents.udp.udp.checksum = htons(r);
-	
-	return (sizeof(struct udp_frame)+len);
+
+	return (sizeof(struct udp_frame)+len+sizeof(struct ethernet_header));
 }

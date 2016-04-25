@@ -9,8 +9,8 @@
 #define IP_TO_INT(_a_, _b_, _c_, _d_) \
   (((_d_) << 24) | ((_c_) << 16) | ((_b_) << 8) | ((_a_) << 0))
 
-#define ETHERTYPE_ARP 					0x0806 	// Code ethertype pour ARP
-#define ETHERTYPE_IP 						0x0800 	// Code ethertype pour IP
+#define ETHERTYPE_ARP						0x0806	// Code ethertype pour ARP
+#define ETHERTYPE_IP						0x0800	// Code ethertype pour IP
 
 #define SERVER_IP								IP_TO_INT(192,168,0,2)
 #define CLIENT_IP								IP_TO_INT(192,168,0,1)
@@ -22,14 +22,14 @@ struct ethernet_header {
 	uint16_t ethertype;
 } __attribute__((packed)) ethernet_header;
 
-#define ARP_HWTYPE					 		0x0001	// Hardware type : 0x0001 pour Ethernet
-#define ARP_PROTO_IP        		0x0800	// Protocol type : 0x0800 pour IP
+#define ARP_HWTYPE							0x0001	// Hardware type : 0x0001 pour Ethernet
+#define ARP_PROTO_IP						0x0800	// Protocol type : 0x0800 pour IP
 
 #define ARP_HW_SIZE							0x06		// Size of hardware address
 #define ARP_PROTO_SIZE					0x04		// Size of network address
 
-#define ARP_OPCODE_REQUEST  		0x0001	// Operation Code request
-#define ARP_OPCODE_REPLY    		0x0002	// Operation Code reply
+#define ARP_OPCODE_REQUEST			0x0001	// Operation Code request
+#define ARP_OPCODE_REPLY				0x0002	// Operation Code reply
 
 // Define ARP frame
 struct arp_frame {
@@ -96,8 +96,8 @@ static inline uint16_t htons(uint16_t data) {
 }
 
 void microudp_start(uint8_t *macaddr, uint32_t ip);
-uint16_t microudp_fill_udp(union ethernet_buffer* buffer, uint16_t src_port, \
-													 uint16_t dst_port, uint32_t dst_ip, uint8_t *data,\
-													 uint32_t len);
-void microudp_set_cache(uint8_t *macaddr); 
+uint16_t microudp_fill(union ethernet_buffer* buffer, uint16_t src_port,
+													 uint16_t dst_port, uint8_t *data, uint32_t len);
+void microudp_set_cache(uint8_t *macaddr);
+uint32_t microudp_start_arp(union ethernet_buffer *buffer, uint32_t ip);
 #endif//__MICROUDP_H__

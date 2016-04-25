@@ -4,9 +4,8 @@
 
 uint32_t arp_request(union ethernet_buffer *buffer, uint32_t dst_ip) {
 
-	buffer->frame.eth_header.ethertype = htons(ETHERTYPE_ARP);                     
-	microudp_start(buffer->frame.eth_header.srcmac, SERVER_IP);	
-	
+	buffer->frame.eth_header.ethertype = htons(ETHERTYPE_ARP);
+
 	buffer->frame.contents.arp.hwtype = htons(ARP_HWTYPE);
 	buffer->frame.contents.arp.proto = htons(ARP_PROTO_IP);
 	buffer->frame.contents.arp.hwsize = ARP_HW_SIZE;

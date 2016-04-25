@@ -27,7 +27,7 @@ void arp_request(void) {
   memcpy(&eh->srcmac[0], eth->mac_addr, 6);
   eh->ethertype = htons(ETHERTYPE_ARP);
   // ARP
-  af->hwtype = htons(ARP_HWTYPE_ETHERNET);
+  af->hwtype = htons(ARP_HWTYPE);
   af->proto = htons(ARP_PROTO_IP);
   af->hwsize = ARP_HW_SIZE;
   af->protosize = ARP_PROTO_SIZE;
