@@ -12,9 +12,8 @@
 #define ETHERTYPE_ARP 					0x0806 	// Code ethertype pour ARP
 #define ETHERTYPE_IP 						0x0800 	// Code ethertype pour IP
 
-static inline uint16_t htons(uint16_t data) {
-  return ((data >> 8) & 0xff) | ((data << 8) & 0xff00);
-}
+#define SERVER_IP								IP_TO_INT(192,168,0,2)
+#define CLIENT_IP								IP_TO_INT(192,168,0,1)
 
 struct ethernet_header {
 	//uint8_t preamble[8];
@@ -23,7 +22,7 @@ struct ethernet_header {
 	uint16_t ethertype;
 } __attribute__((packed)) ethernet_header;
 
-#define ARP_HWTYPE_ETHERNET 		0x0001	// Hardware type : 0x0001 pour Ethernet
+#define ARP_HWTYPE					 		0x0001	// Hardware type : 0x0001 pour Ethernet
 #define ARP_PROTO_IP        		0x0800	// Protocol type : 0x0800 pour IP
 
 #define ARP_HW_SIZE							0x06		// Size of hardware address
@@ -43,8 +42,7 @@ struct arp_frame {
 	uint32_t sender_ip;
 	uint8_t target_mac[6];
 	uint32_t target_ip;
-	uint8_t padding[18];
-} __attribute__((packed));
+} __attribute__((packed)) arp_frame;
 
 #define IP_IPV4									0x45		// IPv4 version + Header length
 #define IP_DONT_FRAGMENT				0x4000	// Flags don't fragment
@@ -63,7 +61,7 @@ struct ip_header {
 	uint16_t checksum;
 	uint32_t src_ip;
 	uint32_t dst_ip;
-} __attribute__((packed));
+} __attribute__((packed)) ip_header;
 
 // Define UDP header
 struct udp_header {
@@ -88,11 +86,18 @@ struct ethernet_frame {
 	} contents;
 } __attribute__((packed)) ethernet_frame;
 
-typedef union {
+union ethernet_buffer {
 	struct ethernet_frame frame;
 	uint8_t raw[1532];
-} ethernet_buffer;
+};
+
+static inline uint16_t htons(uint16_t data) {
+  return ((data >> 8) & 0xff) | ((data << 8) & 0xff00);
+}
 
 void microudp_start(uint8_t *macaddr, uint32_t ip);
-
+uint16_t microudp_fill_udp(union ethernet_buffer* buffer, uint16_t src_port, \
+													 uint16_t dst_port, uint32_t dst_ip, uint8_t *data,\
+													 uint32_t len);
+void microudp_set_cache(uint8_t *macaddr); 
 #endif//__MICROUDP_H__
