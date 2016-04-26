@@ -2,6 +2,7 @@
 #include "string.h"
 #include "microudp.h"
 #include "arp.h"
+#include "icmp.h"
 
 uint8_t my_mac[6];
 uint32_t my_ip;
@@ -41,6 +42,34 @@ uint16_t ip_checksum(uint32_t r, void *buffer, uint32_t length, int32_t complete
 	return r;
 }
 
+void print_arpframe(struct arp_frame arp) {
+  printk("ARP(0x%016X)\n", arp);
+  printk("  hwtype(0x%04x)\n", htons(arp.hwtype));
+  printk("  proto(0x%04x)\n", htons(arp.proto));
+  printk("  hwsize(0x%02x)\n", arp.hwsize);
+  printk("  protosize(0x%02x)\n", arp.protosize);
+  printk("  opcode(0x%04x)\n", htons(arp.opcode));
+  printk("  sender_mac(0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x)\n",
+						arp.sender_mac[0], arp.sender_mac[1], arp.sender_mac[2],
+						arp.sender_mac[3], arp.sender_mac[4], arp.sender_mac[5]);
+  printk("  sender_ip(0x%08x)\n", arp.sender_ip);
+  printk("  target_mac(0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x)\n",
+						arp.target_mac[0], arp.target_mac[1], arp.target_mac[2],
+						arp.target_mac[3], arp.target_mac[4], arp.target_mac[5]);
+  printk("  target_ip(0x%08x)\n", arp.target_ip);
+}
+
+void print_ethframe(struct ethernet_header eth_head) {
+  printk("Ethernet(0x%016X)\n", eth_head);
+  printk("  destmac(0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x)\n",
+						eth_head.destmac[0], eth_head.destmac[1], eth_head.destmac[2],
+						eth_head.destmac[3], eth_head.destmac[4], eth_head.destmac[5]);
+  printk("  srcmac(0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x)\n",
+						eth_head.srcmac[0], eth_head.srcmac[1], eth_head.srcmac[2],
+						eth_head.srcmac[3], eth_head.srcmac[4], eth_head.srcmac[5]);
+  printk("  ethertype(0x%04x)\n", htons(eth_head.ethertype));
+}
+
 void microudp_start(uint8_t *macaddr, uint32_t ip)
 {
 	uint32_t i;
@@ -77,24 +106,44 @@ void microudp_initialize_ethframe(union ethernet_buffer* buffer) {
   printk("\n");
 }
 
-void microudp_set_cache(uint8_t *macaddr) {
+void microudp_set_cache(union ethernet_buffer *buffer) {
   uint32_t i;
 	INFO("New client MAC address\n");
   for (i = 0; i < 6; i++) {
-    printk("%02x ", macaddr[i]);
+    printk("%02x ", buffer->frame.contents.arp.sender_mac[i]);
   }
   printk("\n");
-	memcpy(&cached_mac[0], &macaddr[0], 6);
+	memcpy(&cached_mac[0], &buffer->frame.contents.arp.sender_mac[0], 6);
 }
 
-uint32_t microudp_start_arp(union ethernet_buffer *buffer, uint32_t ip) {
+uint16_t microudp_start_arp(union ethernet_buffer *buffer, uint32_t ip,
+														uint16_t opcode) {
+	uint16_t len;
+
 	// Send an ARP request
 	INFO("START ARP\n");
 	cached_ip = ip;
 	microudp_initialize_ethframe(buffer);
-  uint32_t len = arp_request(buffer, ip);
-
+	if(opcode==ARP_OPCODE_REQUEST) {
+		len = arp_request(buffer, ip);
+	} else {
+		len = arp_reply(buffer, ip, cached_mac);
+	}
 	return len+sizeof(ethernet_header);
+}
+
+uint16_t microudp_start_icmp(union ethernet_buffer *buffer, uint8_t type) {
+	uint16_t len;
+
+	INFO("Start ICMP\n");
+
+	microudp_initialize_ethframe(buffer);
+	if(type==0) {
+		len = icmp_reply(buffer);
+	} else {
+		len = 0;
+	}
+	return len;
 }
 
 uint16_t microudp_fill(union ethernet_buffer* buffer, uint16_t src_port,
@@ -146,4 +195,40 @@ uint16_t microudp_fill(union ethernet_buffer* buffer, uint16_t src_port,
 	buffer->frame.contents.udp.udp.checksum = htons(r);
 
 	return (sizeof(struct udp_frame)+len+sizeof(struct ethernet_header));
+}
+
+uint16_t microudp_handle_frame(union ethernet_buffer *buffer) {
+	uint16_t len;
+	if(buffer->frame.eth_header.ethertype == htons(ETHERTYPE_ARP) &&
+		buffer->frame.contents.arp.opcode == htons(ARP_OPCODE_REQUEST) &&
+		buffer->frame.contents.arp.target_ip == SERVER_IP &&
+		buffer->frame.contents.arp.sender_ip == CLIENT_IP) {
+
+		INFO("ARP request receive for us\n");
+
+		microudp_set_cache(buffer);
+
+		len=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REPLY);
+
+	} else if(buffer->frame.eth_header.ethertype == htons(ETHERTYPE_ARP) &&
+		buffer->frame.contents.arp.opcode == htons(ARP_OPCODE_REPLY) &&
+		buffer->frame.contents.arp.target_ip == SERVER_IP &&
+		buffer->frame.contents.arp.sender_ip == CLIENT_IP)  {
+
+		INFO("ARP reply receive for us\n");
+
+		microudp_set_cache(buffer);
+	} else if (buffer->frame.eth_header.ethertype == htons(ETHERTYPE_IP) &&
+						buffer->frame.contents.icmp.type == 0x08) {
+
+		INFO("ICMP request\n");
+		len = microudp_start_icmp(buffer, 0);
+
+	} else {
+
+		INFO("WTF\n");
+
+	}
+
+	return len;
 }

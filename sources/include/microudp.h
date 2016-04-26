@@ -48,6 +48,7 @@ struct arp_frame {
 #define IP_DONT_FRAGMENT				0x4000	// Flags don't fragment
 #define IP_TTL									64			// Time to live
 #define IP_PROTO_UDP						0x11		// UDP above
+#define IP_PROTO_ICMP						0x01		// ICMP above
 
 // Define IP header
 struct ip_header {
@@ -78,11 +79,21 @@ struct udp_frame {
 	uint8_t payload[];
 } __attribute__((packed)) udp_frame;
 
+struct icmp_frame {
+	struct ip_header ip;
+	uint8_t type;
+	uint8_t code;
+	uint16_t checksum;
+	uint8_t data[4];
+	uint8_t payload[];
+} __attribute__((packed)) icmp_frame;
+
 struct ethernet_frame {
 	struct ethernet_header eth_header;
 	union {
 		struct arp_frame arp;
 		struct udp_frame udp;
+		struct icmp_frame icmp;
 	} contents;
 } __attribute__((packed)) ethernet_frame;
 
@@ -95,9 +106,24 @@ static inline uint16_t htons(uint16_t data) {
   return ((data >> 8) & 0xff) | ((data << 8) & 0xff00);
 }
 
+uint16_t ip_checksum(uint32_t r, void *buffer, uint32_t length, int32_t complete);
+
+void print_arpframe(struct arp_frame arp);
+void print_ethframe(struct ethernet_header eth_head);
+
+// Initialize ARP cache and server configuration
 void microudp_start(uint8_t *macaddr, uint32_t ip);
+
+// Fill packet to send if Client MAC address is known
 uint16_t microudp_fill(union ethernet_buffer* buffer, uint16_t src_port,
 													 uint16_t dst_port, uint8_t *data, uint32_t len);
-void microudp_set_cache(uint8_t *macaddr);
-uint32_t microudp_start_arp(union ethernet_buffer *buffer, uint32_t ip);
+
+// Fill the ARP cache
+void microudp_set_cache(union ethernet_buffer *buffer);
+
+// Fill ARP frame for request
+uint16_t microudp_start_arp(union ethernet_buffer *buffer, uint32_t ip,
+														uint16_t opcode);
+
+uint16_t microudp_handle_frame(union ethernet_buffer* buffer);
 #endif//__MICROUDP_H__
