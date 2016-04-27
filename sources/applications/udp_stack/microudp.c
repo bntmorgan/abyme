@@ -113,17 +113,22 @@ void microudp_set_cache(union ethernet_buffer *buffer) {
     printk("%02x ", buffer->frame.contents.arp.sender_mac[i]);
   }
   printk("\n");
+
+	// Save the Client MAC
 	memcpy(&cached_mac[0], &buffer->frame.contents.arp.sender_mac[0], 6);
 }
 
 uint16_t microudp_start_arp(union ethernet_buffer *buffer, uint32_t ip,
 														uint16_t opcode) {
 	uint16_t len;
-
-	// Send an ARP request
 	INFO("START ARP\n");
+
+	// Save the target IP
 	cached_ip = ip;
+
+	// Initialize ethernet frame
 	microudp_initialize_ethframe(buffer);
+
 	if(opcode==ARP_OPCODE_REQUEST) {
 		len = arp_request(buffer, ip);
 	} else {
@@ -137,7 +142,9 @@ uint16_t microudp_start_icmp(union ethernet_buffer *buffer, uint8_t type) {
 
 	INFO("Start ICMP\n");
 
+	// Initialize ethernet frame
 	microudp_initialize_ethframe(buffer);
+
 	if(type==0) {
 		len = icmp_reply(buffer);
 	} else {
@@ -160,8 +167,10 @@ uint16_t microudp_fill(union ethernet_buffer* buffer, uint16_t src_port,
 	INFO("Address MAC found, ok to send\n");
 	microudp_initialize_ethframe(buffer);
 
+	// Add the ethertype
 	buffer->frame.eth_header.ethertype = htons(ETHERTYPE_IP);
 
+	// Fill IP header
 	buffer->frame.contents.udp.ip.version = IP_IPV4;
 	buffer->frame.contents.udp.ip.diff_services=0;
 	buffer->frame.contents.udp.ip.total_length=htons(sizeof(struct udp_frame)+len);
@@ -173,14 +182,17 @@ uint16_t microudp_fill(union ethernet_buffer* buffer, uint16_t src_port,
 	buffer->frame.contents.udp.ip.src_ip=my_ip;
 	buffer->frame.contents.udp.ip.dst_ip=cached_ip;
 
+	// Fill UDP header
 	buffer->frame.contents.udp.udp.src_port = htons(src_port);
 	buffer->frame.contents.udp.udp.dst_port = htons(dst_port);
 	buffer->frame.contents.udp.udp.length = htons(sizeof(struct udp_header)+len);
 	buffer->frame.contents.udp.udp.checksum=0;
 	memcpy(&buffer->frame.contents.udp.payload[0], &data[0], len);
+
+	// Checksum IP
 	buffer->frame.contents.udp.ip.checksum = htons(ip_checksum(0, &buffer->frame.contents.udp.ip, sizeof(struct ip_header), 1));
 
-	// Checksum
+	// Checksum UDP
 	h.proto = buffer->frame.contents.udp.ip.proto;
 	h.src_ip = buffer->frame.contents.udp.ip.src_ip;
 	h.dst_ip = buffer->frame.contents.udp.ip.dst_ip;
@@ -199,6 +211,8 @@ uint16_t microudp_fill(union ethernet_buffer* buffer, uint16_t src_port,
 
 uint16_t microudp_handle_frame(union ethernet_buffer *buffer) {
 	uint16_t len;
+
+	// Test if request receive
 	if(buffer->frame.eth_header.ethertype == htons(ETHERTYPE_ARP) &&
 		buffer->frame.contents.arp.opcode == htons(ARP_OPCODE_REQUEST) &&
 		buffer->frame.contents.arp.target_ip == SERVER_IP &&
@@ -210,6 +224,7 @@ uint16_t microudp_handle_frame(union ethernet_buffer *buffer) {
 
 		len=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REPLY);
 
+	// Test if reply receive
 	} else if(buffer->frame.eth_header.ethertype == htons(ETHERTYPE_ARP) &&
 		buffer->frame.contents.arp.opcode == htons(ARP_OPCODE_REPLY) &&
 		buffer->frame.contents.arp.target_ip == SERVER_IP &&
@@ -218,16 +233,17 @@ uint16_t microudp_handle_frame(union ethernet_buffer *buffer) {
 		INFO("ARP reply receive for us\n");
 
 		microudp_set_cache(buffer);
+
+	// Test if icmp echo request receive
 	} else if (buffer->frame.eth_header.ethertype == htons(ETHERTYPE_IP) &&
 						buffer->frame.contents.icmp.type == 0x08) {
 
 		INFO("ICMP request\n");
 		len = microudp_start_icmp(buffer, 0);
 
+	// Everything else for now is WTF
 	} else {
-
 		INFO("WTF\n");
-
 	}
 
 	return len;

@@ -14,32 +14,6 @@ void clear_buffer(union ethernet_buffer *buffer) {
 	buffer = (union ethernet_buffer *)&buf2[0];
 }
 
-void efi_start_send(union ethernet_buffer *buffer, protocol_82579LM *eth) {
-	// Initialize mac address
-	//efi_initialize_ethframe(buffer, eth);
-	microudp_start(eth->mac_addr, SERVER_IP);
-
-	uint8_t data[5] = {'c','a','c','a',0x0a};
-	uint32_t len;
-	while((len=microudp_fill(buffer, 6666, 6666, data, 5)) == 0) {
-		len = microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
-		INFO("Sending ARP with new ethernet API ! size : %d \n", len);
-		eth->eth_send(buf2, len, 1);
-
-		clear_buffer(buffer);
-
-		// Wait for reply
-		eth->eth_recv(buf2, 42, 1);
-
-		microudp_handle_frame(buffer);
-
-		clear_buffer(buffer);
-	}
-
-	INFO("Sending UDP with new ethernet API ! size : %d \n", len);
-	eth->eth_send(buf2, len, 1);
-}
-
 EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image, systab);
 	EFI_STATUS status;
