@@ -302,7 +302,8 @@ static inline void eth_wait_rx(uint8_t idx) {
 uint32_t eth_recv(void *buf, uint32_t len, uint8_t block) {
   // Current receive descriptor index
   static uint8_t idx = 0;
-  // Wait for a packet
+
+	// Wait for a packet
   if (block) {
     eth_wait_rx(idx);
   }
