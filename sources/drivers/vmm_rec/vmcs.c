@@ -932,7 +932,8 @@ void vmcs_host_config_vm_exec_control_fields(void) {
       ENABLE_RDTSCP;
 
   uint64_t eptp;
-  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER; // | NMI_EXITING;
+	//XXX
+  uint32_t pinbased_ctls = 0;//ACT_VMX_PREEMPT_TIMER; // | NMI_EXITING;
 
   VMW(ctrls.ex.pin_based_vm_exec_control,
       cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
@@ -1050,8 +1051,12 @@ void vmcs_host_config_guest_state_fields() {
   VMW(gs.gdtr_base, gdt_get_host_base());
   VMW(gs.gdtr_limit, gdt_get_host_limit());
 
-  cpu_read_idt(&idt_ptr);
-  VMW(gs.idtr_base, idt_ptr.base);
+	// TODO remplacer la copie de l'idt courante par celle sauvegardée dans le
+	// fichier idt.c pour le guest
+	//cpu_read_idt(&idt_ptr);
+	idt_get_guest_idt_ptr(&idt_ptr);
+	idt_dump(&idt_ptr);
+	VMW(gs.idtr_base, idt_ptr.base);
   VMW(gs.idtr_limit, idt_ptr.limit);
 
   VMW(gs.ia32_debugctl, msr_read(MSR_ADDRESS_IA32_DEBUGCTL));
@@ -1060,18 +1065,21 @@ void vmcs_host_config_guest_state_fields() {
   msr = msr_read(MSR_ADDRESS_IA32_EFER);
   VMW(gs.ia32_efer, msr);
 
-  VMW(gs.activity_state, 0);
+	VMW(gs.activity_state, 0);
   VMW(gs.interruptibility_info, 0);
   VMW(gs.pending_dbg_exceptions, 0);
   VMW(gs.vmcs_link_pointer, 0xffffffffffffffff);
 
   VMW(gs.ia32_perf_global_ctrl, msr_read(MSR_ADDRESS_IA32_PERF_GLOBAL_CTRL));
 
+	//INFO("%X\n", msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO));
   // Init and compute vmx_preemption_timer_value
-  tsc_freq_MHz = ((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
-  tsc_divider = msr_read(MSR_ADDRESS_IA32_VMX_MISC) & 0x7;
+  //XXX
+	/*tsc_freq_MHz = ((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
+	tsc_divider = msr_read(MSR_ADDRESS_IA32_VMX_MISC) & 0x7;
   vmcs_set_vmx_preemption_timer_value(hc,
       VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
+	*/
 }
 
 void vmcs_host_config_vm_exit_control_fields(void) {
@@ -1087,7 +1095,7 @@ void vmcs_host_config_vm_exit_control_fields(void) {
 void vmcs_host_config_vm_entry_control_fields(void) {
   uint32_t entry_controls = ENTRY_LOAD_IA32_EFER |
     ENTRY_LOAD_IA32_PERF_GLOBAL_CTRL | IA32E_MODE_GUEST;
-  VMW(ctrls.entry.controls, cpu_adjust32(entry_controls,
+	VMW(ctrls.entry.controls, cpu_adjust32(entry_controls,
         MSR_ADDRESS_IA32_VMX_ENTRY_CTLS));
   VMW(ctrls.entry.msr_load_count, 0);
   VMW(ctrls.entry.intr_info_field, 0);
@@ -1106,9 +1114,13 @@ void vmcs_host_config_configure(void) {
   // Host configuration
   vmcs = hc; // We set the current vmcs for the VMW macro
   vmcs_host_config_host_state_fields();
+
   vmcs_host_config_guest_state_fields();
+
   vmcs_host_config_vm_exec_control_fields();
+
   vmcs_host_config_vm_exit_control_fields();
+
   vmcs_host_config_vm_entry_control_fields();
 }
 
@@ -1136,4 +1148,5 @@ void vmcs_init(void) {
 
 void vmcs_set_vmx_preemption_timer_value(struct vmcs *v, uint64_t time_microsec) {
   VMW(gs.vmx_preemption_timer_value, (tsc_freq_MHz * time_microsec) >> tsc_divider);
+
 }
