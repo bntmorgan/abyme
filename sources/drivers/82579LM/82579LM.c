@@ -259,18 +259,19 @@ int eth_init() {
 static inline void eth_wait_tx(uint8_t idx) {
   trans_desc *tx_desc = tx_descs + idx;
   // Wait until the packet is send
+	// XXX
   while (!(tx_desc->status & 0xf)) {
     wait(1000000);
-    INFO("WAIIT lol\n");
+    //INFO("WAIIT lol\n");
   }
 }
 
 void eth_send(const void *buf, uint16_t len, uint8_t block) {
-  // Current transmition descriptor index
+	// Current transmition descriptor index
   static uint8_t idx = 0;
   // Wait for the precedent descriptor being ready
   eth_wait_tx(idx);
-  // Copy the buf into the tx_buf
+	// Copy the buf into the tx_buf
   trans_desc *tx_desc = tx_descs + idx;
   uint8_t *b = tx_bufs + (idx * NET_BUF_SIZE);
   memcpy(b, (void *)buf, len);
@@ -309,18 +310,24 @@ uint32_t eth_recv(void *buf, uint32_t len, uint8_t block) {
   recv_desc *rx_desc = rx_descs + idx;
   uint32_t l = 0;
   while ((rx_desc->status & RSTA_DD) && (l < len)) {
-    if (rx_desc->errors) {
-      INFO("Packet Error: (0x%x)\n", rx_desc->errors);
-    } else {
+// XXX
+//    if (rx_desc->errors) {
+//       INFO("Packet Error: (0x%02x)\n", rx_desc->errors);
+//       INFO("Packet Status: (0x%02x)\n", rx_desc->status);
+//		} else {
       uint8_t *b = rx_bufs + (idx * NET_BUF_SIZE);
       uint32_t len = rx_desc->len;
       memcpy((void *)buf, b, len);
       // desc->addr = (u64)(uintptr_t)buf->start;
       buf = (uint8_t *)buf + len;
       l += len;
-    }
+//    }
+
     rx_desc->status = 0;
-    // Flush data cache line
+		// XXX
+		rx_desc->errors = 0;
+
+		// Flush data cache line
     cpu_clflush(rx_desc);
     cpu_mem_writed(bar0 + REG_RDT, idx);
     idx = (idx + 1) & (RX_DESC_COUNT - 1);
