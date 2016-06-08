@@ -152,9 +152,10 @@ pre-launch:
 	./run_qemu.sh
 
 launch: pre-launch
-	qemu-system-x86_64 -bios /usr/share/ovmf/ovmf_x64.bin -m 4G \
-										 -hda fat:img/hda-contents -cdrom ../../arch.iso \
-										 -drive file=../../vdisk.img,format=raw -enable-kvm \
-										 -cpu host -net nic,model=e1000,vlan=0 \
-										 -net tap,ifname=tap0,vlan=0,script=no \
-										 -s -smp 1 -net dump -monitor stdio
+	qemu-system-x86_64 -bios /usr/share/ovmf/ovmf_x64.bin -m 16G \
+										 -hda fat:img/hda-contents -cdrom img_arch/arch.iso \
+										 -drive file=img_arch/vdisk.qcow2 -enable-kvm \
+										 -cpu host -net nic,model=e1000 \
+										 -net tap,ifname=tap0,script=no,downscript=no \
+										 -smp 1 -net dump -monitor stdio -s
+										
