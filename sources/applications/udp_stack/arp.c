@@ -3,6 +3,7 @@
 #include "stdio.h"
 #include "arp.h"
 
+
 void arp_fill(union ethernet_buffer *buffer, uint32_t dst_ip) {
 	buffer->frame.eth_header.ethertype = htons(ETHERTYPE_ARP);
 
@@ -19,7 +20,7 @@ void arp_fill(union ethernet_buffer *buffer, uint32_t dst_ip) {
 
 uint16_t arp_request(union ethernet_buffer *buffer, uint32_t dst_ip) {
 
-	INFO("ARP request \n");
+//	INFO("ARP request \n");
 	arp_fill(buffer, dst_ip);
 	buffer->frame.contents.arp.opcode = htons(ARP_OPCODE_REQUEST);
 		// We do not know the target MAC
@@ -30,7 +31,7 @@ uint16_t arp_request(union ethernet_buffer *buffer, uint32_t dst_ip) {
 
 uint16_t arp_reply(union ethernet_buffer *buffer, uint32_t dst_ip, uint8_t *mac) {
 
-	INFO("ARP reply\n");
+	//INFO("ARP reply\n");
 	arp_fill(buffer, dst_ip);
 	buffer->frame.contents.arp.opcode = htons(ARP_OPCODE_REPLY);
 	// We do not know the target MAC

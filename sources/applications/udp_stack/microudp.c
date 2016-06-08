@@ -87,32 +87,32 @@ void microudp_start(uint8_t *macaddr, uint32_t ip)
 }
 
 void microudp_initialize_ethframe(union ethernet_buffer* buffer) {
-  uint32_t i;
+  //uint32_t i;
   // We copy source mac address
   memcpy(&buffer->frame.eth_header.srcmac[0], &my_mac[0], 6);
   // Dst address
 	memcpy(&buffer->frame.eth_header.destmac[0], &cached_mac[0], 6);
-  INFO("Dest mac address\n");
-  for (i = 0; i < 6; i++) {
+  //INFO("Dest mac address\n");
+  /*for (i = 0; i < 6; i++) {
     printk("%02x ", buffer->frame.eth_header.destmac[i]);
   }
   printk("\n");
 
 	// Src address
-  INFO("Source mac address\n");
+  //INFO("Source mac address\n");
   for (i = 0; i < 6; i++) {
     printk("%02x ", buffer->frame.eth_header.srcmac[i]);
   }
-  printk("\n");
+  printk("\n");*/
 }
 
 void microudp_set_cache(union ethernet_buffer *buffer) {
-  uint32_t i;
-	INFO("New client MAC address\n");
+  /*uint32_t i;
+	//INFO("New client MAC address\n");
   for (i = 0; i < 6; i++) {
     printk("%02x ", buffer->frame.contents.arp.sender_mac[i]);
   }
-  printk("\n");
+  printk("\n");*/
 
 	// Save the Client MAC
 	memcpy(&cached_mac[0], &buffer->frame.contents.arp.sender_mac[0], 6);
@@ -121,7 +121,7 @@ void microudp_set_cache(union ethernet_buffer *buffer) {
 uint16_t microudp_start_arp(union ethernet_buffer *buffer, uint32_t ip,
 														uint16_t opcode) {
 	uint16_t len;
-	INFO("START ARP\n");
+	//INFO("START ARP\n");
 
 	// Save the target IP
 	cached_ip = ip;
@@ -140,7 +140,7 @@ uint16_t microudp_start_arp(union ethernet_buffer *buffer, uint32_t ip,
 uint16_t microudp_start_icmp(union ethernet_buffer *buffer, uint8_t type) {
 	uint16_t len;
 
-	INFO("Start ICMP\n");
+	//INFO("Start ICMP\n");
 
 	// Initialize ethernet frame
 	microudp_initialize_ethframe(buffer);
@@ -160,11 +160,11 @@ uint16_t microudp_fill(union ethernet_buffer* buffer, uint16_t src_port,
 
 	if((cached_mac[0] == 0xff) && (cached_mac[1] == 0xff) && (cached_mac[2] == 0xff)
 		&& (cached_mac[3] == 0xff) && (cached_mac[4] == 0xff) && (cached_mac[5] == 0xff)) {
-		INFO("No address MAC\n");
+		//INFO("No address MAC\n");
 		return 0;
 	}
 
-	INFO("Address MAC found, ok to send\n");
+	//INFO("Address MAC found, ok to send\n");
 	microudp_initialize_ethframe(buffer);
 
 	// Add the ethertype
@@ -218,7 +218,7 @@ uint16_t microudp_handle_frame(union ethernet_buffer *buffer) {
 		buffer->frame.contents.arp.target_ip == SERVER_IP &&
 		buffer->frame.contents.arp.sender_ip == CLIENT_IP) {
 
-		INFO("ARP request receive for us\n");
+		//INFO("ARP request receive for us\n");
 
 		microudp_set_cache(buffer);
 
@@ -230,7 +230,7 @@ uint16_t microudp_handle_frame(union ethernet_buffer *buffer) {
 		buffer->frame.contents.arp.target_ip == SERVER_IP &&
 		buffer->frame.contents.arp.sender_ip == CLIENT_IP)  {
 
-		INFO("ARP reply receive for us\n");
+		//INFO("ARP reply receive for us\n");
 
 		microudp_set_cache(buffer);
 
@@ -238,12 +238,12 @@ uint16_t microudp_handle_frame(union ethernet_buffer *buffer) {
 	} else if (buffer->frame.eth_header.ethertype == htons(ETHERTYPE_IP) &&
 						buffer->frame.contents.icmp.type == 0x08) {
 
-		INFO("ICMP request\n");
+		//INFO("ICMP request\n");
 		len = microudp_start_icmp(buffer, 0);
 
 	// Everything else for now is WTF
 	} else {
-		INFO("WTF\n");
+		//INFO("WTF\n");
 	}
 
 	return len;

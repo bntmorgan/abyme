@@ -39,17 +39,32 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
 	microudp_start(eth->mac_addr, SERVER_IP);
 
 	// Wait loop
-	while(1) {
+//	while(1) {
+//
+//		clear_buffer(buffer);
+//		// Wait for a request
+//		eth->eth_recv(buf2, 1500, 1);
+//
+//		len = microudp_handle_frame(buffer);
+//		if (len != 0) {
+//			eth->eth_send(buf2, len, 1);
+//		}
+//	}
+
+	uint8_t data[4] = {'c','a','c','a'};
+	while((len = microudp_fill(buffer, 6666, 6666, data, 4))==0) {
+		clear_buffer(buffer);
+		len = microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
+		eth->eth_send(buf2, len, 1);
 
 		clear_buffer(buffer);
-		// Wait for a request
-		eth->eth_recv(buf2, 1500, 1);
 
-		len = microudp_handle_frame(buffer);
-		if (len != 0) {
-			eth->eth_send(buf2, len, 1);
-		}
+		eth->eth_recv(buf2, 1500, 1);
+		microudp_handle_frame(buffer);
+
+		clear_buffer(buffer);
 	}
 
+	eth->eth_send(buf2, len, 1);
 	return EFI_SUCCESS;
 }

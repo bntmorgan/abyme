@@ -12,8 +12,8 @@
 static uint8_t sb[BUF_SIZE];
 static protocol_82579LM *eth;
 
-static uint32_t dst_ip = IP_TO_INT(10,0,2,2);
-static uint32_t src_ip = IP_TO_INT(10,0,2,15);
+static uint32_t dst_ip = IP_TO_INT(192,168,0,1);
+static uint32_t src_ip = IP_TO_INT(192,168,0,2);
 
 static uint8_t mac_brd[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
