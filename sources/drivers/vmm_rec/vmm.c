@@ -543,7 +543,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       uint8_t cpl = (vmcs->gs.cs_ar_bytes.raw >> 5) & 3;
       VMR(gs.rflags);
       uint8_t iopl = (vmcs->gs.rflags.raw >> 12) & 3;
-      if (cpu_mode == MODE_REAL || cpl <= iopl) {
+			if (cpu_mode == MODE_REAL || cpl <= iopl) {
         uint8_t direction = exit_qualification & 8;
         uint8_t size = exit_qualification & 7;
         uint8_t string = exit_qualification & (1<<4);
@@ -579,13 +579,13 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
               __asm__ __volatile__("in %%dx, %%ax" : "=a"(v) : "d"(port));
               guest_regs.rax = (guest_regs.rax & 0xffffffffffff0000) | (v & 0x0000ffff);
             } else if (size == 3) {
-              __asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port));
+							__asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port));
               guest_regs.rax = (guest_regs.rax & 0xffffffff00000000) | (v & 0xffffffff);
             } else {
               ERROR("I/O size decoding error\n");
             }
           } else {
-            INFO("NIC I/O config space block\n");
+            //INFO("NIC I/O config space block\n");
             if (size == 0) {
               guest_regs.rax = guest_regs.rax | 0x000000ff;
             } else if (size == 1) {
@@ -694,11 +694,31 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
           }
       } else if (guest_regs.rcx == MSR_ADDRESS_IA32_APIC_BASE) {
           __asm__ __volatile__("wrmsr"
-            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), 
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx),
             "c" (guest_regs.rcx), "d" (guest_regs.rdx));
-          INFO("Writing in apic base msr!\n"); 
+          INFO("Writing in apic base msr!\n");
           apic_setup();
-      } else {
+
+			// XXX
+			// KVM Clock MSR access from the VM
+			} else if (guest_regs.rcx == 0x4b564d01) {
+          __asm__ __volatile__("wrmsr"
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+			} else if (guest_regs.rcx == 0x4b564d02) {
+          __asm__ __volatile__("wrmsr"
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+			} else if (guest_regs.rcx == 0x4b564d04) {
+          __asm__ __volatile__("wrmsr"
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+			} else if (guest_regs.rcx == 0x4b564d03) {
+          __asm__ __volatile__("wrmsr"
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+			} else if (guest_regs.rcx == 0x4b564d00) {
+          __asm__ __volatile__("wrmsr"
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+
+			// Not an MSR
+			} else {
         msr_bitmap_dump((struct msr_bitmap*)vmcs->ctrls.ex.msr_bitmap.raw);
         ERROR("MSR write panic rcx(0x%08x) <= rdx(0x%08x)\n", guest_regs.rcx,
             guest_regs.rdx);

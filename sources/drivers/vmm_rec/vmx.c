@@ -78,7 +78,7 @@ void cpu_vmlaunch(uint64_t vm_RIP, uint64_t vm_RSP, uint64_t vm_RBP) {
   INFO("rip 0x%016X, rsp 0x%016x, rbp 0x%016X\n", vm_RIP, vm_RSP, vm_RBP);
   /* Correct rbp */
   __asm__ __volatile__("mov %0, %%rbp" : : "m" (vm_RBP));
-  /* Launch the vm */
+	/* Launch the vm */
   __asm__ __volatile__("vmlaunch;"
                        /* everything after should not be executed */
                        "setc %al;"

@@ -17,7 +17,7 @@ void _stdio_stop(void);
     /* printk("%s(%s,%03d): ", __FUNCTION__, __FILE__, __LINE__); */ \
     printk(__VA_ARGS__);                                             \
     if (stop == 1) {                                                 \
-      _stdio_stop();                                                 \
+      _stdio_stop();                                             \
     }                                                                \
   } while (0)
 
