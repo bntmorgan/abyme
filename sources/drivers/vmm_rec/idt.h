@@ -39,6 +39,7 @@ void idt_debug_bios(void);
 void idt_debug_host(void);
 void idt_get_idt_ptr(struct idt_ptr *ptr);
 void idt_create(void);
+void idt_get_guest_idt_ptr(struct idt_ptr *p);
 
 union idt_error_code_page_fault {
   struct {

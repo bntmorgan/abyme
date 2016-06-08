@@ -61,7 +61,7 @@ void debug_server_log_cr3_flush(struct registers *regs) {
   m->length = DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t);
   for (i = 0; i < DEBUG_SERVER_CR3_SIZE / DEBUG_SERVER_CR3_PER_MESSAGE; i++) {
     // Copy DEBUG_SERVER_CR3_PER_MESSAGE cr3
-    memcpy(data, &log_cr3_table[i * DEBUG_SERVER_CR3_PER_MESSAGE],
+		memcpy(data, &log_cr3_table[i * DEBUG_SERVER_CR3_PER_MESSAGE],
         DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t));
     // Send the message
     // INFO("Send\n");
