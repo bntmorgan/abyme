@@ -157,5 +157,5 @@ launch: pre-launch
 										 -drive file=img_arch/vdisk.qcow2 -enable-kvm \
 										 -cpu host -net nic,model=e1000 \
 										 -net tap,ifname=tap0,script=no,downscript=no \
-										 -smp 1 -net dump -monitor stdio -s
+										 -net user,vlan=1 -net nic,vlan=1,model=e1000 -smp 1 -net dump -monitor stdio -s
 										
