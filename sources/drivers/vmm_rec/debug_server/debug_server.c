@@ -163,9 +163,12 @@ void debug_server_init() {
   memset(&send_debug[0][0], 0, NB_EXIT_REASONS * VM_NB);
   for (i = 0; i < VM_NB; i++) {
     send_debug[i][EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED] = 1;
-    // send_debug[i][EXIT_REASON_MONITOR_TRAP_FLAG] = 1;
+    //send_debug[i][EXIT_REASON_MONITOR_TRAP_FLAG] = 1;
     send_debug[i][EXIT_REASON_VMCALL] = 1;
+		//send_debug[i][EXIT_REASON_IO_INSTRUCTION] = 1;
+		//send_debug[i][EXIT_REASON_EPT_VIOLATION] = 1;
   }
+
 
   debug_server_log_cr3_reset();
   EFI_STATUS status;
@@ -456,10 +459,10 @@ void debug_server_send(void *buf, uint32_t len) {
   //XXX
 	//eth->send(buf, len, EFI_82579LM_API_BLOCK);
 
-	//uint16_t size=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
-	//eth->eth_send(buf2, size, 1);
+	uint16_t size=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
+	eth->eth_send(buf2, size, 1);
 
-	//clear_buffer();
+	clear_buffer();
 
 	len = microudp_fill(buffer, 6666, 6666, buf, len);
 	eth->eth_send(buf2, len, 1);

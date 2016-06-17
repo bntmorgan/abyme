@@ -391,22 +391,22 @@ int ept_iterate(uint64_t eptp, int (*cb)(uint64_t *, uint64_t, uint8_t)) {
 
   // Initiate the algorithm
   pml4 = (uint64_t *)(eptp & PAGING_CR3_PLM4_ADDR);
-  // INFO("@PML4 0x%016X\n", pml4);
+  //INFO("@PML4 0x%016X\n", pml4);
 
   // PML4
   for (i = 0; i < 512; i++) {
     e = &pml4[i];
-//    INFO("@PML4E 0x%016X\n", *e);
+    //INFO("@PML4E 0x%016X\n", *e);
     if (!(*e & EPT_PML4E_P)) {
       paging_error = PAGING_WALK_NOT_PRESENT;
       return -1;
     }
     pdpt = (uint64_t *)(*e & PAGING_PML4E_PDPT_ADDR);
-//    INFO("@PDPT 0x%016X\n", pdpt);
+    //INFO("@PDPT 0x%016X\n", pdpt);
     // PDPT
     for (j = 0; j < 512; j++) {
-      e = &pdpt[j];
-//      INFO("PDPTE 0x%016X\n", *e);
+	    e = &pdpt[j];
+      //INFO("PDPTE 0x%016X\n", *e);
       // 1 GB Frame
       if (*e & PAGING_PDPTE_PAGE) {
         a = (*e & PAGING_PDPTE_FRAME_ADDR);
@@ -417,7 +417,7 @@ int ept_iterate(uint64_t eptp, int (*cb)(uint64_t *, uint64_t, uint8_t)) {
         continue;
       }
       pd = (uint64_t *)(*e & PAGING_PDPTE_PD_ADDR);
-//      INFO("@PD 0x%016X\n", pd);
+      //INFO("@PD 0x%016X\n", pd);
       // PD
       for (k = 0; k < 512; k++) {
         e = &pd[k];
@@ -432,11 +432,11 @@ int ept_iterate(uint64_t eptp, int (*cb)(uint64_t *, uint64_t, uint8_t)) {
           continue;
         }
         pt = (uint64_t *)(*e & PAGING_PDE_PT_ADDR);
-//        INFO("@PT 0x%016X\n", pt);
+        //INFO("@PT 0x%016X\n", pt);
         // PT
         for (l = 0; l < 512; l++) {
           e = &pt[l];
-//          INFO("PTE 0x%016X\n", *e);
+          //INFO("PTE 0x%016X\n", *e);
           a = (*e & PAGING_PTE_FRAME_ADDR);
           s = PAGING_ENTRY_PTE;
           if (!cb(e, a, s)) {

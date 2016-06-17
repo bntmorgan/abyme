@@ -933,7 +933,7 @@ void vmcs_host_config_vm_exec_control_fields(void) {
 
   uint64_t eptp;
 	//XXX
-  uint32_t pinbased_ctls = 0;//ACT_VMX_PREEMPT_TIMER; // | NMI_EXITING;
+  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER; // | NMI_EXITING;
 
   VMW(ctrls.ex.pin_based_vm_exec_control,
       cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
@@ -1074,12 +1074,12 @@ void vmcs_host_config_guest_state_fields() {
 
 	//INFO("%X\n", msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO));
   // Init and compute vmx_preemption_timer_value
-  //XXX
-	/*tsc_freq_MHz = ((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
+  //XXX Find real value !!!!
+	tsc_freq_MHz = 100; //((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
 	tsc_divider = msr_read(MSR_ADDRESS_IA32_VMX_MISC) & 0x7;
   vmcs_set_vmx_preemption_timer_value(hc,
       VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
-	*/
+
 }
 
 void vmcs_host_config_vm_exit_control_fields(void) {

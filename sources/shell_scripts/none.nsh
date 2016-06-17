@@ -1,3 +1,5 @@
+unload 88
+unload 89
 cd \EFI\drivers\82579LM
 echo Loading ethernet driver
 echo press any key

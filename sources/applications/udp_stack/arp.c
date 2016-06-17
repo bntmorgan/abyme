@@ -20,7 +20,7 @@ void arp_fill(union ethernet_buffer *buffer, uint32_t dst_ip) {
 
 uint16_t arp_request(union ethernet_buffer *buffer, uint32_t dst_ip) {
 
-//	INFO("ARP request \n");
+	//INFO("ARP request \n");
 	arp_fill(buffer, dst_ip);
 	buffer->frame.contents.arp.opcode = htons(ARP_OPCODE_REQUEST);
 		// We do not know the target MAC

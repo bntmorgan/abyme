@@ -585,7 +585,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
               ERROR("I/O size decoding error\n");
             }
           } else {
-            //INFO("NIC I/O config space block\n");
+            INFO("NIC I/O config space block\n");
             if (size == 0) {
               guest_regs.rax = guest_regs.rax | 0x000000ff;
             } else if (size == 1) {

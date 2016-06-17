@@ -230,8 +230,6 @@ uint16_t microudp_handle_frame(union ethernet_buffer *buffer) {
 		buffer->frame.contents.arp.target_ip == SERVER_IP &&
 		buffer->frame.contents.arp.sender_ip == CLIENT_IP)  {
 
-		//INFO("ARP reply receive for us\n");
-
 		microudp_set_cache(buffer);
 
 	// Test if icmp echo request receive
