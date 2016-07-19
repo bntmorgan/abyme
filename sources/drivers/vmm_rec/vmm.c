@@ -257,6 +257,40 @@ void vmm_vms_init(void) {
 }
 
 /**
+ * Event injection
+ */
+
+static uint8_t charged = 0;
+static uint32_t error_code = 0;
+static union vm_entry_interrupt_info iif;
+
+void vm_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code) {
+  if (charged) {
+    INFO("Multiple event injection unsupported : losing an interrupt \n");
+  }
+  charged = 1;
+  iif.vector = vector;
+  iif.type = type;
+  if (error_code > 0 && (type == VM_ENTRY_INT_TYPE_SOFT_EXCEPTION || type ==
+        VM_ENTRY_INT_TYPE_HW_EXCEPTION)) {
+    iif.error_code = 1;
+    error_code = error_code;
+  }
+  iif.valid = 1;
+}
+
+void vm_interrupt_inject(void) {
+  if (charged) {
+    charged = 0;
+    cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, iif.raw);
+    if (iif.error_code) {
+      cpu_vmwrite(VM_ENTRY_EXCEPTION_ERROR_CODE, error_code);
+    }
+    INFO("Event Injection in 0x%x!\n", level);
+  }
+}
+
+/**
  * Compute if we haev to redirect the VMExit to the l1 host
  */
 int vmm_host_redirect(uint32_t exit_reason, uint32_t exit_qualification, struct
@@ -463,6 +497,21 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_SIPI:
     case EXIT_REASON_INIT_SIGNAL:
     case EXIT_REASON_EXTERNAL_INTERRUPT:
+      // XXX On réinjecte direct l'external interruption dans la VM et on voit
+      // si ça a le swag
+      //
+      VMR(info.intr_info);
+      union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info.raw};
+      VMR(info.intr_error_code);
+      uint32_t error_code = vmcs->info.intr_error_code.raw;
+      INFO("External interrupt from 0x%x : \n  info(0x%x)\n error_code(0x%x)\n",
+          vm->index, iif.raw, error_code);
+      // Set ...
+      vm_interrupt_set(iif.vector, iif.type, error_code);
+      // and fire
+      vm_interrupt_inject();
+      return; // ou break o voir si on doit incrémenter
+              // le rip ou d'autre chibreries
     case EXIT_REASON_EXCEPTION_OR_NMI:
       break;
     case EXIT_REASON_VMXOFF:

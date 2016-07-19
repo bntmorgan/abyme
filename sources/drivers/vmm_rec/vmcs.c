@@ -933,7 +933,7 @@ void vmcs_host_config_vm_exec_control_fields(void) {
 
   uint64_t eptp;
 	//XXX
-  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER; // | NMI_EXITING;
+  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER | EXT_INTR_EXITING; // | NMI_EXITING;
 
   VMW(ctrls.ex.pin_based_vm_exec_control,
       cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
@@ -1085,7 +1085,8 @@ void vmcs_host_config_guest_state_fields() {
 void vmcs_host_config_vm_exit_control_fields(void) {
   uint32_t exit_controls = EXIT_SAVE_IA32_EFER | EXIT_LOAD_IA32_EFER |
     EXIT_LOAD_IA32_PERF_GLOBAL_CTRL | HOST_ADDR_SPACE_SIZE |
-    SAVE_VMX_PREEMPT_TIMER_VAL;
+    SAVE_VMX_PREEMPT_TIMER_VAL |
+    ACK_INTR_ON_EXIT; // cf. 33.3.3.3 dev man
   VMW(ctrls.exit.controls, cpu_adjust32(exit_controls,
         MSR_ADDRESS_IA32_VMX_EXIT_CTLS));
   VMW(ctrls.exit.msr_store_count, 0);
