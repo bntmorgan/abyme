@@ -152,7 +152,7 @@ pre-launch:
 	./run_qemu.sh
 
 launch: pre-launch
-	qemu-system-x86_64 -bios /usr/share/ovmf/ovmf_x64.bin -m 16G \
+	qemu-system-x86_64 -bios /usr/share/ovmf/ovmf_x64.bin -m 8G \
 										 -hda fat:img/hda-contents -cdrom img_arch/arch.iso \
 										 -drive file=img_arch/vdisk.qcow2 -enable-kvm \
 										 -cpu host -net nic,model=e1000 \

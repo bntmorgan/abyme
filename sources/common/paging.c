@@ -11,9 +11,12 @@ uint8_t max_phyaddr;
 
 void paging_setup_host_paging(void) {
 
-  paging_ia32e = efi_allocate_pages(sizeof(struct paging_ia32e) / 0x1000 +
-      (sizeof(struct paging_ia32e) % 0x1000 != 0 ));
-  INFO("Pointer allocated 0x%016X\n", (uintptr_t)&paging_ia32e);
+  uint32_t p = sizeof(struct paging_ia32e) / 0x1000 +
+      (sizeof(struct paging_ia32e) % 0x1000 != 0 );
+
+  paging_ia32e = efi_allocate_pages(p);
+  INFO("Pointer allocated 0x%016X of 0x%08x pages\n", (uintptr_t)paging_ia32e,
+      p);
 
   /* TODO: pcide dans le registre cr4 */
   INFO("SETTING HOST UP PAGING\n");
