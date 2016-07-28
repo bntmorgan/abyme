@@ -497,14 +497,16 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_SIPI:
     case EXIT_REASON_INIT_SIGNAL:
     case EXIT_REASON_EXTERNAL_INTERRUPT:
-      // XXX On réinjecte direct l'external interruption dans la VM et on voit
+      break;
+    case EXIT_REASON_EXCEPTION_OR_NMI:
+      // XXX On réinjecte direct la NMI dans la VM et on voit
       // si ça a le swag
       //
       VMR(info.intr_info);
       union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info.raw};
       VMR(info.intr_error_code);
       uint32_t error_code = vmcs->info.intr_error_code.raw;
-      INFO("External interrupt from 0x%x : \n  info(0x%x)\n error_code(0x%x)\n",
+      INFO("NMI from 0x%x : \n  info(0x%x)\n error_code(0x%x)\n",
           vm->index, iif.raw, error_code);
       // Set ...
       vm_interrupt_set(iif.vector, iif.type, error_code);
@@ -512,7 +514,6 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       vm_interrupt_inject();
       return; // ou break o voir si on doit incrémenter
               // le rip ou d'autre chibreries
-    case EXIT_REASON_EXCEPTION_OR_NMI:
       break;
     case EXIT_REASON_VMXOFF:
       nested_vmxoff(&guest_regs);
