@@ -58,9 +58,9 @@ void efi_reset_system(void) {
 
 void *efi_allocate_pages(uint64_t count) {
   EFI_PHYSICAL_ADDRESS addr;
-  // allocate the page tables 
+  // allocate the page tables
   efiw_status = uefi_call_wrapper(ST->BootServices->AllocatePages, 4,
-      AllocateAnyPages, EfiRuntimeServicesData, count, &addr); 
+      AllocateAnyPages, EfiRuntimeServicesData, count, &addr);
   switch (efiw_status) {
     case EFI_SUCCESS:
       break;
@@ -79,9 +79,9 @@ void *efi_allocate_pages(uint64_t count) {
 
 void *efi_allocate_low_pages(uint64_t count) {
   EFI_PHYSICAL_ADDRESS addr = 0x10000;
-  // allocate the page tables 
+  // allocate the page tables
   efiw_status = uefi_call_wrapper(ST->BootServices->AllocatePages, 4,
-      AllocateMaxAddress, EfiRuntimeServicesData, count, &addr); 
+      AllocateMaxAddress, EfiRuntimeServicesData, count, &addr);
   switch (efiw_status) {
     case EFI_SUCCESS:
       break;

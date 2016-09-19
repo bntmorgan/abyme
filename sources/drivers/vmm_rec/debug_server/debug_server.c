@@ -13,8 +13,19 @@
 #include "debug_protocol.h"
 #include "gdt.h"
 #include "error.h"
+#include "microudp.h"
 
 #define MAX_INFO_SIZE 1024
+
+// XXX
+#define BUF_SIZE					1500
+uint8_t buf2[BUF_SIZE];
+union ethernet_buffer *buffer;
+void clear_buffer() {
+	memset(&buf2[0], 0, 1500);
+	buffer = (union ethernet_buffer *)&buf2[0];
+}
+
 
 extern void (*putc)(uint8_t);
 
@@ -48,7 +59,7 @@ void debug_server_log_cr3_flush(struct registers *regs) {
   m->length = DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t);
   for (i = 0; i < DEBUG_SERVER_CR3_SIZE / DEBUG_SERVER_CR3_PER_MESSAGE; i++) {
     // Copy DEBUG_SERVER_CR3_PER_MESSAGE cr3
-    memcpy(data, &log_cr3_table[i * DEBUG_SERVER_CR3_PER_MESSAGE],
+		memcpy(data, &log_cr3_table[i * DEBUG_SERVER_CR3_PER_MESSAGE],
         DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t));
     // Send the message
     // INFO("Send\n");
@@ -122,7 +133,7 @@ void debug_server_core_regs_read(struct core_regs *cr, struct registers *regs) {
   cr->rip = regs->rip;
   // Flasgs
   VMR2(gs.rflags, cr->rflags);
-  // MSRs 
+  // MSRs
   VMR2(gs.ia32_efer, cr->ia32_efer);
 }
 
@@ -135,7 +146,7 @@ void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
     ms->exit_reason = exit_reason;
     debug_server_core_regs_read(&ms->regs, guest_regs);
     debug_server_send(ms, sizeof(message_vmexit));
-    debug_server_run(guest_regs);
+		debug_server_run(guest_regs);
   }
 }
 
@@ -150,12 +161,16 @@ void debug_server_init() {
   memset(&send_debug[0][0], 0, NB_EXIT_REASONS * VM_NB);
   for (i = 0; i < VM_NB; i++) {
     send_debug[i][EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED] = 1;
-//     send_debug[i][EXIT_REASON_EPT_VIOLATION] = 1;
-//     send_debug[i][EXIT_REASON_HLT] = 1;
-//     send_debug[i][EXIT_REASON_TRIPLE_FAULT] = 1;
-//     send_debug[i][EXIT_REASON_MWAIT] = 1;
+    // send_debug[i][EXIT_REASON_EPT_VIOLATION] = 1;
+    // send_debug[i][EXIT_REASON_HLT] = 1;
+    // send_debug[i][EXIT_REASON_TRIPLE_FAULT] = 1;
+    // send_debug[i][EXIT_REASON_MWAIT] = 1;
+    // send_debug[i][EXIT_REASON_MONITOR_TRAP_FLAG] = 1;
     send_debug[i][EXIT_REASON_VMCALL] = 1;
+		// send_debug[i][EXIT_REASON_IO_INSTRUCTION] = 1;
+		// send_debug[i][EXIT_REASON_EPT_VIOLATION] = 1;
   }
+
 
   debug_server_log_cr3_reset();
   EFI_STATUS status;
@@ -175,6 +190,21 @@ void debug_server_init() {
 //     INFO("Uninstalling efi interface\n");
 //     eth->uninstall();
     printk("DEBUG SERVER INIT : ETH BAR0 %X\n", eth->bar0);
+
+		// XXX
+		uint16_t len;
+		clear_buffer();
+		microudp_start(eth->mac_addr, SERVER_IP);
+
+		INFO("ARP request send\n");
+		len=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
+		eth->eth_send(buf2, len, 1);
+
+		clear_buffer();
+
+		eth->eth_recv(buf2, 1500, 1);
+		microudp_handle_frame(buffer);
+		clear_buffer();
   }
 }
 
@@ -337,9 +367,9 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr,
     }
     // Special case for some guest regs
     if (e == GUEST_RIP) {
-      guest_regs->rip = v; 
+      guest_regs->rip = v;
     } else if (e == GUEST_RSP) {
-      guest_regs->rsp = v; 
+      guest_regs->rsp = v;
     }
     // Size
     s = *((uint8_t *)data);
@@ -391,8 +421,8 @@ void debug_server_handle_send_debug(message_send_debug *mr) {
 void debug_server_run(struct registers *regs) {
   message *mr = (message *)rb;
   mr->type = MESSAGE_MESSAGE;
-  while (mr->type != MESSAGE_EXEC_CONTINUE) {
-    if (debug_server_recv(mr, eth->mtu) == -1) {
+	while (mr->type != MESSAGE_EXEC_CONTINUE) {
+		if (debug_server_recv(mr, eth->mtu) == -1) {
       mr->type = MESSAGE_MESSAGE;
       continue;
     } else {
@@ -428,11 +458,26 @@ void debug_server_run(struct registers *regs) {
 }
 
 void debug_server_send(void *buf, uint32_t len) {
-  eth->send(buf, len, EFI_82579LM_API_BLOCK);
+  //XXX
+	//eth->send(buf, len, EFI_82579LM_API_BLOCK);
+
+	uint16_t size=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
+	eth->eth_send(buf2, size, 1);
+
+	clear_buffer();
+
+	len = microudp_fill(buffer, 6666, 6666, buf, len);
+	eth->eth_send(buf2, len, 1);
+	clear_buffer();
 }
 
 uint32_t debug_server_recv(void *buf, uint32_t len) {
-  return eth->recv(buf, len, EFI_82579LM_API_BLOCK);
+	clear_buffer();
+	uint32_t size = eth->eth_recv(buf2, len, 1);
+	uint32_t payload_size = size - sizeof(struct udp_frame) - sizeof(struct ethernet_header);
+	memcpy(buf, &buffer->frame.contents.udp.payload[0], payload_size);
+	return payload_size;
+  //return eth->recv(buf, len, EFI_82579LM_API_BLOCK);
 }
 
 void debug_server_putc(uint8_t value) {
@@ -447,7 +492,14 @@ void debug_server_putc(uint8_t value) {
     m->type = MESSAGE_INFO;
     m->vmid = debug_server_level;
     m->length = current_size;
-    eth->send(sb, current_size + sizeof(message_info), EFI_82579LM_API_BLOCK);
+
+		// XXX
+		clear_buffer();
+		uint16_t len = microudp_fill(buffer, 6666, 6666, sb, current_size + sizeof(message_info));
+		eth->eth_send(buf2, len, 1);
+
+		clear_buffer();
+
     // XXX needs blocking send
     memset(&buf[0], 0, 0x1000); // Reset the buffer!
     current_size = 0;

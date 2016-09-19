@@ -56,10 +56,6 @@ void nested_load_host(void);
 
 void nested_vmx_shadow_bitmap_init(void);
 
-void nested_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code);
-
-void nested_interrupt_inject(void);
-
 void nested_vmptrst(uint8_t **shadow_vmcs, struct registers *gr);
 
 #endif

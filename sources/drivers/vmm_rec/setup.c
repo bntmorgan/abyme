@@ -70,6 +70,7 @@ void bsp_main(struct setup_state *state) {
   idt_create();
   idt_debug_host();
   idt_debug_bios();
+	// TODO set host idt here
 
 #ifdef _VMCS_SHADOWING
   nested_vmx_shadow_bitmap_init();

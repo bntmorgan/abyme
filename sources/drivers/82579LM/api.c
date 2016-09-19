@@ -88,7 +88,7 @@ uint32_t send(const void *buf, uint32_t len, uint8_t flags) {
 
 uint32_t recv(void *buf, uint32_t len, uint8_t flags) {
   static uint8_t frame[ETH_LEN];
-  if (len > ETH_MTU) {
+	if (len > ETH_MTU) {
     return -1;
   }
   uint32_t size = len + sizeof(eth_header);

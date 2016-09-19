@@ -263,6 +263,40 @@ void vmm_vms_init(void) {
 }
 
 /**
+ * Event injection
+ */
+
+static uint8_t charged = 0;
+static uint32_t error_code = 0;
+static union vm_entry_interrupt_info iif;
+
+void vm_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code) {
+  if (charged) {
+    INFO("Multiple event injection unsupported : losing an interrupt \n");
+  }
+  charged = 1;
+  iif.vector = vector;
+  iif.type = type;
+  if (error_code > 0 && (type == VM_ENTRY_INT_TYPE_SOFT_EXCEPTION || type ==
+        VM_ENTRY_INT_TYPE_HW_EXCEPTION)) {
+    iif.error_code = 1;
+    error_code = error_code;
+  }
+  iif.valid = 1;
+}
+
+void vm_interrupt_inject(void) {
+  if (charged) {
+    charged = 0;
+    cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, iif.raw);
+    if (iif.error_code) {
+      cpu_vmwrite(VM_ENTRY_EXCEPTION_ERROR_CODE, error_code);
+    }
+    INFO("Event Injection in 0x%x!\n", level);
+  }
+}
+
+/**
  * Compute if we haev to redirect the VMExit to the l1 host
  */
 int vmm_host_redirect(uint32_t exit_reason, uint32_t exit_qualification, struct
@@ -469,7 +503,23 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_SIPI:
     case EXIT_REASON_INIT_SIGNAL:
     case EXIT_REASON_EXTERNAL_INTERRUPT:
+      break;
     case EXIT_REASON_EXCEPTION_OR_NMI:
+      // XXX On réinjecte direct la NMI dans la VM et on voit
+      // si ça a le swag
+      //
+      VMR(info.intr_info);
+      union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info.raw};
+      VMR(info.intr_error_code);
+      uint32_t error_code = vmcs->info.intr_error_code.raw;
+      INFO("NMI from 0x%x : \n  info(0x%x)\n error_code(0x%x)\n",
+          vm->index, iif.raw, error_code);
+      // Set ...
+      vm_interrupt_set(iif.vector, iif.type, error_code);
+      // and fire
+      vm_interrupt_inject();
+      return; // ou break o voir si on doit incrémenter
+              // le rip ou d'autre chibreries
       break;
     case EXIT_REASON_VMXOFF:
       nested_vmxoff(&guest_regs);
@@ -549,7 +599,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       uint8_t cpl = (vmcs->gs.cs_ar_bytes.raw >> 5) & 3;
       VMR(gs.rflags);
       uint8_t iopl = (vmcs->gs.rflags.raw >> 12) & 3;
-      if (cpu_mode == MODE_REAL || cpl <= iopl) {
+			if (cpu_mode == MODE_REAL || cpl <= iopl) {
         uint8_t direction = exit_qualification & 8;
         uint8_t size = exit_qualification & 7;
         uint8_t string = exit_qualification & (1<<4);
@@ -585,7 +635,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
               __asm__ __volatile__("in %%dx, %%ax" : "=a"(v) : "d"(port));
               guest_regs.rax = (guest_regs.rax & 0xffffffffffff0000) | (v & 0x0000ffff);
             } else if (size == 3) {
-              __asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port));
+							__asm__ __volatile__("in %%dx, %%eax" : "=a"(v) : "d"(port));
               guest_regs.rax = (guest_regs.rax & 0xffffffff00000000) | (v & 0xffffffff);
             } else {
               ERROR("I/O size decoding error\n");
@@ -700,11 +750,31 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
           }
       } else if (guest_regs.rcx == MSR_ADDRESS_IA32_APIC_BASE) {
           __asm__ __volatile__("wrmsr"
-            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), 
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx),
             "c" (guest_regs.rcx), "d" (guest_regs.rdx));
-          INFO("Writing in apic base msr!\n"); 
+          INFO("Writing in apic base msr!\n");
           apic_setup();
-      } else {
+
+			// XXX
+			// KVM Clock MSR access from the VM
+			} else if (guest_regs.rcx == 0x4b564d01) {
+          __asm__ __volatile__("wrmsr"
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+			} else if (guest_regs.rcx == 0x4b564d02) {
+          __asm__ __volatile__("wrmsr"
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+			} else if (guest_regs.rcx == 0x4b564d04) {
+          __asm__ __volatile__("wrmsr"
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+			} else if (guest_regs.rcx == 0x4b564d03) {
+          __asm__ __volatile__("wrmsr"
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+			} else if (guest_regs.rcx == 0x4b564d00) {
+          __asm__ __volatile__("wrmsr"
+            : : "a" (guest_regs.rax), "b" (guest_regs.rbx), "c" (guest_regs.rcx), "d" (guest_regs.rdx));
+
+			// Not an MSR
+			} else {
         msr_bitmap_dump((struct msr_bitmap*)vmcs->ctrls.ex.msr_bitmap.raw);
         ERROR("MSR write panic rcx(0x%08x) <= rdx(0x%08x)\n", guest_regs.rcx,
             guest_regs.rdx);

@@ -136,21 +136,21 @@ void env_setup(void) {
   tsc_divider = msr_read(MSR_ADDRESS_IA32_VMX_MISC) & 0x7;
 
   // Setup DSN experiment
-  env_command md5 = {
-    &env_md5_init,
-    &env_md5_call,
-    &env_md5_execute,
-    "md5"
-  };
-  env_add_command(&md5);
-
-  env_command flash = {
-    &env_flash_init,
-    &env_flash_call,
-    &env_flash_execute,
-    "flash"
-  };
-  env_add_command(&flash);
+//   env_command md5 = {
+//     &env_md5_init,
+//     &env_md5_call,
+//     &env_md5_execute,
+//     "md5"
+//   };
+//   env_add_command(&md5);
+// 
+//   env_command flash = {
+//     &env_flash_init,
+//     &env_flash_call,
+//     &env_flash_execute,
+//     "flash"
+//   };
+//   env_add_command(&flash);
 
   // Protect ERIC with EPT
   int m;

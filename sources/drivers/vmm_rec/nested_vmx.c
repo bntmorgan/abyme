@@ -51,40 +51,6 @@ void nested_vmx_shadow_bitmap_init(void) {
 #endif
 
 /**
- * Event injection
- */
-
-static uint8_t charged = 0;
-static uint32_t error_code = 0;
-static union vm_entry_interrupt_info iif;
-
-void nested_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code) {
-  if (charged) {
-    INFO("Multiple event injection unsupported : losing an interrupt \n");
-  }
-  charged = 1;
-  iif.vector = vector;
-  iif.type = type;
-  if (error_code > 0 && (type == VM_ENTRY_INT_TYPE_SOFT_EXCEPTION || type ==
-        VM_ENTRY_INT_TYPE_HW_EXCEPTION)) {
-    iif.error_code = 1;
-    error_code = error_code;
-  }
-  iif.valid = 1;
-}
-
-void nested_interrupt_inject(void) {
-  if (charged) {
-    charged = 0;
-    cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, iif.raw);
-    if (iif.error_code) {
-      cpu_vmwrite(VM_ENTRY_EXCEPTION_ERROR_CODE, error_code);
-    }
-    INFO("Event Injection in 0x%x!\n", level);
-  }
-}
-
-/**
  * VMX Emulation
  */
 

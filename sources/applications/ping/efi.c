@@ -12,8 +12,8 @@
 static uint8_t sb[BUF_SIZE];
 static protocol_82579LM *eth;
 
-static uint32_t dst_ip = IP_TO_INT(10,0,2,2);
-static uint32_t src_ip = IP_TO_INT(10,0,2,15);
+static uint32_t dst_ip = IP_TO_INT(192,168,0,1);
+static uint32_t src_ip = IP_TO_INT(192,168,0,2);
 
 static uint8_t mac_brd[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
@@ -27,7 +27,7 @@ void arp_request(void) {
   memcpy(&eh->srcmac[0], eth->mac_addr, 6);
   eh->ethertype = htons(ETHERTYPE_ARP);
   // ARP
-  af->hwtype = htons(ARP_HWTYPE_ETHERNET);
+  af->hwtype = htons(ARP_HWTYPE);
   af->proto = htons(ARP_PROTO_IP);
   af->hwsize = ARP_HW_SIZE;
   af->protosize = ARP_PROTO_SIZE;

@@ -46,6 +46,7 @@ enum idt_exceptions {
   IDT_SMID_FLOATING_POINT_EXCEPTION
 };
 
+// Host pointer
 void idt_get_idt_ptr(struct idt_ptr *ptr) {
   ptr->base = (uint64_t)&idt[0];
   ptr->limit = IDT_LOW_IT * sizeof(struct idt_gdsc) - 1;
@@ -57,7 +58,10 @@ o1(0x%04x), o2(0x%08x)\n", gdsc->o0, gdsc->cs, gdsc->ist, gdsc->t, gdsc->dpl,
     gdsc->p, gdsc->o1, gdsc-> o2);
 }
 
+struct idt_ptr guest_idt_ptr;
+
 void idt_create(void) {
+	// Host
   uint32_t i;
   uint64_t a = (uint64_t)&isr;
   uint16_t cs = cpu_read_cs() & 0xf8;
@@ -80,6 +84,18 @@ void idt_create(void) {
     // Code segment selector
     gdsc->cs = cs;
   }
+	// Guest firmware copy TODO
+	cpu_read_idt(&guest_idt_ptr);
+	idt_dump(&guest_idt_ptr);
+	struct idt_ptr host_idt_ptr;
+	idt_get_idt_ptr(&host_idt_ptr);
+	idt_dump(&host_idt_ptr);
+	cpu_write_idt(&host_idt_ptr);
+}
+
+void idt_get_guest_idt_ptr(struct idt_ptr *p) {
+  p->base = guest_idt_ptr.base;
+  p->limit = guest_idt_ptr.limit;
 }
 
 void idt_dump(struct idt_ptr *p) {
@@ -108,10 +124,10 @@ void idt_dump(struct idt_ptr *p) {
 }
 
 #define IDT_PRINT(__T__) \
-  INFO(#__T__ "\n");
+   INFO(#__T__ "\n");
 
 void idt_decode(struct idt_isr_stack *is) {
-  INFO("int number 0x%x\n", is->number);
+	INFO("int number 0x%x\n", is->number);
   INFO("ERROR CODE 0x%x\n", is->error_code);
   INFO("RIP 0x%x\n", is->rip);
   INFO("cs 0x%x\n", is->cs);

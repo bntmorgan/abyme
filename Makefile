@@ -152,14 +152,10 @@ pre-launch:
 	./run_qemu.sh
 
 launch: pre-launch
-	qemu-system-x86_64 -bios /usr/share/ovmf/ovmf_x64.bin -m 16G \
-		           -hda fat:img/hda-contents -cpu host -enable-kvm \
-			   -net nic,model=e1000 \
-			   -net tap,ifname=tap0,script=no,downscript=no 
-	sudo /etc/qemu-ifdown tap0
-
-qemu_clean:
-	sudo netctl disable bridge
-	sudo netctl stop bridge
-	sudo modprobe -r tun
-	sudo sysctl net.ipv4.ip_forward=0
+	qemu-system-x86_64 -bios /usr/share/ovmf/ovmf_x64.bin -m 8G \
+										 -hda fat:img/hda-contents -cdrom img_arch/arch.iso \
+										 -drive file=img_arch/vdisk.qcow2 -enable-kvm \
+										 -cpu host -net nic,model=e1000 \
+										 -net tap,ifname=tap0,script=no,downscript=no \
+										 -net user,vlan=1 -net nic,vlan=1,model=e1000 -smp 1 -net dump -monitor stdio -s
+										
