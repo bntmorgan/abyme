@@ -41,6 +41,14 @@ vmm_vm_exit_handler:
    */
   call vmm_adjust_tsc
   /*
+   * Adjust vmcs execution controls
+   */
+  call vmm_adjust_execution_controls
+  /*
+   * Adjust vmcs entry controls
+   */
+  call vmm_adjust_vm_entry_controls
+  /*
    * Flush the current VMCS cache
    */
   call vmm_vmcs_flush

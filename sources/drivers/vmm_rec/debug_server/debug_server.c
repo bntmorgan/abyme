@@ -27,8 +27,6 @@ uint32_t debug_server_level = 0;
 
 static uint8_t send_debug[VM_NB][NB_EXIT_REASONS];
 
-static uint8_t mtf = 0;
-
 // Messages buffer
 static uint8_t *rb = NULL;
 static uint8_t *sb = NULL;
@@ -152,7 +150,10 @@ void debug_server_init() {
   memset(&send_debug[0][0], 0, NB_EXIT_REASONS * VM_NB);
   for (i = 0; i < VM_NB; i++) {
     send_debug[i][EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED] = 1;
-    // send_debug[i][EXIT_REASON_MONITOR_TRAP_FLAG] = 1;
+//     send_debug[i][EXIT_REASON_EPT_VIOLATION] = 1;
+//     send_debug[i][EXIT_REASON_HLT] = 1;
+//     send_debug[i][EXIT_REASON_TRIPLE_FAULT] = 1;
+//     send_debug[i][EXIT_REASON_MWAIT] = 1;
     send_debug[i][EXIT_REASON_VMCALL] = 1;
   }
 
@@ -328,10 +329,10 @@ void debug_server_handle_vmcs_write(message_vmcs_write *mr,
     if (e == CPU_BASED_VM_EXEC_CONTROL) {
       if (v & MONITOR_TRAP_FLAG) {
         // INFO("Monitor trap flag activation\n");
-        mtf = 1;
+        vmm_mtf_set();
       } else {
         // INFO("Monitor trap flag deactivation\n");
-        mtf = 0;
+        vmm_mtf_unset();
       }
     }
     // Special case for some guest regs
@@ -462,22 +463,4 @@ void debug_server_enable_putc() {
 void no_putc(uint8_t value) {}
 void debug_server_disable_putc() {
   putc = &no_putc;
-}
-
-void set_mtf(void) {
-  mtf = 1;
-}
-
-uint8_t ismtf(void) {
-  return mtf;
-}
-
-void debug_server_mtf(void) {
-  // monitor trap flag handling
-  VMR(ctrls.ex.cpu_based_vm_exec_control);
-  if (ismtf()) {
-    vmm_mtf_set();
-  } else {
-    vmm_mtf_unset();
-  }
 }

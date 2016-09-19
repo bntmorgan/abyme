@@ -151,6 +151,8 @@ void vm_child_shadow_get(struct vm *pv, struct vm **cv);
 
 void vmm_mtf_unset(void);
 void vmm_mtf_set(void);
+int vmm_is_mtf(void);
+void vmm_adjust_mtf(void);
 
 int get_paging_mode(void);
 int get_cpu_mode(void);

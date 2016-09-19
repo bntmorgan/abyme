@@ -110,6 +110,12 @@ int get_cpu_mode(void) {
   }
 }
 
+static uint8_t mtf = 0;
+
+uint8_t ismtf(void) {
+  return mtf;
+}
+
 static inline void* get_instr_param_ptr(struct registers *guest_regs);
 static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs);
 static inline uint8_t is_MTRR(uint64_t msr_addr);
@@ -918,6 +924,13 @@ static inline void increment_rip(uint8_t cpu_mode, struct registers *guest_regs)
   }
 }
 
+void vmm_adjust_execution_controls(void) {
+#ifdef _DEBUG_SERVER
+  // handle Monitor trap flag
+  vmm_adjust_mtf();
+#endif
+}
+
 void vmm_adjust_vm_entry_controls(void) {
   uint8_t cpu_mode = get_cpu_mode();
   VMR(ctrls.entry.controls);
@@ -931,20 +944,27 @@ void vmm_adjust_vm_entry_controls(void) {
     // Guest is not in IA32e mode
     VMW(ctrls.entry.controls, vm_entry_controls & ~(uint64_t)IA32E_MODE_GUEST);
   }
-#ifdef _DEBUG_SERVER
-  // handle Monitor trap flag
-  debug_server_mtf();
-#endif
+}
+
+void vmm_adjust_mtf(void) {
+  // monitor trap flag handling
+  VMR(ctrls.ex.cpu_based_vm_exec_control);
+  if (ismtf()) {
+    VMW(ctrls.ex.cpu_based_vm_exec_control,
+        vmcs->ctrls.ex.cpu_based_vm_exec_control.raw | MONITOR_TRAP_FLAG);
+  } else {
+    VMW(ctrls.ex.cpu_based_vm_exec_control,
+        vmcs->ctrls.ex.cpu_based_vm_exec_control.raw &
+        ~(uint32_t)MONITOR_TRAP_FLAG);
+  }
 }
 
 void vmm_mtf_set(void) {
   INFO("WE SET THE MOTHERFUCKING MTF !\n");
-  VMW(ctrls.ex.cpu_based_vm_exec_control,
-      vmcs->ctrls.ex.cpu_based_vm_exec_control.raw | MONITOR_TRAP_FLAG);
+  mtf = 1;
 }
 
 void vmm_mtf_unset(void) {
-  VMW(ctrls.ex.cpu_based_vm_exec_control,
-      vmcs->ctrls.ex.cpu_based_vm_exec_control.raw &
-      ~(uint32_t)MONITOR_TRAP_FLAG);
+  INFO("WE UNSET THE MOTHERFUCKING MTF !\n");
+  mtf = 0;
 }

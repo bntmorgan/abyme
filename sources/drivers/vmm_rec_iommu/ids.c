@@ -1,6 +1,7 @@
 #include "stdio.h"
 #include "hook.h"
 #include "vmm.h"
+#include "vmcs.h"
 #include "ept.h"
 #include "dmar.h"
 #include "pci.h"
@@ -18,6 +19,8 @@ enum iommu_trap {
 
 enum iommu_trap iommu_state = IOMMU_RUNTIME;
 
+static uint64_t guest_physical_addr;
+
 void iommu_protect(void) {
   ept_perm((uint64_t)vtd1, 1, 5, 0);
   ept_perm((uint64_t)vtd2, 1, 5, 0);
@@ -31,23 +34,89 @@ void iommu_unprotect(void) {
 }
 
 int iommu_boot_ept(struct registers *regs) {
-  iommu_state = IOMMU_TRAP;
-  vmm_mtf_set();
-  iommu_unprotect();
-  return HOOK_OVERRIDE_STAY;
+  VMR(info.guest_physical_address);
+  guest_physical_addr = vmcs->info.guest_physical_address.raw;
+  INFO("EPT VIOLATION @0x%016X\n", guest_physical_addr);
+  if ((guest_physical_addr & ~(uint64_t)0xfff) == vtd1 ||
+      (guest_physical_addr & ~(uint64_t)0xfff) == vtd2 ) {
+    iommu_state = IOMMU_TRAP;
+    vmm_mtf_set();
+    iommu_unprotect();
+    // Pre access operations
+    switch (guest_physical_addr & 0xfff) {
+      case PCI_VC0PREMAP_GCMD:
+        INFO("=========== Write to GCMD\n");
+        if ((guest_physical_addr & ~(uint64_t)0xfff) == vtd2) {
+          dmar_dump_iommu(vtd2);
+          union vtd_rtaddr rtaddr = {.raw = pci_bar_readq(vtd2,
+              PCI_VC0PREMAP_RTADDR)};
+          // Get root table
+          if (rtaddr.raw == 0) {
+              INFO("RTADDR is zero !\n");
+          } else {
+            dmar_dump(rtaddr);
+            union dmar_root_entry *rt = (union dmar_root_entry *)rtaddr.raw;
+            // Get bus 0 context table
+            if (rt[0].p == 0) {
+              INFO("RT[0] not present !\n");
+            } else {
+              union dmar_context_entry *ct =
+                (union dmar_context_entry *)(uintptr_t)(rt[0].ctp << 12);
+              // Unprotect e1000 NIC [00:19.0], entry 0x19 * 8
+              INFO("Unprotecting [00:19.0] network card\n");
+              ct[0x19 << 3].p = 1;
+              ct[0x19 << 3].t = 2;
+              ct[0x19 << 3].aw = 2;
+              ct[0x19 << 3].did = 2;
+              __asm__ __volatile__("wbinvd");
+              __asm__ __volatile__("wbinvd");
+              __asm__ __volatile__("wbinvd");
+              __asm__ __volatile__("wbinvd");
+              dmar_dump(rtaddr);
+            }
+          }
+        }
+        break;
+    }
+    INFO("STATE -> TRAP !\n");
+    return HOOK_OVERRIDE_STAY;
+  } else {
+    return HOOK_OVERRIDE_SKIP;
+  }
 }
 
 int iommu_boot_mtf(struct registers *regs) {
-  print_protected_memory();
   if (iommu_state == IOMMU_TRAP) {
+    // Post access operations
+    switch (guest_physical_addr & 0xfff) {
+      case PCI_VC0PREMAP_GCMD:
+        INFO("=========== Write to GCMD\n");
+        break;
+      case PCI_VC0PREMAP_RTADDR:
+        INFO("=========== Write to RTADDR\n");
+        break;
+//       case PCI_VC0PREMAP_IQT:
+//         INFO("=========== Write to IQT\n");
+//         break;
+    }
+    // print_protected_memory();
+    INFO("IOMMU TRAPPED !\n");
     iommu_protect();
     vmm_mtf_unset();
     iommu_state = IOMMU_RUNTIME;
+    INFO("STATE -> RUNTIME !\n");
   }
   return 0;
 }
 
 union dmar_context_entry *fce;
+
+int iommu_boot_vmcall2(struct registers *regs) {
+  dmar_dump_iommu(vtd2);
+  union vtd_rtaddr rtaddr = {.raw = pci_bar_readq(vtd2, PCI_VC0PREMAP_RTADDR)};
+  dmar_dump(rtaddr);
+  return 0;
+}
 
 int iommu_boot_vmcall(struct registers *regs) {
   INFO("IOMMU address (@0x%016X)\n", regs->rax);
@@ -104,14 +173,17 @@ int iommu_boot_vmcall(struct registers *regs) {
 }
 
 void hook_main(void) {
-  hook_boot[EXIT_REASON_VMCALL] = &iommu_boot_vmcall;
-  fce = efi_allocate_pages(1);
+  hook_boot[EXIT_REASON_EPT_VIOLATION] = &iommu_boot_ept;
+  hook_boot[EXIT_REASON_MONITOR_TRAP_FLAG] = &iommu_boot_mtf;
+  // hook_boot[EXIT_REASON_VMCALL] = &iommu_boot_vmcall2;
+  // fce = efi_allocate_pages(1);
   // Locate eric
-  EFI_GUID guid_eric = EFI_PROTOCOL_ERIC_GUID;
-  EFI_STATUS status = LibLocateProtocol(&guid_eric, (void **)&eric);
-  if (EFI_ERROR(status)) {
-    ERROR("FAILED LOL LocateProtocol\n");
-  }
-  INFO("ENV INIT : ERIC BAR0 %X\n", eric->bar0);
-  INFO("ENV INIT : ERIC EXP %X\n", eric->rom);
+  // EFI_GUID guid_eric = EFI_PROTOCOL_ERIC_GUID;
+  // EFI_STATUS status = LibLocateProtocol(&guid_eric, (void **)&eric);
+  // if (EFI_ERROR(status)) {
+  //   ERROR("FAILED LOL LocateProtocol\n");
+  // }
+  // INFO("ENV INIT : ERIC BAR0 %X\n", eric->bar0);
+  // INFO("ENV INIT : ERIC EXP %X\n", eric->rom);
+  iommu_protect();
 }
