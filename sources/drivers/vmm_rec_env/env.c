@@ -15,6 +15,8 @@
 #include "debug.h"
 #include "ept.h"
 #include "pci.h"
+// XXX
+#include "apic.h"
 
 #include <efi.h>
 #include <efilib.h>
@@ -131,8 +133,17 @@ void env_setup(void) {
   code = efi_allocate_pages(1);
   challenge = (void *)&code[8];
 
-  // TSC configuration
+  // Get the TSC frequency
+#ifdef _NO_MSR_PLATFORM_INFO
+  // XXX unsupported in qemu 2.7.0
+#ifdef _CPU_FREQ_MHZ
+  tsc_freq_MHz = _CPU_FREQ_MHZ;
+#else
+  tsc_freq_MHz = 5000;
+#endif
+#else
   tsc_freq_MHz = ((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
+#endif
   tsc_divider = msr_read(MSR_ADDRESS_IA32_VMX_MISC) & 0x7;
 
   // Setup DSN experiment

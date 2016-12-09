@@ -11,7 +11,7 @@ OBJS_$(d)				:= $(call SRC_2_OBJ, $(d)/ids.o $(d)/env.o $(d)/env_flash.o \
 OBJECTS 				+= $(OBJS_$(d))
 
 $(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -I$(d)/vmm_rec -D_DEBUG_SERVER \
-											-U_NO_PRINTK
+											-U_NO_PRINTK -D_NO_MSR_PLATFORM_INFO -D_CPU_FREQ_MHZ=2100
 
 $(TARGET_ELF)				:  LD_FLAGS_TARGET	:=
 $(TARGET_ELF)				:  LD_FLAGS_ALL	:= -nostdlib -T $(LIBVMM_SRC_PATH)/efi.ld \

@@ -3,6 +3,9 @@
 #include "string.h"
 #include "stdio.h"
 #include "error.h"
+#include "vmm.h"
+#include "apic.h"
+#include "vmcs.h"
 
 extern void *isr;
 
@@ -133,6 +136,7 @@ void idt_decode(struct idt_isr_stack *is) {
   INFO("cs 0x%x\n", is->cs);
   INFO("rsp 0x%x\n", is->rsp);
   INFO("ss 0x%x\n", is->ss);
+  INFO("RFLAGS 0x%016x\n", cpu_read_flags());
   switch(is->number) {
     case IDT_DIVIDE_ERROR:
       IDT_PRINT(IDT_DIVIDE_ERROR);
@@ -208,6 +212,23 @@ void idt_decode(struct idt_isr_stack *is) {
     case IDT_SMID_FLOATING_POINT_EXCEPTION:
       IDT_PRINT(IDT_SMID_FLOATING_POINT_EXCEPTION);
       break;
+    case 0xef: { // Lets assume that is the Local APIC timer
+      INFO("YOLO 0xef\n");
+      INFO("Event injection for the local APIC timer\n");
+      vm_interrupt_set(is->number, 0, is->error_code); // Type is external
+      // and fire for the vmresume
+      vm_interrupt_inject();
+      // XXX
+      vmcs_update();
+      vmcs_dump(vmcs);
+      // VMR(ctrls.ex.secondary_vm_exec_control);
+      // vmcs->ctrls.ex.secondary_vm_exec_control.virtual_interrupt_delivery = 1;
+      // VMD(ctrls.ex.secondary_vm_exec_control);
+//       if (apic_is_vector_apic_timer(is->number)) {
+//         apic_emulate_apic_timer_expiration();
+//       }
+      break;
+    }
   }
 }
 

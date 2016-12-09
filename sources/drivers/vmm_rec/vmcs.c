@@ -311,10 +311,172 @@ void vmcs_dump_info(struct vmcs *v) {
 
 void vmcs_dump(struct vmcs *v) {
   INFO("VMCS dump(0x%016X)\n", v);
-  void vmcs_dump_ctrls(struct vmcs *v);
-  void vmcs_dump_gs(struct vmcs *v);
-  void vmcs_dump_hs(struct vmcs *v);
-  void vmcs_dump_info(struct vmcs *v);
+  vmcs_dump_ctrls(v);
+  vmcs_dump_gs(v);
+  vmcs_dump_hs(v);
+  vmcs_dump_info(v);
+}
+
+/**
+ * VMREAD every fields of the VMCS
+ */
+void vmcs_update(void) {
+  // Execution controls
+  VMR(ctrls.ex.virtual_processor_id);
+  VMR(ctrls.ex.posted_int_notif_vector);
+  VMR(ctrls.ex.eptp_index);
+  VMR(ctrls.ex.io_bitmap_a);
+  VMR(ctrls.ex.io_bitmap_b);
+  VMR(ctrls.ex.msr_bitmap);
+  VMR(ctrls.ex.executive_vmcs_pointer);
+  VMR(ctrls.ex.tsc_offset);
+  VMR(ctrls.ex.virtual_apic_page_addr);
+  VMR(ctrls.ex.apic_access_addr);
+  VMR(ctrls.ex.posted_intr_desc_addr);
+  VMR(ctrls.ex.vm_function_controls);
+  VMR(ctrls.ex.ept_pointer);
+  VMR(ctrls.ex.eoi_exit_bitmap_0);
+  VMR(ctrls.ex.eoi_exit_bitmap_1);
+  VMR(ctrls.ex.eoi_exit_bitmap_2);
+  VMR(ctrls.ex.eoi_exit_bitmap_3);
+  VMR(ctrls.ex.eptp_list_addr);
+  VMR(ctrls.ex.vmread_bitmap_addr);
+  VMR(ctrls.ex.vmwrite_bitmap_addr);
+  VMR(ctrls.ex.virt_excep_info_addr);
+  VMR(ctrls.ex.xss_exiting_bitmap);
+  VMR(ctrls.ex.pin_based_vm_exec_control);
+  VMR(ctrls.ex.cpu_based_vm_exec_control);
+  VMR(ctrls.ex.exception_bitmap);
+  VMR(ctrls.ex.page_fault_error_code_mask);
+  VMR(ctrls.ex.page_fault_error_code_match);
+  VMR(ctrls.ex.cr3_target_count);
+  VMR(ctrls.ex.tpr_threshold);
+  VMR(ctrls.ex.secondary_vm_exec_control);
+  VMR(ctrls.ex.ple_gap);
+  VMR(ctrls.ex.ple_window);
+  VMR(ctrls.ex.cr0_guest_host_mask);
+  VMR(ctrls.ex.cr4_guest_host_mask);
+  VMR(ctrls.ex.cr0_read_shadow);
+  VMR(ctrls.ex.cr4_read_shadow);
+  VMR(ctrls.ex.cr3_target_value0);
+  VMR(ctrls.ex.cr3_target_value1);
+  VMR(ctrls.ex.cr3_target_value2);
+  VMR(ctrls.ex.cr3_target_value3);
+  // Guest state
+  VMR(gs.es_selector);
+  VMR(gs.cs_selector);
+  VMR(gs.ss_selector);
+  VMR(gs.ds_selector);
+  VMR(gs.fs_selector);
+  VMR(gs.gs_selector);
+  VMR(gs.ldtr_selector);
+  VMR(gs.tr_selector);
+  VMR(gs.ia32_debugctl);
+  VMR(gs.ia32_pat);
+  VMR(gs.ia32_efer);
+  VMR(gs.ia32_perf_global_ctrl);
+  VMR(gs.pdpte0);
+  VMR(gs.pdpte1);
+  VMR(gs.pdpte2);
+  VMR(gs.pdpte3);
+  VMR(gs.cr0);
+  VMR(gs.cr3);
+  VMR(gs.cr4);
+  VMR(gs.es_base);
+  VMR(gs.cs_base);
+  VMR(gs.ss_base);
+  VMR(gs.ds_base);
+  VMR(gs.fs_base);
+  VMR(gs.gs_base);
+  VMR(gs.ldtr_base);
+  VMR(gs.tr_base);
+  VMR(gs.gdtr_base);
+  VMR(gs.idtr_base);
+  VMR(gs.dr7);
+  VMR(gs.rsp);
+  VMR(gs.rip);
+  VMR(gs.rflags);
+  VMR(gs.pending_dbg_exceptions);
+  VMR(gs.sysenter_esp);
+  VMR(gs.sysenter_eip);
+  VMR(gs.es_limit);
+  VMR(gs.cs_limit);
+  VMR(gs.ss_limit);
+  VMR(gs.ds_limit);
+  VMR(gs.fs_limit);
+  VMR(gs.gs_limit);
+  VMR(gs.ldtr_limit);
+  VMR(gs.tr_limit);
+  VMR(gs.gdtr_limit);
+  VMR(gs.idtr_limit);
+  VMR(gs.es_ar_bytes);
+  VMR(gs.cs_ar_bytes);
+  VMR(gs.ss_ar_bytes);
+  VMR(gs.ds_ar_bytes);
+  VMR(gs.fs_ar_bytes);
+  VMR(gs.gs_ar_bytes);
+  VMR(gs.ldtr_ar_bytes);
+  VMR(gs.tr_ar_bytes);
+  VMR(gs.interruptibility_info);
+  VMR(gs.activity_state);
+  VMR(gs.smbase);
+  VMR(gs.ia32_sysenter_cs);
+  VMR(gs.vmcs_link_pointer);
+  VMR(gs.interrupt_status);
+  VMR(gs.vmx_preemption_timer_value);
+  // Host state
+  VMR(hs.es_selector);
+  VMR(hs.cs_selector);
+  VMR(hs.ss_selector);
+  VMR(hs.ds_selector);
+  VMR(hs.fs_selector);
+  VMR(hs.gs_selector);
+  VMR(hs.tr_selector);
+  VMR(hs.ia32_pat);
+  VMR(hs.ia32_efer);
+  VMR(hs.ia32_perf_global_ctrl);
+  VMR(hs.ia32_sysenter_cs);
+  VMR(hs.cr0);
+  VMR(hs.cr3);
+  VMR(hs.cr4);
+  VMR(hs.fs_base);
+  VMR(hs.gs_base);
+  VMR(hs.tr_base);
+  VMR(hs.gdtr_base);
+  VMR(hs.idtr_base);
+  VMR(hs.ia32_sysenter_esp);
+  VMR(hs.ia32_sysenter_eip);
+  VMR(hs.rsp);
+  VMR(hs.rip);
+  // Vm exit controls
+  VMR(ctrls.exit.msr_store_addr);
+  VMR(ctrls.exit.msr_load_addr);
+  VMR(ctrls.exit.controls);
+  VMR(ctrls.exit.msr_store_count);
+  VMR(ctrls.exit.msr_load_count);
+  // VM entry controls
+  VMR(ctrls.entry.msr_load_addr);
+  VMR(ctrls.entry.controls);
+  VMR(ctrls.entry.msr_load_count);
+  VMR(ctrls.entry.intr_info_field);
+  VMR(ctrls.entry.exception_error_code);
+  VMR(ctrls.entry.instruction_len);
+  // VM exit info
+  VMR(info.guest_physical_address);
+  VMR(info.vm_instruction_error);
+  VMR(info.reason);
+  VMR(info.intr_info);
+  VMR(info.intr_error_code);
+  VMR(info.idt_vectoring_info_field);
+  VMR(info.idt_vectoring_error_code);
+  VMR(info.instruction_len);
+  VMR(info.vmx_instruction_info);
+  VMR(info.qualification);
+  VMR(info.io_rcx);
+  VMR(info.io_rsi);
+  VMR(info.io_rdi);
+  VMR(info.io_rip);
+  VMR(info.guest_linear_address);
 }
 
 /**
@@ -1072,10 +1234,18 @@ void vmcs_host_config_guest_state_fields() {
 
   VMW(gs.ia32_perf_global_ctrl, msr_read(MSR_ADDRESS_IA32_PERF_GLOBAL_CTRL));
 
-	//INFO("%X\n", msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO));
   // Init and compute vmx_preemption_timer_value
-  //XXX Find real value !!!!
-	tsc_freq_MHz = 5000; //((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
+  // Get the TSC frequency
+#ifdef _NO_MSR_PLATFORM_INFO
+  // XXX unsupported in qemu 2.7.0
+#ifdef _CPU_FREQ_MHZ
+  tsc_freq_MHz = _CPU_FREQ_MHZ;
+#else
+  tsc_freq_MHz = 5000;
+#endif
+#else
+  tsc_freq_MHz = ((msr_read(MSR_ADDRESS_MSR_PLATFORM_INFO) >> 8) & 0xff) * 100;
+#endif
 	tsc_divider = msr_read(MSR_ADDRESS_IA32_VMX_MISC) & 0x7;
   vmcs_set_vmx_preemption_timer_value(hc,
       VMCS_DEFAULT_PREEMPTION_TIMER_MICROSEC);
@@ -1148,6 +1318,6 @@ void vmcs_init(void) {
 }
 
 void vmcs_set_vmx_preemption_timer_value(struct vmcs *v, uint64_t time_microsec) {
-  VMW(gs.vmx_preemption_timer_value, (tsc_freq_MHz * time_microsec) >> tsc_divider);
-
+  VMW(gs.vmx_preemption_timer_value, (tsc_freq_MHz * time_microsec) >>
+      tsc_divider);
 }

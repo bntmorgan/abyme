@@ -485,6 +485,10 @@ struct field_64 {
   uint64_t raw;
 };
 
+struct field_signed_64 {
+  int64_t raw;
+};
+
 /**
  * VMCS
  *
@@ -690,7 +694,7 @@ struct vmcs_execution_controls {
   VMCSF(struct field_64, io_bitmap_b);
   VMCSF(struct field_64, msr_bitmap);
   VMCSF(struct field_64, executive_vmcs_pointer);
-  VMCSF(struct field_64, tsc_offset);
+  VMCSF(struct field_signed_64, tsc_offset);
   VMCSF(struct field_64, virtual_apic_page_addr);
   VMCSF(struct field_64, apic_access_addr);
   VMCSF(struct field_64, posted_intr_desc_addr);
@@ -775,6 +779,7 @@ void vmcs_dump_gs(struct vmcs *v);
 void vmcs_dump_hs(struct vmcs *v);
 void vmcs_dump_info(struct vmcs *v);
 void vmcs_dump(struct vmcs *v);
+void vmcs_update(void);
 void vmcs_force_update(void);
 void vmcs_collect_shadow(struct vmcs *gvmcs);
 void vmcs_create_vmcs_regions(void);

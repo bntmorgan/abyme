@@ -274,6 +274,7 @@ void vm_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code) {
   if (charged) {
     INFO("Multiple event injection unsupported : losing an interrupt \n");
   }
+  memset(&iif, 0, sizeof(union vm_entry_interrupt_info));
   charged = 1;
   iif.vector = vector;
   iif.type = type;
@@ -288,9 +289,9 @@ void vm_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code) {
 void vm_interrupt_inject(void) {
   if (charged) {
     charged = 0;
-    cpu_vmwrite(VM_ENTRY_INTR_INFO_FIELD, iif.raw);
+    VMW(ctrls.entry.intr_info_field, iif.raw);
     if (iif.error_code) {
-      cpu_vmwrite(VM_ENTRY_EXCEPTION_ERROR_CODE, error_code);
+      VMW(ctrls.entry.exception_error_code, error_code);
     }
     INFO("Event Injection in 0x%x!\n", level);
   }
@@ -862,14 +863,16 @@ void vmm_adjust_tsc(void) {
   }
   // Adjust TSC DEADLINE
   if (msr_tsc_deadline_original > 0) {
-    msr_tsc_deadline_adjusted = msr_tsc_deadline_original - rvm->tsc_offset;
+    msr_tsc_deadline_adjusted = (msr_tsc_deadline_original
+        // tsc_offset is signed !!!!
+        - rvm->tsc_offset) + 0x10000;
     msr_write(MSR_ADDRESS_IA32_TSC_DEADLINE, msr_tsc_deadline_adjusted);
 //    INFO("Write to TSC DEADLINE DUDES original 0x%016X, adjusted 0x%016X, tsc is 0x%016X, offset is 0x%016X!!!\n",
 //        msr_tsc_deadline_original, msr_tsc_deadline_adjusted, cpu_rdtsc(),
 //        rvm->tsc_offset);
-    if (msr_tsc_deadline_adjusted < cpu_rdtsc()) {
-      // WARN("DEADLINE HAS PASSED YOLOSSE\n");
-    }
+//     if (msr_tsc_deadline_adjusted < cpu_rdtsc()) {
+//       WARN("DEADLINE HAS PASSED YOLOSSE\n");
+//     }
   }
   // INFO("TSC offset 0x%016X\n", vm->tsc_offset);
 }

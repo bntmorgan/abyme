@@ -250,5 +250,8 @@ union x2apic_lvt_error {
 
 void apic_setup(void);
 int apic_get_mode(void);
+void x2apic_print(void);
+int apic_is_vector_apic_timer(uint8_t vector);
+void apic_emulate_apic_timer_expiration(void);
 
 #endif//__APIC_H__
