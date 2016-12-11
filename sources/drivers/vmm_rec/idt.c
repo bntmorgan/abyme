@@ -216,11 +216,6 @@ void idt_decode(struct idt_isr_stack *is) {
       INFO("YOLO 0xef\n");
       INFO("Event injection for the local APIC timer\n");
       vm_interrupt_set(is->number, 0, is->error_code); // Type is external
-      // and fire for the vmresume
-      vm_interrupt_inject();
-      // XXX
-      vmcs_update();
-      vmcs_dump(vmcs);
       // VMR(ctrls.ex.secondary_vm_exec_control);
       // vmcs->ctrls.ex.secondary_vm_exec_control.virtual_interrupt_delivery = 1;
       // VMD(ctrls.ex.secondary_vm_exec_control);

@@ -272,7 +272,7 @@ static union vm_entry_interrupt_info iif;
 
 void vm_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code) {
   if (charged) {
-    INFO("Multiple event injection unsupported : losing an interrupt \n");
+    INFO("Multiple event injection unsupported : loosing an interrupt \n");
   }
   memset(&iif, 0, sizeof(union vm_entry_interrupt_info));
   charged = 1;
@@ -498,12 +498,22 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
     case EXIT_REASON_GETSEC:
     case EXIT_REASON_TASK_SWITCH:
     case EXIT_REASON_NMI_WINDOW:
-    case EXIT_REASON_INTR_WINDOW:
     case EXIT_REASON_OTHER_SMI:
     case EXIT_REASON_IO_SMI:
     case EXIT_REASON_SIPI:
     case EXIT_REASON_INIT_SIGNAL:
     case EXIT_REASON_EXTERNAL_INTERRUPT:
+      break;
+    case EXIT_REASON_INTR_WINDOW:
+      // An interrupt is tried to injected : it is time to !
+      // the injection is handled in vmm_adjust_vm_entry_controls(), we let it
+      // do it
+      // Here we juste deactivate the proc_based control for interrupt window
+      // exiting
+      INFO("Deactivation of interrupt window exiting\n");
+      VMR(ctrls.ex.cpu_based_vm_exec_control);
+      vmcs->ctrls.ex.cpu_based_vm_exec_control.interrupt_window_exiting = 0;
+      VMD(ctrls.ex.cpu_based_vm_exec_control);
       break;
     case EXIT_REASON_EXCEPTION_OR_NMI:
       // XXX On réinjecte direct la NMI dans la VM et on voit
@@ -515,10 +525,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       uint32_t error_code = vmcs->info.intr_error_code.raw;
       INFO("NMI from 0x%x : \n  info(0x%x)\n error_code(0x%x)\n",
           vm->index, iif.raw, error_code);
-      // Set ...
+      // Set interrupt
       vm_interrupt_set(iif.vector, iif.type, error_code);
-      // and fire
-      vm_interrupt_inject();
       return; // ou break o voir si on doit incrémenter
               // le rip ou d'autre chibreries
       break;
@@ -1006,6 +1014,8 @@ void vmm_adjust_execution_controls(void) {
 
 void vmm_adjust_vm_entry_controls(void) {
   uint8_t cpu_mode = get_cpu_mode();
+  union rflags rflags;
+  // IA-32e mode or not
   VMR(ctrls.entry.controls);
   uint64_t vm_entry_controls = vmcs->ctrls.entry.controls.raw;
   if (cpu_mode == MODE_LONG) {
@@ -1016,6 +1026,20 @@ void vmm_adjust_vm_entry_controls(void) {
   } else {
     // Guest is not in IA32e mode
     VMW(ctrls.entry.controls, vm_entry_controls & ~(uint64_t)IA32E_MODE_GUEST);
+  }
+  // Event injection
+  if (charged) {
+    VMR(gs.rflags);
+    rflags = vmcs->gs.rflags;
+    if (rflags.IF) {
+      vm_interrupt_inject();
+    } else {
+      INFO("Can't inject an interrupt, IF is cleared\n");
+      INFO("Activation of interrupt window exiting\n");
+      VMR(ctrls.ex.cpu_based_vm_exec_control);
+      vmcs->ctrls.ex.cpu_based_vm_exec_control.interrupt_window_exiting = 1;
+      VMD(ctrls.ex.cpu_based_vm_exec_control);
+    }
   }
 }
 
