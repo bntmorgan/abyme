@@ -417,9 +417,16 @@ void debug_server_handle_send_debug(message_send_debug *mr) {
 
 void debug_server_run(struct registers *regs) {
   int32_t ret;
+  char lol = 'a';;
   message *mr = (message *)rb;
   mr->type = MESSAGE_MESSAGE;
 	while (mr->type != MESSAGE_EXEC_CONTINUE) {
+    ret = debug_server_recv(mr, eth->mtu);
+    if (lol == 'z') {
+      lol = 'a';
+    } else {
+      lol++;
+    }
 		if (ret == -1) {
       mr->type = MESSAGE_MESSAGE;
       continue;
