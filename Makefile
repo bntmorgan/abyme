@@ -143,7 +143,7 @@ vmware-prepare:
 vmware-compile:
 	sudo vmware-modconfig --console --install-all
 
-qemu: launch
+qemu: all launch
 
 pre-launch:
 	mkdir -p img/hda-contents/EFI
@@ -152,10 +152,13 @@ pre-launch:
 	./run_qemu.sh
 
 launch: pre-launch
-	qemu-system-x86_64 -bios /usr/share/ovmf/ovmf_x64.bin -m 8G \
-										 -hda fat:img/hda-contents -cdrom img_arch/arch.iso \
-										 -drive file=img_arch/vdisk.qcow2 -enable-kvm \
-										 -cpu host -net nic,model=e1000 \
-										 -net tap,ifname=tap0,script=no,downscript=no \
-										 -net user,vlan=1 -net nic,vlan=1,model=e1000 -smp 1 -net dump -monitor stdio -s
+	qemu-system-x86_64 \
+		-bios /usr/share/ovmf/ovmf_x64.bin -m 8G \
+		-hda fat:img/hda-contents -cdrom img_arch/arch.iso \
+		-drive file=img_arch/vdisk.qcow2 -enable-kvm \
+		-cpu host -net nic,model=e1000 \
+		-net tap,ifname=tap0,script=no,downscript=no \
+		-net user,vlan=1 -net nic,vlan=1,model=e1000 -smp 1 \
+		-net dump -monitor stdio \
+		-gdb tcp::9999
 										

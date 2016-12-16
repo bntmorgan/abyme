@@ -873,7 +873,7 @@ void vmm_adjust_tsc(void) {
   if (msr_tsc_deadline_original > 0) {
     msr_tsc_deadline_adjusted = (msr_tsc_deadline_original
         // tsc_offset is signed !!!!
-        - rvm->tsc_offset) + 0x10000;
+        - rvm->tsc_offset);
     msr_write(MSR_ADDRESS_IA32_TSC_DEADLINE, msr_tsc_deadline_adjusted);
 //    INFO("Write to TSC DEADLINE DUDES original 0x%016X, adjusted 0x%016X, tsc is 0x%016X, offset is 0x%016X!!!\n",
 //        msr_tsc_deadline_original, msr_tsc_deadline_adjusted, cpu_rdtsc(),

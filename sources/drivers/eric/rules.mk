@@ -12,7 +12,7 @@ OBJS_$(d)				:= $(call SRC_2_OBJ, $(d)/common/cpu.o \
 
 OBJECTS 				+= $(OBJS_$(d))
 
-$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d)
+$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -D_NO_PRINTK
 
 $(TARGET_ELF)				:  LD_FLAGS_TARGET	:= 
 $(TARGET_ELF)				:  LD_OBJECTS	:= $(OBJS_$(d))

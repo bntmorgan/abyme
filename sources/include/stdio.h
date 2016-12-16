@@ -3,6 +3,8 @@
 
 #include <efi.h>
 #include "types.h"
+#include "serial.h"
+#include "debug.h"
 
 #ifdef _DEBUG_SERVER
 #include "debug_server/debug_server.h"
@@ -36,6 +38,21 @@ void _stdio_stop(void);
 
 #define PRINT_FIELD(__st__, __fd__) \
   PRINT_FIELD_PREFIX("  ", __st__, __fd__)
+
+#define SERIAL_INFO(...) \
+  debug_server_serial_on(); \
+  INFO(__VA_ARGS__); \
+  debug_server_serial_off();
+
+#define SERIAL_DUMP(...) \
+  debug_server_serial_on(); \
+  dump(__VA_ARGS__); \
+  debug_server_serial_off();
+
+#define SERIAL_NEW_LINE \
+  debug_server_serial_on(); \
+  printk("\n"); \
+  debug_server_serial_off();
 
 void printk_string(int8_t *string, int8_t minimum_length, int8_t padding);
 

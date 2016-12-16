@@ -26,7 +26,6 @@ void clear_buffer() {
 	buffer = (union ethernet_buffer *)&buf2[0];
 }
 
-
 extern void (*putc)(uint8_t);
 
 protocol_82579LM *eth;
@@ -187,8 +186,6 @@ void debug_server_init() {
       INFO("Debug server enabled\n");
       debug_server = 1;
     }
-//     INFO("Uninstalling efi interface\n");
-//     eth->uninstall();
     printk("DEBUG SERVER INIT : ETH BAR0 %X\n", eth->bar0);
 
 		// XXX
@@ -419,10 +416,11 @@ void debug_server_handle_send_debug(message_send_debug *mr) {
 }
 
 void debug_server_run(struct registers *regs) {
+  int32_t ret;
   message *mr = (message *)rb;
   mr->type = MESSAGE_MESSAGE;
 	while (mr->type != MESSAGE_EXEC_CONTINUE) {
-		if (debug_server_recv(mr, eth->mtu) == -1) {
+		if (ret == -1) {
       mr->type = MESSAGE_MESSAGE;
       continue;
     } else {
@@ -458,9 +456,6 @@ void debug_server_run(struct registers *regs) {
 }
 
 void debug_server_send(void *buf, uint32_t len) {
-  //XXX
-	//eth->send(buf, len, EFI_82579LM_API_BLOCK);
-
 	uint16_t size=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
 	eth->eth_send(buf2, size, 1);
 
@@ -471,13 +466,30 @@ void debug_server_send(void *buf, uint32_t len) {
 	clear_buffer();
 }
 
-uint32_t debug_server_recv(void *buf, uint32_t len) {
+int32_t debug_server_recv(void *buf, uint32_t len) {
 	clear_buffer();
+  uint64_t tsc = cpu_rdtsc();
 	uint32_t size = eth->eth_recv(buf2, len, 1);
 	uint32_t payload_size = size - sizeof(struct udp_frame) - sizeof(struct ethernet_header);
-	memcpy(buf, &buffer->frame.contents.udp.payload[0], payload_size);
-	return payload_size;
-  //return eth->recv(buf, len, EFI_82579LM_API_BLOCK);
+  // Handle ip stuff
+  uint32_t size2 = microudp_handle_frame(buffer);
+  // Size is > 0 we have to send a frame back to the sender machine
+  if (size2 > 0) {
+    eth->eth_send(buffer, size2, 1);
+  }
+  SERIAL_INFO("0x%016X : Size of frame : 0x%x \n", tsc, size);
+  SERIAL_DUMP((void *)buf2, 4, size, 8, 0, 6);
+  SERIAL_NEW_LINE;
+  if (buffer->frame.eth_header.ethertype == ntohs(ETHERTYPE_IP) &&
+      // buffer->frame.contents.udp.ip.proto == htons(0x11) &&
+      buffer->frame.contents.udp.udp.dst_port == htons(6666)) {
+    memcpy(buf, &buffer->frame.contents.udp.payload[0], payload_size);
+    SERIAL_INFO("This is 6666 udp protocol\n");
+    return payload_size;
+  } else {
+    SERIAL_INFO("This is not 6666 protocol!\n");
+    return -1;
+  }
 }
 
 void debug_server_putc(uint8_t value) {
@@ -495,12 +507,12 @@ void debug_server_putc(uint8_t value) {
 
 		// XXX
 		clear_buffer();
-		uint16_t len = microudp_fill(buffer, 6666, 6666, sb, current_size + sizeof(message_info));
+    uint16_t len = microudp_fill(buffer, 6666, 6666, sb, current_size +
+        sizeof(message_info));
 		eth->eth_send(buf2, len, 1);
 
 		clear_buffer();
 
-    // XXX needs blocking send
     memset(&buf[0], 0, 0x1000); // Reset the buffer!
     current_size = 0;
   }

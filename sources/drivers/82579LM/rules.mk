@@ -9,7 +9,7 @@ OBJS_$(d)				:= $(call SRC_2_OBJ, \
 										$(d)/efi.o $(d)/82579LM.o $(d)/common/cpu.o $(d)/pci.o $(d)/debug_eth.o $(d)/api.o $(d)/common/string.o $(d)/common/stdio.o $(d)/common/screen.o $(d)/common/stdlib.o $(d)/common/efiw.o $(d)/common/msr.o)
 OBJECTS 				+= $(OBJS_$(d))
 
-$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d)
+$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -D_NO_PRINTK
 
 $(TARGET_ELF)				:  LD_FLAGS_TARGET	:= 
 $(TARGET_ELF)				:  LD_OBJECTS	:= $(OBJS_$(d))

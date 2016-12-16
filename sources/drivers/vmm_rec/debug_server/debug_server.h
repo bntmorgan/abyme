@@ -6,7 +6,7 @@
 
 void debug_server_init();
 void debug_server_send(void *buf, uint32_t len);
-uint32_t debug_server_recv(void *buf, uint32_t len);
+int32_t debug_server_recv(void *buf, uint32_t len);
 void debug_server_putc(uint8_t value);
 void debug_server_enable_putc();
 void debug_server_disable_putc();

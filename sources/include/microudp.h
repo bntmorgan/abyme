@@ -106,6 +106,10 @@ static inline uint16_t htons(uint16_t data) {
   return ((data >> 8) & 0xff) | ((data << 8) & 0xff00);
 }
 
+static inline uint16_t ntohs(uint16_t data) {
+  return htons(data);
+}
+
 uint16_t ip_checksum(uint32_t r, void *buffer, uint32_t length, int32_t complete);
 
 void print_arpframe(struct arp_frame arp);
