@@ -514,7 +514,8 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       VMR(ctrls.ex.cpu_based_vm_exec_control);
       vmcs->ctrls.ex.cpu_based_vm_exec_control.interrupt_window_exiting = 0;
       VMD(ctrls.ex.cpu_based_vm_exec_control);
-      break;
+      // We do not increment GUEST RIP !!!
+      return;
     case EXIT_REASON_EXCEPTION_OR_NMI:
       // XXX On réinjecte direct la NMI dans la VM et on voit
       // si ça a le swag

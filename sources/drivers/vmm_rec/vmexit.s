@@ -8,7 +8,7 @@ vmm_vm_exit_handler:
    * Save guest general purpose registers.
    */
   // XXX
-  cli
+  // cli
   sub $8, %rsp /* placeholder, will be replaced by rip */
   push %r15
   push %r14
@@ -77,7 +77,7 @@ vmm_vm_exit_handler:
   /*
    * Resume guest execution.
    */
-  sti
+  // sti
   vmresume
 
   /* Check errors */
