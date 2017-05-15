@@ -151,10 +151,14 @@ pre-launch:
 	cp -r sources/shell_scripts/* img/hda-contents
 	./run_qemu.sh
 
+		# -bios /usr/share/ovmf/ovmf_x64.bin -m 8G
 launch: pre-launch
 	qemu-system-x86_64 \
-		-bios /usr/share/ovmf/ovmf_x64.bin -m 8G \
-		-hda fat:img/hda-contents -cdrom img_arch/arch.iso \
+		-bios /usr/share/ovmf/ovmf_code_x64.bin \
+		-L . \
+		-m 8G \
+		-drive file=fat:rw:img/hda-contents \
+		-cdrom img_arch/arch.iso \
 		-drive file=img_arch/vdisk.qcow2 -enable-kvm \
 		-cpu host -net nic,model=e1000 \
 		-net tap,ifname=tap0,script=no,downscript=no \
