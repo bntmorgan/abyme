@@ -24,7 +24,7 @@
 static env_command commands[ENV_LIMIT];
 static uint32_t index = 0;
 static uint8_t eric_present;
-static uint8_t env_enabled;;
+/* static */ uint8_t env_enabled;
 static uint16_t tsc_freq_MHz;
 static uint8_t tsc_divider;
 protocol_eric *eric;
@@ -127,7 +127,7 @@ void env_setup(void) {
   systab.printk = &printk;
   systab.answer = (uint32_t *)(uintptr_t)eric->bar0;
   eric_present = 1;
-  env_enabled = 1;
+  env_enabled = 0;
 
   // Allode code table
   code = efi_allocate_pages(1);
@@ -147,13 +147,13 @@ void env_setup(void) {
   tsc_divider = msr_read(MSR_ADDRESS_IA32_VMX_MISC) & 0x7;
 
   // Setup DSN experiment
-//   env_command md5 = {
-//     &env_md5_init,
-//     &env_md5_call,
-//     &env_md5_execute,
-//     "md5"
-//   };
-//   env_add_command(&md5);
+  env_command md5 = {
+    &env_md5_init,
+    &env_md5_call,
+    &env_md5_execute,
+    "md5"
+  };
+  env_add_command(&md5);
 // 
 //   env_command flash = {
 //     &env_flash_init,

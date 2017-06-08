@@ -45,9 +45,16 @@ int env_md5_init(void) {
   return ENV_OK;
 }
 
+// XXX
+extern uint8_t env_enabled;
+
 int env_md5_walk(struct registers *guest_regs) {
   uint64_t lcurrent, pcurrent, *entry;
   uint8_t size;
+
+  // XXX
+  env_enabled = 1;
+
   int ret;
   idx = 0;
   cr3 = cpu_vmread(GUEST_CR3);
