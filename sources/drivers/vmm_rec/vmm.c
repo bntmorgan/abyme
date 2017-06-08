@@ -45,12 +45,12 @@ uint8_t vm_allocated[VM_NB];
 /**
  * Current VM running
  */
-struct vm *vm;
+struct vm *vm = NULL;
 
 /**
  * Root VM
  */
-struct vm *rvm;
+struct vm *rvm = NULL;
 
 void vm_set(struct vm *v) {
   vm = v;
@@ -266,11 +266,11 @@ void vmm_vms_init(void) {
  * Event injection
  */
 
-static uint8_t charged = 0;
-static uint32_t error_code = 0;
 static union vm_entry_interrupt_info iif;
 
 void vm_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code) {
+  INFO("Injection set vector(0x%02x), type(0x%02x), error_core(0x%x)\n", vector,
+      type, error_code);
   if (charged) {
     INFO("Multiple event injection unsupported : loosing an interrupt \n");
   }

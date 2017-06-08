@@ -221,7 +221,10 @@ void idt_decode(struct idt_isr_stack *is) {
     // XXX
     // Type is external
     INFO("Injection of interruption\n");
-    vm_interrupt_set(is->number, VM_ENTRY_INT_TYPE_EXT_INT, is->error_code);
+    // XXX if no vm is launched
+    if (rvm != NULL) {
+      vm_interrupt_set(is->number, VM_ENTRY_INT_TYPE_EXT_INT, is->error_code);
+    }
   }
 }
 
