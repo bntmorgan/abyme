@@ -2,12 +2,22 @@
 
 extern void (*putc)(uint8_t);
 
+#define PORT 0x3F8
+
+int debug_server_is_transmit_empty(void) {
+  int port = PORT + 5, res;
+  __asm__ __volatile("in %%dx, %%al" : "=a"(res) : "d"(port));
+  return res & 0x20;
+}
+
 // Serial pig debug
 void debug_server_serial_putc(uint8_t c) {
   if (c == '\n') {
-    __asm__ __volatile__("out %%al, %%dx" : : "a"('\r'), "d"(0x3F8));
+    while(debug_server_is_transmit_empty() == 0);
+    __asm__ __volatile__("out %%al, %%dx" : : "a"('\r'), "d"(PORT));
   }
-  __asm__ __volatile__("out %%al, %%dx" : : "a"(c), "d"(0x3F8));
+  while(debug_server_is_transmit_empty() == 0);
+  __asm__ __volatile__("out %%al, %%dx" : : "a"(c), "d"(PORT));
 }
 
 static void (*putc_saved)(uint8_t);
