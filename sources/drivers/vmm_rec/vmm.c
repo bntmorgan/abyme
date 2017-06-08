@@ -266,6 +266,8 @@ void vmm_vms_init(void) {
  * Event injection
  */
 
+static uint8_t charged = 0;
+static int error_code = 0;
 static union vm_entry_interrupt_info iif;
 
 void vm_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code) {
