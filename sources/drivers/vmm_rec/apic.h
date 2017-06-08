@@ -57,7 +57,7 @@ struct local_apic {
     uint32_t _r1:7;
     uint32_t _r2[3];
   } version; // 30
-  struct {uint32_t r[4];} _jmp[43]; // XXX on saute jusqu'à la LVT
+  struct {uint32_t r[4];} _jmp0[43]; // XXX on saute jusqu'à la LVT
   struct {
     uint32_t vector:8;
     uint32_t delivery_mode:3;
@@ -133,6 +133,17 @@ struct local_apic {
     uint32_t _r2:15;
     uint32_t _r3[3];
   } lvt_error; // 370
+  uint32_t initial_count; // 380
+  uint32_t jmp1;
+  uint32_t current_count; // 390
+  uint32_t jmp2;
+  struct {uint32_t r[4];} _jmp3[5]; // XXX on saute jusqu'au div. configuration
+  struct {
+    uint32_t div0:2;
+    uint32_t _r0:1;
+    uint32_t div1:1;
+    uint32_t _r1:28;
+  } divide_configuration;
 };
 
 /**
@@ -251,6 +262,7 @@ union x2apic_lvt_error {
 void apic_setup(void);
 int apic_get_mode(void);
 void x2apic_print(void);
+void apic_print(void);
 int apic_is_vector_apic_timer(uint8_t vector);
 void apic_emulate_apic_timer_expiration(void);
 

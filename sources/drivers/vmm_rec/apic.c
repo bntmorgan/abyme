@@ -106,6 +106,12 @@ delivery_status(%x), mask(%x)\n",
       lvt_error.vector, lvt_error.delivery_status, lvt_error.mask); 
 }
 
+void apic_timer_print(void) {
+  INFO("Timer: initial_count(0x%08x), current_count(0x%08x), div(0x%x)\n", 
+      la->initial_count, la->current_count, (la->divide_configuration.div0 |
+        (la->divide_configuration.div1 << 2)));
+}
+
 void apic_lvt_print(void) {
   INFO("@CMCI 0x%016X == 0x2f0\n", &la->lvt_cmci);
   INFO("CMCI : vector(0x%02x), delivery_mode(0x%x), \
@@ -152,6 +158,7 @@ void apic_print(void) {
       la->version.version, la->version.max_lvt_entry,
       la->version.eoi_broadcast_suppression);
   apic_lvt_print();
+  apic_timer_print();
 }
 
 void apic_setup(void) {

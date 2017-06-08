@@ -93,7 +93,7 @@ void bsp_main(struct setup_state *state) {
   INFO("MTRR PRINT RANGES DONE\n");
   ept_create_tables(setup_state->protected_begin, setup_state->protected_end);
   INFO("EPT CREATE TABLES DONE\n");
-  // apic_setup();
+  apic_setup();
   INFO("APIC SETUP DONE\n");
 
   // Virtualization
