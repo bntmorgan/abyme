@@ -1089,13 +1089,14 @@ void vmcs_host_config_host_state_fields(void) {
 
 void vmcs_host_config_vm_exec_control_fields(void) {
   uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS |
-      USE_IO_BITMAPS | USE_TSC_OFFSETTING | /* XXX */ CR3_LOAD_EXITING | HLT_EXITING;
+      USE_IO_BITMAPS | USE_TSC_OFFSETTING ;  /*| XXX CR3_LOAD_EXITING | HLT_EXITING */;
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST |
       ENABLE_RDTSCP;
 
   uint64_t eptp;
 	//XXX
-  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER | NMI_EXITING;// | EXT_INTR_EXITING; // | NMI_EXITING;
+  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER | NMI_EXITING;
+      // | EXT_INTR_EXITING; // | NMI_EXITING;
 
   VMW(ctrls.ex.pin_based_vm_exec_control,
       cpu_adjust32(pinbased_ctls, MSR_ADDRESS_IA32_VMX_PINBASED_CTLS));
@@ -1106,7 +1107,7 @@ void vmcs_host_config_vm_exec_control_fields(void) {
   if (((msr_read(MSR_ADDRESS_IA32_VMX_BASIC) >> 55) & 1)
       // CR3_LOAD_EXITING & CR3_STORE_EXITING can be disabled
       && (((msr_read(MSR_ADDRESS_IA32_VMX_TRUE_PROCBASED_CTLS) >> 15) & 3)) ==
-      0){
+      0) {
     procbased_ctls &= ~(CR3_LOAD_EXITING | CR3_STORE_EXITING);
   } else {
     panic("#!PROCBASED_CTLS CR3_LOAD_EXITING or CR3_STORE_EXITING required\n");
