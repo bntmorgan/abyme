@@ -36,6 +36,8 @@ dir	:= $(d)/vmm_rec_eric
 include	$(dir)/rules.mk
 dir	:= $(d)/smm
 include	$(dir)/rules.mk
+dir	:= $(d)/vmm_rec_cache
+include	$(dir)/rules.mk
 # dir	:= $(d)/smm_handler
 # include	$(dir)/rules.mk
 
