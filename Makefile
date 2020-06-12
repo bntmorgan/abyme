@@ -14,33 +14,36 @@ INCLUDE_DIR			:= sources/include
 
 ARCH := $(shell uname -m | sed s,i[3456789]86,ia32,)
 
-PREFIX					:= /usr
-EFI_INCLUDE			:= $(PREFIX)/include/efi
+PREFIX					:= ./gnu-efi
+EFI_INCLUDE			:= $(PREFIX)/inc
 # Installation gnu-efi 3.0 locale
 # EFI_INCLUDE			:= /usr/local/include/efi
 
 EFI_INCLUDES 		:= -I$(EFI_INCLUDE) -I$(EFI_INCLUDE)/$(ARCH) \
 		-I$(EFI_INCLUDE)/protocol -I$(INCLUDE_DIR)
 
-EFI_PATH 				:= $(PREFIX)/lib
+EFI_PATH 				:= $(PREFIX)/x86_64
 # Installation gnu-efi 3.0 locale
 # EFI_PATH 				:= /usr/local/lib
 
 LIB_GCC	 				:= $(shell $(CC) -print-libgcc-file-name)
 EFI_LIBS 				:= -lefi -lgnuefi $(LIB_GCC)
+EFI_LIBS_INCLUDE := -L$(EFI_PATH)/lib -L$(EFI_PATH)/gnuefi
 
-EFI_CRT_OBJS 		:= $(EFI_PATH)/crt0-efi-$(ARCH).o
-EFI_LDS 				:= efi.ld
+EFI_CRT_OBJS 		:= $(EFI_PATH)/gnuefi/crt0-efi-$(ARCH).o
+EFI_LDS 				:= $(PREFIX)/gnuefi/elf_x86_64_efi.lds
 
-CC_FLAGS_ALL		:= -Wall -Werror -Werror -fno-stack-protector \
-		-fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC -O0
+CC_FLAGS_ALL		:= -g -Wall -Werror -Werror -fno-stack-protector \
+		-fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC -fPIE -O0
 
 ifeq ($(ARCH),x86_64)
 	CC_FLAGS_ALL	+= -DEFI_FUNCTION_WRAPPER
 endif
 
-LD_FLAGS_ALL		:= -nostdlib -T $(EFI_LDS) -shared -Bsymbolic -L$(EFI_PATH) \
-		$(EFI_CRT_OBJS) -znocombreloc -fPIC --no-undefined
+LD_FLAGS_SCRIPT = -T $(EFI_LDS)
+
+LD_FLAGS_ALL		= -nostdlib $(LD_FLAGS_SCRIPT) -shared -Bsymbolic $(EFI_LIBS_INCLUDE) \
+		$(EFI_CRT_OBJS) -znocombreloc -fPIC --no-undefined -fPIE
 
 define SRC_2_OBJ
   $(foreach src,$(1),$(patsubst sources/%,$(BUILD_DIR)/%,$(src)))
@@ -72,12 +75,11 @@ $(BUILD_DIR)/%.o: sources/%.c
 
 $(BINARY_DIR)/%.efi: $(BINARY_DIR)/%.elf
 	@echo "[OC] $@"
-	@objcopy -j .padding_begin -j .text -j .sdata -j .data \
+	@objcopy -j .text -j .sdata -j .data \
 		-j .dynamic -j .dynsym  -j .rel \
 		-j .rela -j .reloc -j .padding_end \
 		$(OBJCPY_FLAGS_TARGET) \
 	  $< $@
-	@strip $@
 
 $(BINARY_DIR)/%.elf:
 	@echo "[LD] $@"
@@ -149,20 +151,37 @@ pre-launch:
 	mkdir -p img/hda-contents/EFI
 	cp -r $(BINARY_DIR)/* img/hda-contents/EFI
 	cp -r sources/shell_scripts/* img/hda-contents
+	cp img/hda-contents/startup{-qemu,}.nsh
 	./run_qemu.sh
 
 		# -bios /usr/share/ovmf/ovmf_x64.bin -m 8G
 launch: pre-launch
-	qemu-system-x86_64 \
-		-bios /usr/share/ovmf/ovmf_code_x64.bin \
-		-L . \
-		-m 8G \
-		-drive file=fat:rw:img/hda-contents \
-		-cdrom img_arch/arch.iso \
-		-drive file=img_arch/vdisk.qcow2 -enable-kvm \
-		-cpu host -net nic,model=e1000 \
-		-net tap,ifname=tap0,script=no,downscript=no \
-		-net user,vlan=1 -net nic,vlan=1,model=e1000 -smp 1 \
-		-net dump -monitor stdio \
-		-gdb tcp::9999
+	./run_qemu.sh
+#	qemu-system-x86_64 \
+#		-enable-kvm \
+#		-cpu host \
+#		-bios /usr/share/ovmf/x64/OVMF_CODE.fd \
+#		-L . \
+#		-m 8G \
+#		-drive file=fat:rw:img/hda-contents,format=raw \
+#		-cdrom img_arch/arch.iso \
+#		-drive file=img_arch/vdisk.qcow2 \
+#		-net nic,model=e1000 \
+#		-net tap,ifname=tap99,script=no,downscript=no \
+#		-debugcon file:debug.log \
+#		-global isa-debugcon.iobase=0x402 \
+#		-smp 1 \
+#		-S -s
+# 	qemu-system-x86_64 \
+# 		-bios /usr/share/ovmf/ovmf_code_x64.bin \
+# 		-L . \
+# 		-m 8G \
+# 		-drive file=fat:rw:img/hda-contents \
+# 		-cdrom img_arch/arch.iso \
+# 		-drive file=img_arch/vdisk.qcow2 -enable-kvm \
+# 		-cpu host -net nic,model=e1000 \
+# 		-net tap,ifname=tap99,script=no,downscript=no \
+# 		-net user,vlan=1 -net nic,vlan=1,model=e1000 -smp 1 \
+# 		-net dump -monitor stdio \
+# 		-gdb tcp::9999
 										
