@@ -4,3 +4,6 @@
 [submodule "uefi-gdb"]
 	path = uefi-gdb
 	url = git@gitlab.enseeiht.fr:bmorgan/uefi-gdb.git
+[submodule "abyme-challenge"]
+	path = abyme-challenge
+	url = git@gitlab.enseeiht.fr:bmorgan/abyme-challenge.git
