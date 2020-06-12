@@ -32,6 +32,8 @@ sources/drivers/eric/
 edk2/
   Submodule for QEMU/OVMF firmware needed if using QEMU
 
+  dependencies : acpica; nasm
+
   $ git submodule update --init
   $ make -C BaseTools
   $ . ./edksetup.sh BaseTools
