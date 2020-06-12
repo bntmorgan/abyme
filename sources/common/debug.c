@@ -1,7 +1,55 @@
 #include "debug.h"
 #include "stdio.h"
+#include "stdlib.h"
 #include "msr.h"
 #include "cpu.h"
+#include "string.h"
+
+extern void *ImageBase;
+extern void *_data;
+
+void qemu_putc(uint8_t value) {
+  __asm__ __volatile__(
+    "mov $0x402, %%dx\r\n"
+    "out %%al, %%dx\r\n" : : "a"(value)
+  );
+}
+
+void qemu_send_io(char *s, int size) {
+  int i;
+  for (i = 0; i < size; i++) {
+    qemu_putc(s[i]);
+  }
+}
+
+void qemu_send_address(char *filename) {
+//  int i;
+
+  char addr_str[9];
+  char str_0[] = "Dirty ass hack...\n";
+  char str_1[] = "Loading driver at 0x";
+  char str_2[] = " EntryPoint=0x";
+
+  qemu_send_io(str_0, strlen(str_0));
+  qemu_send_io(str_1, strlen(str_1));
+
+  // XXX Support 64 bits
+  itoa((int8_t *)&addr_str[0], 16, (uint32_t)(uintptr_t)&ImageBase);
+  qemu_send_io(addr_str, strlen(addr_str));
+
+  qemu_send_io(str_2, strlen(str_2));
+
+  // XXX Support 64 bits
+  itoa((int8_t *)&addr_str[0], 16, (uint32_t)(uintptr_t)&_data);
+  qemu_send_io(addr_str, strlen(addr_str));
+
+  qemu_send_io(" ", 1);
+
+  qemu_send_io(filename, strlen(filename));
+
+  qemu_send_io("\n", 1);
+
+}
 
 void read_core_state(struct core_gpr *gpr, struct core_cr *cr) {
   // Control registers

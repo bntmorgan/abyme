@@ -44,5 +44,8 @@ void dump(void *fields, uint32_t fds, uint32_t fdss, uint32_t fpl, uint64_t
 void dump_core_state(struct core_gpr *gpr, struct core_cr *cr);
 void read_core_state(struct core_gpr *gpr, struct core_cr *cr);
 
+void qemu_send_address(char *filename);
+void qemu_putc(uint8_t value);
+
 #endif
 
