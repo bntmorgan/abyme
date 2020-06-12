@@ -28,3 +28,6 @@ sources/drivers/82579LM/
   Driver de carte réseau générique Intel famille e1000.
 sources/drivers/eric/
   Driver du périphérique de confiance.
+
+edk2/
+  Build and QEMU/OVMF firmware here if needed
