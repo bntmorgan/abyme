@@ -24,12 +24,12 @@
 static env_command commands[ENV_LIMIT];
 static uint32_t index = 0;
 static uint8_t eric_present;
-/* static */ uint8_t env_enabled;
+static uint8_t env_enabled;
 static uint16_t tsc_freq_MHz;
 static uint8_t tsc_divider;
 protocol_eric *eric;
 
-uint8_t *trap_pci;
+uint8_t *env_trap_pci;
 
 uint8_t *code;
 
@@ -127,7 +127,7 @@ void env_setup(void) {
   systab.printk = &printk;
   systab.answer = (uint32_t *)(uintptr_t)eric->bar0;
   eric_present = 1;
-  env_enabled = 0;
+  env_enabled = 1;
 
   // Allode code table
   code = efi_allocate_pages(1);
@@ -166,12 +166,12 @@ void env_setup(void) {
   // Protect ERIC with EPT
   int m;
   uint64_t base_addr = get_mmio_addr();
-  trap_pci = efi_allocate_pages(1);
-  memset(trap_pci, 0xff, 0x1000);
+  env_trap_pci = efi_allocate_pages(1);
+  memset(env_trap_pci, 0xff, 0x1000);
   for (m = 0; m < VM_NB; m++) {
-    ept_remap((uint64_t)eric->rom, (uint64_t)trap_pci, 0x7, m);
-    ept_remap((uint64_t)eric->bar0, (uint64_t)trap_pci, 0x7, m);
-    ept_remap(base_addr, (uint64_t)trap_pci, 0x7, m);
+    ept_remap((uint64_t)eric->rom, (uint64_t)env_trap_pci, 0x7, m);
+    ept_remap((uint64_t)eric->bar0, (uint64_t)env_trap_pci, 0x7, m);
+    ept_remap(base_addr, (uint64_t)env_trap_pci, 0x7, m);
   }
 
   // Protect ERIC with PIO
