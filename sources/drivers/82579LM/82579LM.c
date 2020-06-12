@@ -125,12 +125,14 @@ int eth_setup() {
     return -1;
   }
   // Allocate memory for rx tx buffers and descriptors
-  rx_bufs = efi_allocate_pages((RX_DESC_COUNT * NET_BUF_SIZE) / 0x1000 + ((RX_DESC_COUNT * NET_BUF_SIZE) % 0x1000 != 0.0));
+  rx_bufs = efi_allocate_pages((RX_DESC_COUNT * NET_BUF_SIZE) / 0x1000 +
+      ((RX_DESC_COUNT * NET_BUF_SIZE) % 0x1000 != 0.0));
   if (!rx_bufs) {
     INFO("Failed to allocate rx_bufs\n");
     return -1;
   }
-  tx_bufs = efi_allocate_pages((TX_DESC_COUNT * NET_BUF_SIZE) / 0x1000 + ((TX_DESC_COUNT * NET_BUF_SIZE) % 0x1000 != 0.0));
+  tx_bufs = efi_allocate_pages((TX_DESC_COUNT * NET_BUF_SIZE) / 0x1000 +
+      ((TX_DESC_COUNT * NET_BUF_SIZE) % 0x1000 != 0.0));
   if (!rx_bufs) {
     INFO("Failed to allocate tx_bufs\n");
     return -1;
@@ -139,7 +141,8 @@ int eth_setup() {
   // XXX
   rx_descs = efi_allocate_pages(1);
   if (!rx_descs || (((uintptr_t)rx_descs) & 0xf)) {
-    INFO("Failed to allocate rx_descs or unaligned to 0x10 : 0x%016X lol %d\n", (uintptr_t)rx_descs);
+    INFO("Failed to allocate rx_descs or unaligned to 0x10 : 0x%016X lol %d\n",
+        (uintptr_t)rx_descs);
     return -1;
   }
   tx_descs = efi_allocate_pages(1);
