@@ -2,8 +2,8 @@ sp              := $(sp).x
 dirstack_$(sp)  := $(d)
 d               := $(dir)
 
-TARGET					:= $(call SRC_2_BIN, $(d)/efi.efi)
-TARGET_ELF		  := $(call SRC_2_BIN, $(d)/efi.elf)
+TARGET					:= $(call SRC_2_BIN, $(d)/$(notdir $(dir)).efi)
+TARGET_ELF		  := $(call SRC_2_BIN, $(d)/$(notdir $(dir)).elf)
 TARGETS 				+= $(TARGET)
 OBJS_$(d)				:= $(call SRC_2_OBJ, \
 										$(d)/efi.o $(d)/common/efiw.o $(d)/common/screen.o \
@@ -16,10 +16,6 @@ OBJECTS 				+= $(OBJS_$(d))
 $(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -U_DEBUG_SERVER -U_NO_PRINTK
 
 $(TARGET_ELF)				:  LD_FLAGS_TARGET	:=
-$(TARGET_ELF)				:  LD_FLAGS_ALL	:= -nostdlib -T efi.ld \
-							-shared -Bsymbolic -L$(EFI_PATH) \
-							$(EFI_CRT_OBJS) -znocombreloc -fPIC \
-							--no-undefined
 $(TARGET_ELF)				:  EFI_LIBS_TARGET :=
 
 $(TARGET_ELF)			:  LD_OBJECTS	:= $(OBJS_$(d)) 
