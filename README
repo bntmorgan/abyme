@@ -30,7 +30,28 @@ sources/drivers/eric/
   Driver du périphérique de confiance.
 
 edk2/
-  Build and QEMU/OVMF firmware here if needed
+  Submodule for QEMU/OVMF firmware needed if using QEMU
+
+  $ git submodule update --init
+  $ make -C BaseTools
+  $ . ./edksetup.sh BaseTools
+  $ cat Conf/target.txt
+  $ OvmfPkg/build.sh \
+    -a IA32 -a X64 \
+    -D SECURE_BOOT_ENABLE \
+    -D TPM2_ENABLE -D TPM2_CONFIG_ENABLE \
+    -D FD_SIZE_2MB -D EXCLUDE_SHELL_FROM_FD
+
+  For SMM debugging go and see :
+    https://casualhacking.io/blog/2019/12/3/using-optionrom-to-overwrite-smmsmi-handlers-in-qemu
 
 img-arch/
   Archlinux cdrom and distro disk to be used with QEMU target
+
+gnu-efi/
+  Submodule for GNU efi toolchain to build efi applications
+
+  $ make
+
+uefi-gdb/
+  Submodule for efi applications and drivers debugging with gdb

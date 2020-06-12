@@ -70,17 +70,17 @@ sudo ip addr add dev tap-hv 192.168.0.1/30
 sudo ip link set tap-hv up
 
 OVMF=./edk2/Build/Ovmf3264/DEBUG_GCC5/FV/OVMF_CODE.fd
-VARS=./OVMF_VARS.fd
+VARS=./edk2/Build/Ovmf3264/DEBUG_GCC5/FV/OVMF_VARS.fd
 
 # -serial mon:stdio \
 # -nographic \
 
 
-BIOS="-bios /usr/share/ovmf/x64/OVMF_CODE.fd"
-#BIOS=" \
-#  -global driver=cfi.pflash01,property=secure,value=on \
-#  -drive file=$OVMF,if=pflash,format=raw,unit=0,readonly=on \
-#  -drive file=$VARS,if=pflash,format=raw,unit=1
+#BIOS="-bios /usr/share/ovmf/x64/OVMF_CODE.fd"
+BIOS=" \
+  -global driver=cfi.pflash01,property=secure,value=on \
+  -drive file=$OVMF,if=pflash,format=raw,unit=0,readonly=on \
+  -drive file=$VARS,if=pflash,format=raw,unit=1"
 
 #MACHINE=
 MACHINE="-cpu host -enable-kvm"
