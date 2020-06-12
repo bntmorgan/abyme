@@ -1,15 +1,21 @@
-unload 88
-unload 89
-cd \EFI\drivers\82579LM
-echo Loading ethernet driver
+# unload 88
+# unload 89
+cd \EFI\applications\hello_world
+echo Loading Hello world
 echo press any key
 # pause
-load efi.efi
-echo Ethernet runtime driver loaded !
+hello_world.efi
+echo Hello world executed !
+#cd \EFI\drivers\82579LM
+#echo Loading ethernet driver
+#echo press any key
+## pause
+#load 82579LM.efi
+#echo Ethernet runtime driver loaded !
 cd \EFI\drivers\vmm_rec_none
 echo Loading recursive vmm
 echo press any key
 # pause
-#\EFI\applications\udp_stack\efi.efi
-load efi.efi
+load vmm_rec_none.efi
 echo Recursive vmm runtime driver loaded !
+pause
