@@ -48,6 +48,12 @@ edk2/
 img-arch/
   Archlinux cdrom and distro disk to be used with QEMU target
 
+  $ wget https://<archrepo>/archlinux-yyyy.mm.dd-x86_64.iso -O arch.iso
+  $ qemu-img create -f qcow2 vdisk.qcow2 10G
+
+  And install eventually archlinux on vdisk.qcow2
+  Note that you can work using the live disk only
+
 gnu-efi/
   Submodule for GNU efi toolchain to build efi applications
 
