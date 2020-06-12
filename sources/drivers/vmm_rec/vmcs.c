@@ -1089,7 +1089,7 @@ void vmcs_host_config_host_state_fields(void) {
 
 void vmcs_host_config_vm_exec_control_fields(void) {
   uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS |
-      USE_IO_BITMAPS | USE_TSC_OFFSETTING ;  /*| XXX CR3_LOAD_EXITING | HLT_EXITING */;
+      USE_IO_BITMAPS | USE_TSC_OFFSETTING | CR3_LOAD_EXITING | HLT_EXITING;
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST |
       ENABLE_RDTSCP;
 

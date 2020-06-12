@@ -90,7 +90,7 @@ int get_paging_mode(void) {
   } else if (vmcs->gs.ia32_efer.lma) {
     return PAGING_IA32E;
   } else {
-    ERROR("Error getting paging mode\n");
+    ERROR_N_REBOOT("Error getting paging mode\n");
   }
   return 0;
 }
@@ -151,7 +151,7 @@ void vm_alloc(struct vm **v) {
       return;
     }
   }
-  ERROR("Failed to allocate a VM, pool is fully used\n");
+  ERROR_N_REBOOT("Failed to allocate a VM, pool is fully used\n");
 }
 
 /**
@@ -160,7 +160,7 @@ void vm_alloc(struct vm **v) {
 void vm_free(struct vm *v) {
   uint32_t i;
   if (v == 0) {
-    ERROR("Bad VM pointer\n");
+    ERROR_N_REBOOT("Bad VM pointer\n");
   }
   for (i = 0; i < VM_NB; i++) {
     if (&vm_pool[i] == v) {

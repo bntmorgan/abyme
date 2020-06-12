@@ -114,7 +114,7 @@ void nested_vmptrld(uint8_t *shadow_vmcs, struct registers *gr) {
   rvm->shadow_ptr = shadow_vmcs;
 
   if (shadow_vmcs == 0x0) {
-    ERROR("Shadow VMCS pointer is null\n");
+    ERROR_N_REBOOT("Shadow VMCS pointer is null\n");
   }
 
   nested_set_vm_succeed();
@@ -167,7 +167,7 @@ void nested_smap_build(uint32_t index) {
         ta = a + 0x40000000;
         break;
       default:
-        ERROR("BAD page size\n");
+        ERROR_N_REBOOT("BAD page size\n");
     }
     if (ta == ((uint64_t)1 << max_phyaddr)) {
       INFO("CHECK END maxphyaddr reached\n");
@@ -179,7 +179,7 @@ void nested_smap_build(uint32_t index) {
   uint64_t eptp = svmcs.ctrls.ex.ept_pointer.raw & ~((uint64_t)0xfff);
   INFO("EPTP 0x%016X, idx 0x%x\n", eptp, index);
   if (ept_iterate(eptp, &cb)) {
-    ERROR("PAGING error... 0x%x\n", paging_error);
+    ERROR_N_REBOOT("PAGING error... 0x%x\n", paging_error);
   }
 }
 #endif

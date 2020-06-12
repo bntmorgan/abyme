@@ -179,7 +179,7 @@ void idt_decode(struct idt_isr_stack *is) {
       break;
     case IDT_GENERAL_PROTECTION:
       IDT_PRINT(IDT_GENERAL_PROTECTION);
-      ERROR("Unsupported\n");
+      ERROR_N_REBOOT("Unsupported\n");
       break;
     case IDT_PAGE_FAULT: {
       IDT_PRINT(IDT_PAGE_FAULT);

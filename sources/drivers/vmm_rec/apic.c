@@ -167,7 +167,7 @@ void apic_setup(void) {
   uint64_t max_address_mask = (max_address - 1);
   apic_base.raw = msr_read(MSR_ADDRESS_IA32_APIC_BASE);
   if (!apic_base.global_enable) {
-    ERROR("APIC disabled\n");
+    ERROR_N_REBOOT("APIC disabled\n");
   }
   la = (struct local_apic *)((apic_base.apic_base & max_address_mask) << 12);
   max_lvt_entry = la->version.max_lvt_entry + 1; // Local APIC Version reg doc
@@ -187,7 +187,7 @@ void apic_setup(void) {
       // x2apic_print();
       break;
     default:
-      ERROR("unknow APIC mode\n");
+      ERROR_N_REBOOT("unknow APIC mode\n");
   }
 };
 

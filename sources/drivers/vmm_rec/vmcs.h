@@ -631,7 +631,7 @@ struct vmcs_guest_state {
   VMCSF(struct field_64, pending_dbg_exceptions);
   VMCSF(struct field_64, sysenter_esp);
   VMCSF(struct field_64, sysenter_eip);
-} __attribute__((packed));
+};
 
 struct vmcs_host_state {
   // 16-bit fields
@@ -661,7 +661,7 @@ struct vmcs_host_state {
   VMCSF(struct field_64, ia32_sysenter_eip);
   VMCSF(struct field_64, rsp);
   VMCSF(struct field_64, rip);
-} __attribute__((packed));
+};
 
 struct vmcs_vmexit_information {
   // 64-bit fields
@@ -682,7 +682,7 @@ struct vmcs_vmexit_information {
   VMCSF(struct field_64, io_rdi);
   VMCSF(struct field_64, io_rip);
   VMCSF(struct field_64, guest_linear_address);
-} __attribute__((packed));
+};
 
 struct vmcs_execution_controls {
   // 16-bit fields
@@ -729,7 +729,7 @@ struct vmcs_execution_controls {
   VMCSF(struct field_32, cr3_target_value1);
   VMCSF(struct field_32, cr3_target_value2);
   VMCSF(struct field_32, cr3_target_value3);
-} __attribute__((packed));
+};
 
 struct vmcs_exit_controls {
   // 64-bit fields
@@ -739,7 +739,7 @@ struct vmcs_exit_controls {
   VMCSF(union exit_controls, controls);
   VMCSF(struct field_32, msr_store_count);
   VMCSF(struct field_32, msr_load_count);
-} __attribute__((packed));
+};
 
 struct vmcs_entry_controls {
   // 64-bit fields
@@ -750,13 +750,13 @@ struct vmcs_entry_controls {
   VMCSF(struct field_32, intr_info_field);
   VMCSF(struct field_32, exception_error_code);
   VMCSF(struct field_32, instruction_len);
-} __attribute__((packed));
+};
 
 struct vmcs_controls {
   struct vmcs_execution_controls ex;
   struct vmcs_exit_controls exit;
   struct vmcs_entry_controls entry;
-} __attribute__((packed));
+};
 
 struct vmcs {
   uint32_t revision_id;
@@ -765,7 +765,7 @@ struct vmcs {
   struct vmcs_host_state hs;
   struct vmcs_controls ctrls;
   struct vmcs_vmexit_information info;
-} __attribute__((packed));
+};
 
 void vmcs_dump_vcpu(void);
 void vmcs_set_vmx_preemption_timer_value(struct vmcs *v, uint64_t time_microsec);

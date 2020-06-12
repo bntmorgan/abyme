@@ -13,9 +13,9 @@ OBJECTS 				+= $(OBJS_$(d))
 dir	:= $(d)/debug_server
 include	$(dir)/rules.mk
 
-$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -D_DEBUG_SERVER -U_NO_PRINTK \
+$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -U_DEBUG_SERVER -U_NO_PRINTK \
 	-D_VMCS_SHADOWING -U_PARTIAL_VMX -D_NESTED_EPT -U_NO_GUEST_EPT -U_ESXI \
-	-D_DEBUG # -D_NO_MSR_PLATFORM_INFO -D_CPU_FREQ_MHZ=2100
+	-D_DEBUG -D_NO_MSR_PLATFORM_INFO -D_CPU_FREQ_MHZ=2100
 
 $(TARGET_A)  			:  LD_OBJECTS	:= $(OBJS_$(d))
 $(TARGET_A)			:  $(OBJS_$(d))

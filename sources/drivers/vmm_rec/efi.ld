@@ -1,21 +1,24 @@
 /* Same as elf_x86_64_fbsd_efi.lds, except for OUTPUT_FORMAT below - KEEP IN SYNC */
 OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64", "elf64-x86-64")
 OUTPUT_ARCH(i386:x86-64)
-
 ENTRY(_start)
 SECTIONS
 {
   . = 0;
   ImageBase = .;
-  .hash : { *(.hash) }	/* this MUST come first! */
-  . = ALIGN(0x1000);
+  /* .hash and/or .gnu.hash MUST come first! */
+  .hash : { *(.hash) }
+  .gnu.hash : { *(.gnu.hash) }
+  . = ALIGN(4096);
   ImageStart = .;
-
-  .eh_frame : { *(.eh_frame) }
-
-  .reloc : ALIGN(0x1000) { *(.reloc) }
-
-  .text : ALIGN(0x1000) {
+  .eh_frame : 
+  { 
+    *(.eh_frame)
+  }
+  . = ALIGN(4096);
+  .text :
+  {
+   _text = .;
     *crt0-efi-*.o(.text)
     /tmp/build/drivers/vmm_rec/efi.o(.text)
 
@@ -25,11 +28,23 @@ SECTIONS
 
 /* === Protected zone begin === */
     _protected_begin = .;
-    *(*.text)
-  }
 
-  .data : ALIGN(0x1000)
+   *(.text)
+   *(.text.*)
+   *(.gnu.linkonce.t.*)
+   . = ALIGN(16);
+  }
+  _etext = .;
+  _text_size = . - _text;
+  . = ALIGN(4096);
+  .reloc :
   {
+   *(.reloc)
+  }
+  . = ALIGN(4096);
+  .data :
+  {
+   _data = .;
    *(.rodata*)
    *(.got.plt)
    *(.got)
@@ -44,21 +59,31 @@ SECTIONS
    *(COMMON)
    *(.rel.local)
   }
+  .note.gnu.build-id : { *(.note.gnu.build-id) }
 
-  .dynamic : ALIGN(0x1000) { *(.dynamic) }
-
-  .rela : ALIGN(0x1000)
+  _edata = .;
+  _data_size = . - _etext;
+  . = ALIGN(4096);
+  .dynamic  : { *(.dynamic) }
+  . = ALIGN(4096);
+  .rela :
   {
     *(.rela.data*)
     *(.rela.got)
     *(.rela.stab)
   }
-
-  .dynsym : ALIGN(0x1000) { *(.dynsym) }
-
-  .dynstr : ALIGN(0x1000) { *(.dynstr) }
-
-  .ignored.reloc : ALIGN(0x1000) { *(.rela.reloc) }
+  . = ALIGN(4096);
+  .dynsym   : { *(.dynsym) }
+  . = ALIGN(4096);
+  .dynstr   : { *(.dynstr) }
+  . = ALIGN(4096);
+  .ignored.reloc :
+  {
+    *(.rela.reloc)
+    *(.eh_frame)
+    *(.note.GNU-stack)
+  }
+  .comment 0 : { *(.comment) }
 
   .padding_end :
   {
@@ -68,6 +93,4 @@ SECTIONS
     BYTE(0x90)
   }
 /* === Protected zone end === */
-
-  ImageEnd = .;
 }

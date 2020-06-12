@@ -12,18 +12,17 @@
 #include "efiw.h"
 #include "debug_protocol.h"
 #include "gdt.h"
-#include "error.h"
 #include "microudp.h"
 
 #define MAX_INFO_SIZE 1024
 
 // XXX
-#define BUF_SIZE					1500
+#define BUF_SIZE          1500
 uint8_t buf2[BUF_SIZE];
 union ethernet_buffer *buffer;
 void clear_buffer() {
-	memset(&buf2[0], 0, 1500);
-	buffer = (union ethernet_buffer *)&buf2[0];
+  memset(&buf2[0], 0, 1500);
+  buffer = (union ethernet_buffer *)&buf2[0];
 }
 
 extern void (*putc)(uint8_t);
@@ -58,7 +57,7 @@ void debug_server_log_cr3_flush(struct registers *regs) {
   m->length = DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t);
   for (i = 0; i < DEBUG_SERVER_CR3_SIZE / DEBUG_SERVER_CR3_PER_MESSAGE; i++) {
     // Copy DEBUG_SERVER_CR3_PER_MESSAGE cr3
-		memcpy(data, &log_cr3_table[i * DEBUG_SERVER_CR3_PER_MESSAGE],
+    memcpy(data, &log_cr3_table[i * DEBUG_SERVER_CR3_PER_MESSAGE],
         DEBUG_SERVER_CR3_PER_MESSAGE * sizeof(uint64_t));
     // Send the message
     // INFO("Send\n");
@@ -145,30 +144,31 @@ void debug_server_vmexit(uint8_t vmid, uint32_t exit_reason,
     ms->exit_reason = exit_reason;
     debug_server_core_regs_read(&ms->regs, guest_regs);
     debug_server_send(ms, sizeof(message_vmexit));
-		debug_server_run(guest_regs);
+    debug_server_run(guest_regs);
   }
 }
 
 void debug_server_init() {
-  uint32_t i;
+//  uint32_t i;
 
   // Info message buffer
   rb = efi_allocate_pages(1);
   sb = efi_allocate_pages(1);
 
   /* Init exit reasons for which we need to send a debug message */
-  memset(&send_debug[0][0], 0, NB_EXIT_REASONS * VM_NB);
-  for (i = 0; i < VM_NB; i++) {
-    send_debug[i][EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED] = 1;
-    // send_debug[i][EXIT_REASON_EPT_VIOLATION] = 1;
-    // send_debug[i][EXIT_REASON_HLT] = 1;
-    // send_debug[i][EXIT_REASON_TRIPLE_FAULT] = 1;
-    // send_debug[i][EXIT_REASON_MWAIT] = 1;
-    // send_debug[i][EXIT_REASON_MONITOR_TRAP_FLAG] = 1;
-    send_debug[i][EXIT_REASON_VMCALL] = 1;
-		// send_debug[i][EXIT_REASON_IO_INSTRUCTION] = 1;
-		// send_debug[i][EXIT_REASON_EPT_VIOLATION] = 1;
-  }
+  memset(&send_debug[0][0], 1, NB_EXIT_REASONS * VM_NB);
+//  for (i = 0; i < VM_NB; i++) {
+//    send_debug[i][EXIT_REASON_VMX_PREEMPTION_TIMER_EXPIRED] = 1;
+//    send_debug[i][EXIT_REASON_EPT_VIOLATION] = 1;
+//    send_debug[i][EXIT_REASON_HLT] = 1;
+//    send_debug[i][EXIT_REASON_TRIPLE_FAULT] = 1;
+//    send_debug[i][EXIT_REASON_MWAIT] = 1;
+//    send_debug[i][EXIT_REASON_MONITOR_TRAP_FLAG] = 1;
+//    send_debug[i][EXIT_REASON_VMCALL] = 1;
+//    send_debug[i][EXIT_REASON_IO_INSTRUCTION] = 1;
+//    // XXX
+//    send_debug[i][EXIT_REASON_CR_ACCESS] = 1;
+//  }
 
 
   debug_server_log_cr3_reset();
@@ -188,20 +188,20 @@ void debug_server_init() {
     }
     printk("DEBUG SERVER INIT : ETH BAR0 %X\n", eth->bar0);
 
-		// XXX
-		uint16_t len;
-		clear_buffer();
-		microudp_start(eth->mac_addr, SERVER_IP);
+    // XXX
+    uint16_t len;
+    clear_buffer();
+    microudp_start(eth->mac_addr, SERVER_IP);
 
-		INFO("ARP request send\n");
-		len=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
-		eth->eth_send(buf2, len, 1);
+    INFO("ARP request send\n");
+    len=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
+    eth->eth_send(buf2, len, 1);
 
-		clear_buffer();
+    clear_buffer();
 
-		eth->eth_recv(buf2, 1500, 1);
-		microudp_handle_frame(buffer);
-		clear_buffer();
+    eth->eth_recv(buf2, 1500, 1);
+    microudp_handle_frame(buffer);
+    clear_buffer();
   }
 }
 
@@ -420,14 +420,14 @@ void debug_server_run(struct registers *regs) {
   char lol = 'a';;
   message *mr = (message *)rb;
   mr->type = MESSAGE_MESSAGE;
-	while (mr->type != MESSAGE_EXEC_CONTINUE) {
+  while (mr->type != MESSAGE_EXEC_CONTINUE) {
     ret = debug_server_recv(mr, eth->mtu);
     if (lol == 'z') {
       lol = 'a';
     } else {
       lol++;
     }
-		if (ret == -1) {
+    if (ret == -1) {
       mr->type = MESSAGE_MESSAGE;
       continue;
     } else {
@@ -463,21 +463,21 @@ void debug_server_run(struct registers *regs) {
 }
 
 void debug_server_send(void *buf, uint32_t len) {
-	uint16_t size=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
-	eth->eth_send(buf2, size, 1);
+  uint16_t size=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
+  eth->eth_send(buf2, size, 1);
 
-	clear_buffer();
+  clear_buffer();
 
-	len = microudp_fill(buffer, 6666, 6666, buf, len);
-	eth->eth_send(buf2, len, 1);
-	clear_buffer();
+  len = microudp_fill(buffer, 6666, 6666, buf, len);
+  eth->eth_send(buf2, len, 1);
+  clear_buffer();
 }
 
 int32_t debug_server_recv(void *buf, uint32_t len) {
-	clear_buffer();
+  clear_buffer();
   uint64_t tsc = cpu_rdtsc();
-	uint32_t size = eth->eth_recv(buf2, len, 1);
-	uint32_t payload_size = size - sizeof(struct udp_frame) - sizeof(struct ethernet_header);
+  uint32_t size = eth->eth_recv(buf2, len, 1);
+  uint32_t payload_size = size - sizeof(struct udp_frame) - sizeof(struct ethernet_header);
   // Handle ip stuff
   uint32_t size2 = microudp_handle_frame(buffer);
   // Size is > 0 we have to send a frame back to the sender machine
@@ -512,13 +512,13 @@ void debug_server_putc(uint8_t value) {
     m->vmid = debug_server_level;
     m->length = current_size;
 
-		// XXX
-		clear_buffer();
+    // XXX
+    clear_buffer();
     uint16_t len = microudp_fill(buffer, 6666, 6666, sb, current_size +
         sizeof(message_info));
-		eth->eth_send(buf2, len, 1);
+    eth->eth_send(buf2, len, 1);
 
-		clear_buffer();
+    clear_buffer();
 
     memset(&buf[0], 0, 0x1000); // Reset the buffer!
     current_size = 0;

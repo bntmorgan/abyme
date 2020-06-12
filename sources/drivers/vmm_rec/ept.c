@@ -96,7 +96,7 @@ void ept_set_ctx(uint8_t c) {
   uint64_t j; // PTPT
   ctx = c;
   if (c >= VM_NB) {
-    ERROR("Invalid context number\n");
+    ERROR_N_REBOOT("Invalid context number\n");
   }
   for (j = 0; j < EPTN; j++) {
     ept_tables->PML4_PDPT[0][j] =
@@ -211,7 +211,7 @@ void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
   // Check if EPT is available
   uint64_t msr = msr_read(MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2);
   if ((msr & ((uint64_t)1 << (1 + 32))) == 0) {
-    ERROR("EPT is not available on this platform\n");
+    ERROR_N_REBOOT("EPT is not available on this platform\n");
   }
 
   ept_tables = efi_allocate_pages(sizeof(struct ept_tables) >> 12);
@@ -458,7 +458,7 @@ int cb(uint64_t *e, uint64_t a, uint8_t s) {
     pa = a;
   } else {
     INFO("a(0x%016X), s(0x%x), address(0x%016X), ta(0x%016X)\n", a, s, pa, ta);
-    ERROR("id mapping error yolord\n");
+    ERROR_N_REBOOT("id mapping error yolord\n");
   }
   switch (s) {
     case PAGING_ENTRY_PTE:
@@ -471,7 +471,7 @@ int cb(uint64_t *e, uint64_t a, uint8_t s) {
       ta = pa + 0x40000000;
       break;
     default:
-      ERROR("BAD page size\n");
+      ERROR_N_REBOOT("BAD page size\n");
   }
   if (ta == ((uint64_t)1 << max_phyaddr)) {
     INFO("CHECK END maxphyaddr reached\n");
@@ -485,7 +485,7 @@ void ept_check_mapping(void) {
   uint64_t eptp = ept_get_eptp();
   INFO("EPTP 0x%016X\n", eptp);
   if (ept_iterate(eptp, &cb)) {
-    ERROR("PAGING error... 0x%x\n", paging_error);
+    ERROR_N_REBOOT("PAGING error... 0x%x\n", paging_error);
   }
 }
 
