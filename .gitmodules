@@ -7,3 +7,6 @@
 [submodule "abyme-challenge"]
 	path = abyme-challenge
 	url = git@gitlab.enseeiht.fr:bmorgan/abyme-challenge.git
+[submodule "edk2"]
+	path = edk2
+	url = git@gitlab.enseeiht.fr:bmorgan/edk2.git
