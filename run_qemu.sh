@@ -97,7 +97,7 @@ $QEMU \
   -drive file=fat:rw:img/hda-contents,format=raw \
   -cdrom img-arch/arch.iso \
   $BIOS \
-  -drive file=img_arch/vdisk.qcow2 \
+  -drive file=img-arch/vdisk.qcow2 \
   -debugcon file:debug.log \
   -global isa-debugcon.iobase=0x402 \
   -s -S
