@@ -1,0 +1,6 @@
+[submodule "gnu-efi"]
+	path = gnu-efi
+	url = git@gitlab.enseeiht.fr:bmorgan/gnu-efi.git
+[submodule "uefi-gdb"]
+	path = uefi-gdb
+	url = git@gitlab.enseeiht.fr:bmorgan/uefi-gdb.git
