@@ -16,16 +16,14 @@ dir	:= $(d)/hello_world
 include	$(dir)/rules.mk
 dir	:= $(d)/cpuid
 include	$(dir)/rules.mk
-dir	:= $(d)/locate
-include	$(dir)/rules.mk
+# dir	:= $(d)/locate
+# include	$(dir)/rules.mk
 dir	:= $(d)/sys_table_2go
 include	$(dir)/rules.mk
 dir	:= $(d)/shadowck
 include	$(dir)/rules.mk
 dir	:= $(d)/mp
 include	$(dir)/rules.mk
-dir := $(d)/udp_stack
-include $(dir)/rules.mk
 dir := $(d)/ping
 include $(dir)/rules.mk
 
