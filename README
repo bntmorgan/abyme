@@ -31,3 +31,6 @@ sources/drivers/eric/
 
 edk2/
   Build and QEMU/OVMF firmware here if needed
+
+img-arch/
+  Archlinux cdrom and distro disk to be used with QEMU target

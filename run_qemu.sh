@@ -95,7 +95,7 @@ $QEMU \
   -netdev tap,id=net0,ifname=tap-hv,script=no,downscript=no \
   -device e1000,netdev=net0 \
   -drive file=fat:rw:img/hda-contents,format=raw \
-  -cdrom img_arch/arch.iso \
+  -cdrom img-arch/arch.iso \
   $BIOS \
   -drive file=img_arch/vdisk.qcow2 \
   -debugcon file:debug.log \
