@@ -15,6 +15,8 @@
 #define SERVER_IP               IP_TO_INT(192,168,0,2)
 #define CLIENT_IP               IP_TO_INT(192,168,0,1)
 
+#define ETHERNET_SIZE 1532
+
 struct ethernet_header {
   //uint8_t preamble[8];
   uint8_t destmac[6];

@@ -241,7 +241,7 @@ uint16_t microudp_handle_frame(union ethernet_buffer *buffer) {
 
   // Everything else for now is WTF
   } else {
-    //INFO("WTF\n");
+    INFO("WTF\n");
   }
 
   return len;
