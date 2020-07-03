@@ -37,7 +37,7 @@ CC_FLAGS_ALL		:= -g -Wall -Werror -Werror -fno-stack-protector \
 		-fno-strict-aliasing -fshort-wchar $(EFI_INCLUDES) -fno-builtin -fPIC -fPIE -O0
 
 ifeq ($(ARCH),x86_64)
-	CC_FLAGS_ALL	+= -DEFI_FUNCTION_WRAPPER
+	CC_FLAGS_ALL	+= -DEFI_FUNCTION_WRAPPER -U_QEMU
 endif
 
 LD_FLAGS_SCRIPT = -T $(EFI_LDS)

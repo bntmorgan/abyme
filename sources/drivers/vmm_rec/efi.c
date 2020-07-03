@@ -21,11 +21,12 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
   // Initialize gnuefi lib
   InitializeLib(image_handle, st);
 
-  // XXX stdio putc pointer to QEMU
+#ifdef _QEMU
   extern void (*putc)(uint8_t);
   putc = &qemu_putc;
 
   qemu_send_address("vmm_rec_none.efi");
+#endif
 
   // Set VM RIP, RSP and RBP
   state.vm_RIP = (uint64_t)&&vm_entrypoint;

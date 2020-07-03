@@ -14,7 +14,9 @@ EFI_STATUS vmm_rt_unload (IN EFI_HANDLE image);
 EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image_handle, systab);
 
+#ifdef _QEMU
   qemu_send_address("82579LM.efi");
+#endif
 
   INFO("Experimental Intel 82579LM Ethernet driver initialization\n");
 
