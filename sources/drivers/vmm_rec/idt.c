@@ -93,7 +93,8 @@ void idt_create(void) {
 	struct idt_ptr host_idt_ptr;
 	idt_get_idt_ptr(&host_idt_ptr);
 	idt_dump(&host_idt_ptr);
-	cpu_write_idt(&host_idt_ptr);
+  // Still in the firmware, we do not need this IDT !
+	// cpu_write_idt(&host_idt_ptr);
 }
 
 void idt_get_guest_idt_ptr(struct idt_ptr *p) {
