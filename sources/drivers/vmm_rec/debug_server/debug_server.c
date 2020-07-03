@@ -17,11 +17,10 @@
 #define MAX_INFO_SIZE 1024
 
 // XXX
-#define BUF_SIZE          1500
-uint8_t buf2[BUF_SIZE];
+uint8_t buf2[ETHERNET_SIZE];
 union ethernet_buffer *buffer;
 void clear_buffer() {
-  memset(&buf2[0], 0, 1500);
+  memset(&buf2[0], 0, ETHERNET_SIZE);
   buffer = (union ethernet_buffer *)&buf2[0];
 }
 
