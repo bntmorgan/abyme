@@ -308,7 +308,7 @@ union vm_entry_interrupt_info {
   struct {
     uint32_t vector:8;
     uint32_t type:3;
-    uint32_t error_code:1;
+    uint32_t deliver_error_code:1;
     uint32_t _r0:19;
     uint32_t valid:1;
   };
@@ -319,7 +319,7 @@ union vm_exit_interrupt_info {
   struct {
     uint32_t vector:8;
     uint32_t type:3;
-    uint32_t error_code:1;
+    uint32_t error_code_valid:1;
     uint32_t nmi_blocking_due_to_iret:1;
     uint32_t _r0:18;
     uint32_t valid:1;

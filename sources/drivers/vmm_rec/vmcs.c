@@ -1091,11 +1091,11 @@ void vmcs_host_config_vm_exec_control_fields(void) {
   uint32_t procbased_ctls = ACT_SECONDARY_CONTROLS | USE_MSR_BITMAPS |
       USE_IO_BITMAPS | USE_TSC_OFFSETTING | CR3_LOAD_EXITING | HLT_EXITING;
   uint32_t procbased_ctls_2 = ENABLE_EPT | ENABLE_VPID | UNRESTRICTED_GUEST |
-      ENABLE_RDTSCP;
+      ENABLE_RDTSCP | ENABLE_INVPCID;
 
   uint64_t eptp;
 	//XXX
-  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER | NMI_EXITING;
+  uint32_t pinbased_ctls = ACT_VMX_PREEMPT_TIMER; // | NMI_EXITING;
       // | EXT_INTR_EXITING; // | NMI_EXITING;
 
   VMW(ctrls.ex.pin_based_vm_exec_control,
@@ -1117,9 +1117,14 @@ void vmcs_host_config_vm_exec_control_fields(void) {
   VMW(ctrls.ex.secondary_vm_exec_control,
       cpu_adjust32(procbased_ctls_2, MSR_ADDRESS_IA32_VMX_PROCBASED_CTLS2));
 
-  VMW(ctrls.ex.exception_bitmap, 0);
+  // We want no page faults reported cf doc Intel vol 3 25.2
+  VMW(ctrls.ex.exception_bitmap, ((uint32_t)1 << 0xe)); // Page fault vector number
   VMW(ctrls.ex.page_fault_error_code_mask, 0);
-  VMW(ctrls.ex.page_fault_error_code_match, 0);
+  VMW(ctrls.ex.page_fault_error_code_match, 0xffffffff);
+
+//  VMW(ctrls.ex.exception_bitmap, 0); // Page fault vector number
+//  VMW(ctrls.ex.page_fault_error_code_mask, 0);
+//  VMW(ctrls.ex.page_fault_error_code_match, 0);
 
   VMW(ctrls.ex.tsc_offset, 0);
 
@@ -1132,6 +1137,14 @@ void vmcs_host_config_vm_exec_control_fields(void) {
       ~msr_read(MSR_ADDRESS_VMX_CR4_FIXED1));
   VMW(ctrls.ex.cr4_read_shadow, cpu_read_cr4() &
       ~(uint64_t)(1<<13)); // We hide CR4.VMXE
+  INFO("Init: ctrls.ex.cr4_read_shadow: 0x%016X\n",
+      vmcs->ctrls.ex.cr4_read_shadow);
+  INFO("Init: ctrls.ex.cr4_guest_host_mask: 0x%016X\n",
+      vmcs->ctrls.ex.cr4_guest_host_mask);
+  INFO("Init: ctrls.ex.cr0_read_shadow: 0x%016X\n",
+      vmcs->ctrls.ex.cr0_read_shadow);
+  INFO("Init: ctrls.ex.cr0_guest_host_mask: 0x%016X\n",
+      vmcs->ctrls.ex.cr0_read_shadow);
 
   VMW(ctrls.ex.cr3_target_count, 0);
   VMW(ctrls.ex.cr3_target_value0, 0);
@@ -1285,6 +1298,10 @@ void vmcs_host_config_configure(void) {
   hc->revision_id = vmcs_revision_identifier;
   // Host configuration
   vmcs = hc; // We set the current vmcs for the VMW macro
+
+  // XXX
+  INFO("VMCS HC 0x%016X\n", vmcs);
+
   vmcs_host_config_host_state_fields();
 
   vmcs_host_config_guest_state_fields();

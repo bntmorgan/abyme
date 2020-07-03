@@ -268,31 +268,32 @@ void vmm_vms_init(void) {
 
 static uint8_t charged = 0;
 static int error_code = 0;
-static union vm_entry_interrupt_info iif;
+static union vm_entry_interrupt_info entry_iif;
 
-void vm_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code) {
+void vm_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code,
+    uint32_t error_code_valid) {
   INFO("Injection set vector(0x%02x), type(0x%02x), error_core(0x%x)\n", vector,
       type, error_code);
   if (charged) {
     INFO("Multiple event injection unsupported : loosing an interrupt \n");
   }
-  memset(&iif, 0, sizeof(union vm_entry_interrupt_info));
+  memset(&entry_iif, 0, sizeof(union vm_entry_interrupt_info));
   charged = 1;
-  iif.vector = vector;
-  iif.type = type;
-  if (error_code > 0 && (type == VM_ENTRY_INT_TYPE_SOFT_EXCEPTION || type ==
+  entry_iif.vector = vector;
+  entry_iif.type = type;
+  if (error_code_valid && (type == VM_ENTRY_INT_TYPE_SOFT_EXCEPTION || type ==
         VM_ENTRY_INT_TYPE_HW_EXCEPTION)) {
-    iif.error_code = 1;
+    entry_iif.deliver_error_code = 1;
     error_code = error_code;
   }
-  iif.valid = 1;
+  entry_iif.valid = 1;
 }
 
 void vm_interrupt_inject(void) {
   if (charged) {
     charged = 0;
-    VMW(ctrls.entry.intr_info_field, iif.raw);
-    if (iif.error_code) {
+    VMW(ctrls.entry.intr_info_field, entry_iif.raw);
+    if (entry_iif.deliver_error_code) {
       VMW(ctrls.entry.exception_error_code, error_code);
     }
     INFO("Event Injection in 0x%x!\n", level);
@@ -313,6 +314,29 @@ int vmm_host_redirect(uint32_t exit_reason, uint32_t exit_qualification, struct
       return io_bitmap_host_redirect((exit_qualification >> 16) & 0xffff);
   }
   return 1;
+}
+
+void vmm_dump_general_purpose_registers(struct registers *r) {
+  INFO("Guest registers:\n"
+      "  rax: 0x%016X\n"
+      "  rcx: 0x%016X\n"
+      "  rdx: 0x%016X\n"
+      "  rbx: 0x%016X\n"
+      "  rsp: 0x%016X\n"
+      "  rbp: 0x%016X\n"
+      "  rsi: 0x%016X\n"
+      "  rdi: 0x%016X\n"
+      "  r8:  0x%016X\n"
+      "  r9:  0x%016X\n"
+      "  r10: 0x%016X\n"
+      "  r11: 0x%016X\n"
+      "  r12: 0x%016X\n"
+      "  r13: 0x%016X\n"
+      "  r14: 0x%016X\n"
+      "  r15: 0x%016X\n"
+      "  rip: 0x%016X\n", r->rax, r->rcx, r->rdx, r->rbx, r->rsp, r->rbp
+     , r->rsi, r->rdi, r->r8, r->r9, r->r10, r->r11, r->r12, r->r13,
+      r->r14, r->r15, r->rip);
 }
 
 void vmm_handle_vm_exit(struct registers guest_regs) {
@@ -378,12 +402,12 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 // XXX Optimisation rappel de la NIM et EXternal interrupt
 //  } else if (exit_reason == EXIT_REASON_EXTERNAL_INTERRUPT) {
 //    VMR(info.intr_info);
-//    union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info.raw};
+//    union vm_exit_interrupt_info exit_iif = {.raw = vmcs->info.intr_info.raw};
 //    VMR(info.intr_error_code);
 //    uint32_t error_code = vmcs->info.intr_error_code.raw;
 //    INFO("External interrupt from 0x%x : \n  info(0x%x)\n  error_code(0x%x)\n",
-//        vm->index, iif.raw, error_code);
-//    if (iif.vector == 0xef) { // Local APIC timer
+//        vm->index, exit_iif.raw, error_code);
+//    if (exit_iif.vector == 0xef) { // Local APIC timer
 //      if (apic_get_mode() == APIC_MODE_X2APIC) {
 //        union apic_timer_register timer_ctrl = 
 //            {.raw = msr_read(MSR_ADDRESS_IA32_X2APIC_LVT_TIMER)};
@@ -401,15 +425,15 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
 //        }
 //      }
 //    }
-    // nested_interrupt_set(iif.vector, iif.type, error_code);
+    // nested_interrupt_set(exit_iif.vector, exit_iif.type, error_code);
     // nested_interrupt_inject();
 //  } else if (exit_reason == EXIT_REASON_EXCEPTION_OR_NMI) {
 //    INFO("NMI interrupt from 0x%x!\n", vm->index);
 //    VMR(info.intr_info);
-//    union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info.raw};
+//    union vm_exit_interrupt_info exit_iif = {.raw = vmcs->info.intr_info.raw};
 //    VMR(info.intr_error_code);
 //    uint32_t error_code = vmcs->info.intr_error_code.raw;
-//    nested_interrupt_set(iif.vector, iif.type, error_code);
+//    nested_interrupt_set(exit_iif.vector, exit_iif.type, error_code);
 //    return;
   } else if (exit_reason == EXIT_REASON_MONITOR_TRAP_FLAG) {
     return;
@@ -439,6 +463,12 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         guest_physical_addr < setup_state->protected_end) {
       INFO("EPT VIOLATION FOR ME!\n");
       // increment_rip(cpu_mode, &guest_regs);
+      // Display guest state
+      VMR(gs.rip);
+      VMR(gs.rsp);
+      INFO("rip(0x%016X), rsp(0x%016X)\n", rvm->vmcs->gs.rip.raw,
+          rvm->vmcs->gs.rsp.raw);
+      vmm_dump_general_purpose_registers(&guest_regs);
       ERROR("Unsupported EPT_VIOLATION\n");
       return;
     }
@@ -519,20 +549,49 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
       // We do not increment GUEST RIP !!!
       return;
     case EXIT_REASON_EXCEPTION_OR_NMI:
-      // XXX On réinjecte direct la NMI dans la VM et on voit
+      // XXX On réinjecte direct la NMI ou l'exception dans la VM et on voit
       // si ça a le swag
       //
       VMR(info.intr_info);
-      union vm_exit_interrupt_info iif = {.raw = vmcs->info.intr_info.raw};
+      union vm_exit_interrupt_info exit_iif = {.raw = vmcs->info.intr_info.raw};
       VMR(info.intr_error_code);
       uint32_t error_code = vmcs->info.intr_error_code.raw;
-      INFO("NMI from 0x%x : \n  info(0x%x)\n error_code(0x%x)\n",
-          vm->index, iif.raw, error_code);
+      INFO("NMI or exception from 0x%x : \n  info(0x%x)\n  error_code(0x%x)\n",
+          vm->index, exit_iif.raw, error_code);
+      INFO("Interrupt-Information field :\n"
+          "  Vector 0x%x\n"
+          "  Interruption type 0x%x\n"
+          "  Error code valid 0x%x\n"
+          "  NMI unblocking due to iret 0x%x\n"
+          "  Valid 0x%x\n",
+          exit_iif.vector, exit_iif.type, exit_iif.error_code_valid,
+          exit_iif.nmi_blocking_due_to_iret, exit_iif.valid);
+      // Print guest regs
+      vmm_dump_general_purpose_registers(&guest_regs);
+      // Walk the address
+      VMR(info.guest_linear_address);
+      VMR(gs.cr3);
+      VMR(gs.cr4);
+      VMR(gs.ia32_efer);
+      VMR(gs.rip);
+      // Note: virt_to_phys linux 5 x86 long mode : virt - 0xffffffff7ce00000
+      if (exit_iif.vector == 0xe) {
+        uint64_t paddr;
+        INFO("This is a page fault, linear address"
+            " should be in info.guest_linear_address field\n");
+        if (page_walk_long_mode(rvm->vmcs->gs.cr0.raw, rvm->vmcs->gs.cr3.raw,
+              rvm->vmcs->gs.cr4.raw, rvm->vmcs->gs.ia32_efer.raw,
+              rvm->vmcs->info.guest_linear_address.raw, &paddr)) {
+          INFO("GUEST RIP 0x@%016X -> @0x%016X\n", rvm->vmcs->gs.rip.raw, paddr);
+        } else {
+          INFO("Failed to walk the guest address\n");
+        }
+      }
       // Set interrupt
-      vm_interrupt_set(iif.vector, iif.type, error_code);
-      return; // ou break o voir si on doit incrémenter
-              // le rip ou d'autre chibreries
-      break;
+      vm_interrupt_set(exit_iif.vector, exit_iif.type, error_code,
+          exit_iif.error_code_valid);
+      // This is an exception of an NMI. Rip don't have to be incremented
+      return;
     case EXIT_REASON_VMXOFF:
       nested_vmxoff(&guest_regs);
       break;
@@ -808,6 +867,7 @@ void vmm_handle_vm_exit(struct registers guest_regs) {
         VMW(ctrls.ex.cr0_read_shadow, value);
         return;
       } else if (cr_num == 4) {
+        INFO("CR4 shadow 0x%016X\n",value);
         VMW(ctrls.ex.cr4_read_shadow, value);
         return;
       } else if (cr_num == 3) {
@@ -1034,7 +1094,8 @@ void vmm_adjust_vm_entry_controls(void) {
   if (charged) {
     VMR(gs.rflags);
     rflags = vmcs->gs.rflags;
-    if (rflags.IF) {
+    // CLI affects only non NMIs and non exception interrupts (vector > 31)
+    if (rflags.IF || entry_iif.vector < 32) {
       vm_interrupt_inject();
     } else {
       INFO("Can't inject an interrupt, IF is cleared\n");

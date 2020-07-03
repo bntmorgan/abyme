@@ -149,7 +149,8 @@ void vm_child_del(struct vm *pv, struct vm *cv);
 void vm_child_shadow_set(struct vm *v);
 void vm_child_shadow_get(struct vm *pv, struct vm **cv);
 
-void vm_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code);
+void vm_interrupt_set(uint8_t vector, uint8_t type, uint32_t error_code,
+    uint32_t error_code_valid);
 void vm_interrupt_inject(void);
 
 void vmm_mtf_unset(void);
