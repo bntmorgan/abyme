@@ -44,10 +44,10 @@ static inline uint16_t ntohs(uint16_t data) {
 void _api_dump_eth_frame(void *frame, uint32_t payload_len) {
   // Addresses
   INFO("MAC Addresses\n");
-  dump((void *)frame, 6, 12, 8, 0, 6);
+  dump((void *)frame, 6, 12, 8, 0, 6, 0);
   // Type
   INFO("Type\n");
-  dump(((void *)frame) + 12, 2, 2, 8, 0, 2);
+  dump(((void *)frame) + 12, 2, 2, 8, 0, 2, 0);
   // Payload
   INFO("Payload len %d\n", payload_len);
   // dump(((void *)frame) + sizeof(eth_header), 1, payload_len, 0, 1);

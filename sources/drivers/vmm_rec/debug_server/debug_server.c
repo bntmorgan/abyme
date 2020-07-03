@@ -485,7 +485,7 @@ int32_t debug_server_recv(void *buf, uint32_t len) {
     eth->eth_send(buffer, size2, 1);
   }
   SERIAL_INFO("0x%016X : Size of frame : 0x%x \n", tsc, size);
-  SERIAL_DUMP((void *)buf2, 4, size, 8, 0, 6);
+  SERIAL_DUMP((void *)buf2, 4, size, 8, 0, 6, 0);
   SERIAL_NEW_LINE;
   if (buffer->frame.eth_header.ethertype == ntohs(ETHERTYPE_IP) &&
       // buffer->frame.contents.udp.ip.proto == htons(0x11) &&

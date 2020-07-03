@@ -39,7 +39,7 @@ struct core_cr {
  * Fields is the address of a 16 bits fields structure
  */
 void dump(void *fields, uint32_t fds, uint32_t fdss, uint32_t fpl, uint64_t
-    offset, uint32_t step);
+    offset, uint32_t step, uint32_t little_endian);
 
 void dump_core_state(struct core_gpr *gpr, struct core_cr *cr);
 void read_core_state(struct core_gpr *gpr, struct core_cr *cr);

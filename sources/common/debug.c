@@ -97,7 +97,7 @@ void dump_core_state(struct core_gpr *gpr, struct core_cr *cr) {
 }
 
 void dump(void *fields, uint32_t fds, uint32_t fdss, uint32_t fpl, uint64_t
-    offset, uint32_t step) {
+    offset, uint32_t step, uint32_t little_endian) {
   uint32_t i, j;
   uint32_t cycles = fdss / fds;
   for (i = 0; i < cycles; i++) {
@@ -105,7 +105,11 @@ void dump(void *fields, uint32_t fds, uint32_t fdss, uint32_t fpl, uint64_t
       printk("%08x: ", i * step + offset);
     }
     for (j = 0; j < fds; j++) {
-      printk("%02x", *((uint8_t*)fields + i * fds + (fds - j - 1)));
+      if (little_endian) {
+        printk("%02x", *((uint8_t*)fields + i * fds + (fds - j - 1)));
+      } else {
+        printk("%02x", *((uint8_t*)fields + i * fds + j));
+      }
     }
     printk(" ");
     if (i % fpl == fpl - 1) {

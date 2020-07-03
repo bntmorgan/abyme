@@ -104,9 +104,9 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
       ((uint32_t)(uintptr_t)rom) | 1);
 
   INFO("BAR0 address (0x%08x)\n", bar0);
-  dump(bar0, 2, 0x10, 8, (uint32_t)(uintptr_t)bar0, 2);
+  dump(bar0, 2, 0x10, 8, (uint32_t)(uintptr_t)bar0, 2, 1);
   INFO("ROM address (0x%08x)\n", rom);
-  dump(rom, 2, 0x10, 8, (uint32_t)(uintptr_t)rom, 2);
+  dump(rom, 2, 0x10, 8, (uint32_t)(uintptr_t)rom, 2, 1);
 
   // Add an unload handler
   status = uefi_call_wrapper(BS->HandleProtocol, 4, &image_handle,
