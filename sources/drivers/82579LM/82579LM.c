@@ -64,11 +64,14 @@ uint8_t eth_set_bar0() {
 }
 
 uint8_t eth_disable_interrupts() {
-  uint16_t reg_imc = cpu_mem_readd(bar0 + REG_IMC);
+// uint16_t reg_imc = cpu_mem_readd(bar0 + REG_IMC);
   // Reset the card
-  reg_imc |=  IMC_RXT0 | IMC_MDAC | IMC_PHYINT | IMC_LSECPN | IMC_SRPD | IMC_ACK |
-    IMC_MNG;
-  cpu_mem_writed(bar0 + REG_IMC, reg_imc);
+  // XXX
+//  reg_imc |=  IMC_RXT0 | IMC_MDAC | IMC_PHYINT | IMC_LSECPN | IMC_SRPD | IMC_ACK |
+//    IMC_MNG;
+//  cpu_mem_writed(bar0 + REG_IMC, reg_imc);
+  cpu_mem_writed(bar0 + REG_IMC, 0xffffffff);
+  cpu_mem_readd(bar0 + REG_ICR);
 
   return 0;
 }
@@ -89,16 +92,19 @@ uint8_t eth_reset() {
   // uint32_t extcnf_ctrl;
   INFO("We reset the ethernet controller to ensure having a clear configuration\n");
   // Remove the lan init done
-  /*reg_status = cpu_mem_readd(bar0 + REG_STATUS);
-  cpu_mem_writed(bar0 + REG_STATUS, reg_status & ~(STATUS_LAN_INIT_DONE));
-  reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
-  cpu_mem_writed(bar0 + REG_CTRL, reg_ctrl);*/
+  INFO("Remove LAN init done\n");
+//  reg_status = cpu_mem_readd(bar0 + REG_STATUS);
+//  cpu_mem_writed(bar0 + REG_STATUS, reg_status & ~(STATUS_LAN_INIT_DONE));
+//  reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
+//  cpu_mem_writed(bar0 + REG_CTRL, reg_ctrl);
   // Reset the card
+  INFO("Reset card\n");
   reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
   cpu_mem_writed(bar0 + REG_CTRL, reg_ctrl | CTRL_SWRST);
   // Get control of the hardware
-  /*reg_ctrl_ext = cpu_mem_readd(bar0 + REG_CTRL_EXT);
-  cpu_mem_writed(bar0 + REG_CTRL_EXT, reg_ctrl_ext | CTRL_EXT_DRV_LOAD);*/
+//  INFO("Get control of hardware\n");
+//  reg_ctrl_ext = cpu_mem_readd(bar0 + REG_CTRL_EXT);
+//  cpu_mem_writed(bar0 + REG_CTRL_EXT, reg_ctrl_ext | CTRL_EXT_DRV_LOAD);
   wait(10000000);
   return 0;
 }
@@ -114,8 +120,9 @@ int eth_setup() {
   INFO("LOLZY Intel 82579LM ethernet controller found at %02x:%02x:%02x\n",
       addr.bus, addr.device, addr.function);
   uint32_t id = PCI_MAKE_ID(addr.bus, addr.device, addr.function);
+  uint16_t pci_config_command = pci_readw(id, PCI_CONFIG_COMMAND);
   // Powerup PIO & MMI_extO
-  pci_writew(id, PCI_CONFIG_COMMAND, 0x7);
+  pci_writew(id, PCI_CONFIG_COMMAND, pci_config_command | 0x4); // Set BME bit
   pci_writeb(id, PCI_CONFIG_INTERRUPT_LINE, 0x5);
   pci_get_device_info(&info, id);
   pci_get_device_info_ext(&info_ext, id);
@@ -193,7 +200,7 @@ int eth_init() {
   eth_reset();
   eth_disable_interrupts();
   // Gain acces to the shared registers
-  /*extcnf_ctrl = cpu_mem_readd(bar0 + REG_EXTCNF_CTRL);
+  /* uint32_t extcnf_ctrl = cpu_mem_readd(bar0 + REG_EXTCNF_CTRL);
   extcnf_ctrl &= ~EXTCNF_CNTRL_GATEPHYCONF;
   cpu_mem_writed(bar0 + REG_EXTCNF_CTRL, extcnf_ctrl | EXTCNF_CTRL_SWFLAG);*/
   INFO("Initializing ethernet\n");
@@ -214,14 +221,13 @@ int eth_init() {
   memcpy(&proto.mac_addr[0], &laddr.n[0], 6);
   INFO("MAC addr %02x:%02x:%02x:%02x:%02x:%02x\n", laddr.n[0],
       laddr.n[1], laddr.n[2], laddr.n[3], laddr.n[4], laddr.n[5]);
-  // cpu_mem_writed(bar0 + REG_CTRL, cpu_mem_readd(bar0 + REG_CTRL) | CTRL_SLU);
+  // Set interface link up !
+  cpu_mem_writed(bar0 + REG_CTRL, cpu_mem_readd(bar0 + REG_CTRL) | CTRL_SLU);
   // Clear Multicast Table Array
   int32_t i;
   for (i = 0; i < 128; ++i) {
     cpu_mem_writed(bar0 + REG_MTA + (i * 4), 0);
   }
-  // Clear all interrupts
-  cpu_mem_readd(bar0 + REG_ICR);
   // Receive setup
   for (i = 0; i < RX_DESC_COUNT; i++) {
     uint8_t *buf = rx_bufs + (i * NET_BUF_SIZE);
@@ -232,7 +238,7 @@ int eth_init() {
   }
   cpu_mem_writed(bar0 + REG_RDBAL, (uintptr_t)rx_descs);
   cpu_mem_writed(bar0 + REG_RDBAH, (uintptr_t)rx_descs >> 32);
-  cpu_mem_writed(bar0 + REG_RDLEN, RX_DESC_COUNT * 16);
+  cpu_mem_writed(bar0 + REG_RDLEN, RX_DESC_COUNT * sizeof(recv_desc));
   cpu_mem_writed(bar0 + REG_RDH, 0);
   cpu_mem_writed(bar0 + REG_RDT, RX_DESC_COUNT - 1);
   cpu_mem_writed(bar0 + REG_RCTL, RCTL_EN | RCTL_SBP | /*RCTL_UPE | RCTL_MPE
@@ -244,28 +250,30 @@ int eth_init() {
     //INFO("@0x%x tx_desc[0x%x]{addr: 0x%x, status: 0x%x}\n", tx_desc, i, tx_desc->addr, tx_desc->status);
   }
   cpu_mem_writed(bar0 + REG_TDBAL, (uintptr_t)tx_descs);
-  cpu_mem_writed(bar0 + REG_TDBAH, 0);
-  cpu_mem_writed(bar0 + REG_TDLEN, TX_DESC_COUNT * 16);
+  cpu_mem_writed(bar0 + REG_TDBAH, (uintptr_t)tx_descs >> 32);
+  cpu_mem_writed(bar0 + REG_TDLEN, TX_DESC_COUNT * sizeof(trans_desc));
   cpu_mem_writed(bar0 + REG_TDH, 0);
   cpu_mem_writed(bar0 + REG_TDT, 0);
-  cpu_mem_writed(bar0 + REG_TCTL, TCTL_EN | TCTL_PSP | (15 << TCTL_CT_SHIFT)
-      | (64 << TCTL_COLD_SHIFT) | TCTL_RTLC);
+//  cpu_mem_writed(bar0 + REG_TCTL, TCTL_EN | TCTL_PSP | (15 << TCTL_CT_SHIFT)
+//      | (64 << TCTL_COLD_SHIFT) | TCTL_RTLC);
+  cpu_mem_writed(bar0 + REG_TCTL, TCTL_EN | TCTL_PSP | TCTL_RTLC);
   // Finally dump the registers
-  /*eth_print_registers_general();
+  eth_print_registers_general();
   eth_print_registers_interrupt();
   eth_print_registers_receive();
-  eth_print_registers_transmit();*/
-  // eth_print_registers_statistic();
+  eth_print_registers_transmit();
+  eth_print_registers_statistic();
   return 0;
 }
 
 static inline void eth_wait_tx(uint8_t idx) {
   trans_desc *tx_desc = tx_descs + idx;
   // Wait until the packet is send
+  INFO("WAIT status idx(0x%x), status(0x%x)\n", idx, tx_desc->status & 0xf);
 	// XXX
   while (!(tx_desc->status & 0xf)) {
-    wait(1000000);
-    //INFO("WAIIT lol\n");
+    wait((uint64_t)100000000000);
+    INFO("WAIT status idx(0x%x), status(0x%x)\n", idx, tx_desc->status & 0xf);
   }
 }
 
@@ -288,10 +296,16 @@ void eth_send(const void *buf, uint16_t len, uint8_t block) {
 
   // Increment the current tx decriptor
   idx = (idx + 1) & (TX_DESC_COUNT - 1);
+  INFO("TX idx 0x%x\n", idx);
   cpu_mem_writed(bar0 + REG_TDT, idx);
+  // Should be before the incrementation instead we wait for the next, which is
+  // true until the queue might be full
   if (block) {
     eth_wait_tx(idx);
   }
+  eth_print_all();
+  eth_print_tx_descs();
+  eth_print_rx_descs();
 }
 
 static inline void eth_wait_rx(uint8_t idx) {
@@ -340,9 +354,10 @@ uint32_t eth_recv(void *buf, uint32_t len, uint8_t block) {
 }
 
 int eth_get_device() {
-  return pci_get_device(ETH_VENDOR_ID, 0x100f, &addr) &&
+  return pci_get_device(ETH_VENDOR_ID, 0x1570, &addr) &&
     pci_get_device(ETH_VENDOR_ID, 0x153A, &addr) &&
     pci_get_device(ETH_VENDOR_ID, 0x100e, &addr) &&
+    pci_get_device(ETH_VENDOR_ID, 0x100f, &addr) &&
     pci_get_device(ETH_VENDOR_ID, 0x1502, &addr);
 }
 
@@ -490,4 +505,35 @@ void eth_print_registers_statistic() {
   INFO("REG_BPTC : 0x%08x\n", cpu_mem_readd(bar0 + REG_BPTC));
   INFO("REG_TSCTC : 0x%08x\n", cpu_mem_readd(bar0 + REG_TSCTC));
   INFO("REG_IAC : 0x%08x\n", cpu_mem_readd(bar0 + REG_IAC));
+}
+
+void eth_print_tx_descs(void) {
+  int i;
+  INFO("--== transmit descriptors ==--\n");
+  for (i = 0; i < TX_DESC_COUNT; i++) {
+    trans_desc *d = tx_descs + i;
+    INFO("tx_desc(addr = %x, len = %x, cso = %x, cmd = %x, status = %x, "
+        "css = %x, special = %x)\n", d->addr, d->len, d->cso, d->cmd, d->status,
+        d->css, d->special);
+  }
+}
+
+void eth_print_rx_descs(void) {
+  int i;
+  INFO("--== receive descriptors ==--\n");
+  for (i = 0; i < RX_DESC_COUNT; i++) {
+    recv_desc *d = rx_descs + i;
+    INFO("tx_desc(addr = %x, len = %x, checksum = %x, status = %x, "
+        "errors = %x, special = %x)\n", d->addr, d->len, d->checksum, d->status,
+        d->errors, d->special);
+  }
+}
+
+void eth_print_all(void) {
+  eth_print_registers_general();
+  eth_print_registers_interrupt();
+  eth_print_registers_receive();
+  eth_print_registers_transmit();
+  eth_print_registers_statistic();
+  eth_print_tx_descs();
 }

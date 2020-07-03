@@ -100,7 +100,7 @@ uint32_t recv(void *buf, uint32_t len, uint8_t flags) {
   }
   // Get the header
   eth_header *eh = (eth_header *)frame; 
-  // _api_dump_eth_frame(frame, l);
+  _api_dump_eth_frame(frame, l);
   if (ntohs(eh->type) != API_ETH_TYPE){
     return -1;
   }

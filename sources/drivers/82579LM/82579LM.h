@@ -226,7 +226,7 @@ extern protocol_82579LM proto;
 
 //#define ETH_DEVICE_ID 0x1502 // 82579LM
 // #define ETH_DEVICE_ID 0x153A // I217-LM
-#define ETH_DEVICE_ID 0x100e // e1000
+// #define ETH_DEVICE_ID 0x100e // e1000
 // #define ETH_DEVICE_ID 0x100f // VMware : Intel 82545EM
 
 #define RX_DESC_COUNT                   32
@@ -320,6 +320,10 @@ void eth_print_registers_general();
 void eth_print_registers_interrupt();
 void eth_print_registers_receive();
 void eth_print_registers_transmit();
+void eth_print_registers_statistic();
+void eth_print_tx_descs();
+void eth_print_rx_descs();
+void eth_print_all();
 
 void eth_send(const void *buf, uint16_t len, uint8_t block);
 uint32_t eth_recv(void *buf, uint32_t len, uint8_t block);

@@ -28,15 +28,15 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
     return EFI_NOT_FOUND;
   }
 
-  // Add an unload handler
   EFI_STATUS status;
-  EFI_LOADED_IMAGE *image;
-  status = uefi_call_wrapper(BS->HandleProtocol, 4, &image_handle,
-      &LoadedImageProtocol, (void*)&image);
-  ASSERT (!EFI_ERROR(status));
-  image->Unload = vmm_rt_unload;
-
-  INFO("Unload handler added %x\n", (uintptr_t)image_handle);
+//  // Add an unload handler
+//  EFI_LOADED_IMAGE *image;
+//  status = uefi_call_wrapper(BS->HandleProtocol, 4, &image_handle,
+//      &LoadedImageProtocol, (void*)&image);
+//  ASSERT (!EFI_ERROR(status));
+//  image->Unload = vmm_rt_unload;
+//
+//  INFO("Unload handler added %x\n", (uintptr_t)image_handle);
 
   // Share the pci address in the uefi protocol
   pci_device_addr *pci_addr = eth_get_pci_addr();
@@ -53,7 +53,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   // Copy the image handle for protocol uninstallation
   ih = image_handle;
 
-  eth_disable_debug();
+  // eth_disable_debug();
 
   return status;
 }

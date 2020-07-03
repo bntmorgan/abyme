@@ -179,6 +179,9 @@ int pci_get_device(uint32_t vendor_id, uint32_t device_id, pci_device_addr *addr
         }
       }
     }
+    if (ok) {
+      break;
+    }
   }
   if (ok) {
     return 0;
