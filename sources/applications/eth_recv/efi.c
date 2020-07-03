@@ -2,6 +2,9 @@
 #include <efilib.h>
 
 #include "efi/efi_82579LM.h"
+#include "debug.h"
+
+#include "stdio.h"
 
 EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image, systab);
@@ -16,16 +19,13 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   }
 
   uint32_t i;
-  uint16_t len = 0x100;
-  uint8_t buf[0x100];
+  uint16_t len = 0x2000;
+  uint8_t buf[len];
   uint32_t nb = 16;
   for (i = 0; i < nb; i++) {
-    // TODO Pourquoi uefi_call_wrapper ne marche pas ??
-    //uefi_call_wrapper(eth->send, 3, buf, len, 0);
-    uint32_t l = eth->recv(buf, len, EFI_82579LM_API_BLOCK);
-    if (l == -1) {
-      Print(L"Receive fail\n");
-    }
+    INFO("REceiving with new ehternet API !\n");
+    uint32_t size = eth->eth_recv(buf, len, EFI_82579LM_API_BLOCK);
+    dump(buf, 2, size, 8, (uint32_t)(uintptr_t)buf, 2, 0);
   }
 
   Print(L"Pointeur du service eth %x\n", eth);
