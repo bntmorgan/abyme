@@ -130,7 +130,7 @@ void idt_dump(struct idt_ptr *p) {
    INFO(#__T__ "\n");
 
 void idt_decode(struct idt_isr_stack *is) {
-	INFO("int number 0x%x\n", is->number);
+  INFO("int number 0x%x\n", is->number);
   INFO("ERROR CODE 0x%x\n", is->error_code);
   INFO("RIP 0x%x\n", is->rip);
   INFO("cs 0x%x\n", is->cs);
@@ -223,7 +223,8 @@ void idt_decode(struct idt_isr_stack *is) {
     INFO("Injection of interruption\n");
     // XXX if no vm is launched
     if (rvm != NULL) {
-      vm_interrupt_set(is->number, VM_ENTRY_INT_TYPE_EXT_INT, is->error_code);
+      vm_interrupt_set(is->number, VM_ENTRY_INT_TYPE_EXT_INT, is->error_code,
+          is->error_code_valid);
     }
   }
 }

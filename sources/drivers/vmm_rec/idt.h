@@ -20,6 +20,7 @@ struct idt_gdsc {
 
 struct idt_isr_stack {
   uint64_t number;
+  uint8_t error_code_valid;
   uint64_t error_code;
   uint64_t rip;
   uint64_t cs;

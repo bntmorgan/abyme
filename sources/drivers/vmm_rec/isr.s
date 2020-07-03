@@ -12,16 +12,20 @@ _isr\@:
 .if (\@ - 8 && \@ - 10 && \@ - 11 && \@ - 12 && \@ - 13 && \@ - 14 && \@ - 17)
   // cli
   pushq $0x0
+  // error code not valid
+  pushq $0x0
   pushq $\@
   callq interrupt_handler
-  addq $0x10, %rsp
+  addq $0x18, %rsp
   // sti
   iretq
 .else
   // cli
+  // error code is valid
+  pushq $0x1
   pushq $\@
   callq interrupt_handler
-  addq $0x8, %rsp
+  addq $0x10, %rsp
   // sti
   iretq
 .endif
