@@ -81,7 +81,7 @@ $(BINARY_DIR)/%.efi: $(BINARY_DIR)/%.elf
 #		$< $<.stripped \
 #		2>&1 | grep -v 'warning: empty loadable segment detected' || true
 #	@../linux/app/binary/elf2efi/elf2efi $<.stripped $@
-	@objcopy -j .text -j .sdata -j .data \
+	@objcopy -j .padding_begin -j .text -j .sdata -j .data \
 		-j .dynamic -j .dynsym  -j .rel \
 		-j .rela -j .reloc -j .padding_end \
 		$(OBJCPY_FLAGS_TARGET) \
