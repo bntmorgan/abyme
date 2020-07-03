@@ -86,18 +86,31 @@ BIOS=" \
 MACHINE="-cpu host -enable-kvm"
 #MACHINE="-machine q35,smm=on,accel=tcg"
 
+NET="\
+  -netdev tap,id=net0,ifname=tap-hv,script=no,downscript=no \
+  -device e1000,netdev=net0 \
+  "
+#NET="\
+#  -netdev user,id=net0 \
+#  -device e1000,netdev=net0 \
+#  "
+
+#CDROM=" \
+#  -cdrom img-arch/arch.iso
+#  "
+CROM=""
+
 $QEMU \
   $MACHINE \
   -m 4G \
-  -smp 4,sockets=1,cores=4,threads=1 \
+  -smp 1,sockets=1,cores=1,threads=1 \
   -chardev pty,id=charserial1 \
   -device isa-serial,chardev=charserial1,id=serial1 \
-  -netdev tap,id=net0,ifname=tap-hv,script=no,downscript=no \
-  -device e1000,netdev=net0 \
+  $NET \
+  $CDROM \
   -drive file=fat:rw:img/hda-contents,format=raw \
-  -cdrom img-arch/arch.iso \
-  $BIOS \
   -drive file=img-arch/vdisk.qcow2 \
+  $BIOS \
   -debugcon file:debug.log \
   -global isa-debugcon.iobase=0x402 \
   -s -S
