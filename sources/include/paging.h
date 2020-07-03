@@ -31,6 +31,9 @@ int paging_iterate(uint64_t cr3, int (*cb)(uint64_t *, uint64_t, uint8_t));
  * the type of the frame and of course, the physical address.
  */
 int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **entry, uint64_t *address, uint8_t *type);
+// Other safe implementation of long mode paging walk
+int page_walk_long_mode(uint64_t cr0, uint64_t cr3, uint64_t cr4, uint64_t
+    ia32_efer, uint64_t vaddr, uint64_t *paddr);
 
 /**
  * Return the frame address according to the entry type

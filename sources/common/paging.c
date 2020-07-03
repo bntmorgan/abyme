@@ -222,3 +222,89 @@ int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **e, uint64_t *a, uint8_
   *s = PAGING_ENTRY_PTE;
   return 0;
 }
+
+int page_walk_long_mode(uint64_t cr0, uint64_t cr3, uint64_t cr4, uint64_t
+    ia32_efer, uint64_t vaddr, uint64_t *paddr) {
+  uint64_t page;
+
+  INFO("Walking @0x%016X\n", vaddr);
+
+  INFO("IA32_EFER 0x%08x\n", ia32_efer);
+  INFO("CR0 0x%08x\n", cr0);
+  INFO("CR4 0x%08x\n", cr4);
+
+  // LMA LME
+  INFO("IA32_EFER.LMA %d\n", (ia32_efer >> 10) & 1);
+  INFO("IA32_EFER.LME %d\n", (ia32_efer >> 8) & 1);
+
+  // PE PG
+  INFO("CR0.PG %d\n", (cr0 >> 31) & 1);
+  INFO("CR0.PE %d\n", (cr0 >> 0) & 1);
+
+  // PAE LA57
+  INFO("CR4.PAE %d\n", (cr4 >> 5) & 1);
+  INFO("CR4.LA57 %d\n", (cr4 >> 12) & 1);
+
+  // IF ia32e paging && no 5 level paging (cr4.LA57 == 0)
+  if (((ia32_efer >> 10) & 1) && ((cr4 >> 12) & 1) == 0) {
+    page = cr3 & ~((long int)0xfff);
+    INFO("CR3 0x%016X\n", page);
+
+    __asm__ __volatile__("mov (%%eax, %%ebx, 8), %%rax": "=a"(page) : "a"(page),
+        "b"((vaddr >> (12 + 3 * 9) ) & 0x1ff));
+    INFO("PML4E 0x%016X\n", page);
+    if (!((page >> 0) & 1)) {
+      INFO("PML4E not present\n");
+      goto fail;
+    }
+    page = page & ~((long int)0xfff);
+
+    __asm__ __volatile__("mov (%%eax, %%ebx, 8), %%rax": "=a"(page) : "a"(page),
+        "b"((vaddr >> (12 + 2 * 9) ) & 0x1ff));
+    INFO("PDPTE 0x%016X\n", page);
+    if (!((page >> 0) & 1)) {
+      INFO("PDPTE not present\n");
+      goto fail;
+    }
+    if ((page >> 7) & 1) {
+      *paddr = ((page & ~((long int)0x3fffffff | ((long int)0xfff << 52))) |
+          (vaddr & 0x3fffffff));
+      INFO("PDPTE 1 GB mapped @0x%016X\n", *paddr);
+      goto ok;
+    }
+    page = page & ~((long int)0xfff);
+
+    __asm__ __volatile__("mov (%%eax, %%ebx, 8), %%rax": "=a"(page) : "a"(page),
+        "b"((vaddr >> (12 + 1 * 9) ) & 0x1ff));
+    INFO("PDE 0x%016X\n", page);
+    if (!((page >> 0) & 1)) {
+      INFO("PDE not present\n");
+      goto fail;
+    }
+    if ((page >> 7) & 1) {
+      *paddr = ((page & ~((long int)0x1fffff | ((long int)0xfff << 52))) |
+          (vaddr & 0x1fffff));
+      INFO("PDE 2 MB mapped @0x%016X\n", *paddr);
+      goto ok;
+    }
+    page = page & ~((long int)0xfff);
+
+    __asm__ __volatile__("mov (%%eax, %%ebx, 8), %%rax": "=a"(page) : "a"(page),
+        "b"((vaddr >> (12 + 0 * 9) ) & 0x1ff));
+    INFO("PTE 0x%016X\n", page);
+    if (!((page >> 0) & 1)) {
+      INFO("PTE not present\n");
+      goto fail;
+    }
+    *paddr = ((page & ~((long int)0xfff | ((long int)0xfff << 52))) |
+        (vaddr & 0xfff));
+    INFO("PTE 4kB mapped @0x%016X\n", *paddr);
+    goto ok;
+  }
+
+fail:
+  return 0;
+
+ok:
+  return 1;
+}
