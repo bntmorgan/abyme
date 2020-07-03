@@ -281,7 +281,9 @@ void ept_create_tables(uint64_t protected_begin, uint64_t protected_end) {
   // Protect the VMM memory space
   // Map 4kB pages for all contexts
   for (m = 0; m < VM_NB; m++) {
-    ept_perm(p_begin, (p_end - p_begin) >> 12, 0x0, m);
+    // XXX firware is reading our image to build physical memory space asked by
+    // linux @see RuntimeDriverSetVirtualAddressMap
+    ept_perm(p_begin, (p_end - p_begin) >> 12, 0x1, m);
   }
 
   // Compute the cache policy thanks to the mtrrs ranges
