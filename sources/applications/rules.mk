@@ -2,6 +2,8 @@ sp 		:= $(sp).x
 dirstack_$(sp)	:= $(d)
 d		:= $(dir)
 
+dir	:= $(d)/elf_loader
+include	$(dir)/rules.mk
 dir	:= $(d)/netboot
 include	$(dir)/rules.mk
 dir	:= $(d)/challenge_cpuid

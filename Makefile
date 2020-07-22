@@ -42,8 +42,12 @@ endif
 
 LD_FLAGS_SCRIPT = -T $(EFI_LDS)
 
-LD_FLAGS_ALL		= -nostdlib $(LD_FLAGS_SCRIPT) -shared -Bsymbolic $(EFI_LIBS_INCLUDE) \
-		$(EFI_CRT_OBJS) -znocombreloc -fPIC --no-undefined -fPIE
+LD_FLAGS_ALL		= $(LD_FLAGS_SCRIPT) -nostdlib -shared -Bsymbolic -znocombreloc -fPIC \
+		--no-undefined -fPIE
+
+LD_FLAGS_EFI		= $(EFI_LIBS_INCLUDE) $(EFI_CRT_OBJS)
+
+LD_FLAGS_ELF		=
 
 define SRC_2_OBJ
   $(foreach src,$(1),$(patsubst sources/%,$(BUILD_DIR)/%,$(src)))
@@ -73,24 +77,18 @@ $(BUILD_DIR)/%.o: sources/%.c
 	@mkdir -p $(dir $@)
 	@$(CC) $(CC_FLAGS_ALL) $(CC_FLAGS_TARGET) -o $@ -c $<
 
-$(BINARY_DIR)/%.efi: $(BINARY_DIR)/%.elf
+$(BINARY_DIR)/%.efi: $(BINARY_DIR)/%.efi.elf
 	@echo "[OC] $@"
-#	@LANG=en objcopy -j .padding_begin -j .text -j .sdata -j .data \
-#		-j .padding_begin -j .text -j .sdata -j .data -j .symtab \
-#		-j .rel -j .reloc -j .padding_end \
-#		$< $<.stripped \
-#		2>&1 | grep -v 'warning: empty loadable segment detected' || true
-#	@../linux/app/binary/elf2efi/elf2efi $<.stripped $@
 	@objcopy -j .padding_begin -j .text -j .sdata -j .data \
 		-j .dynamic -j .dynsym  -j .rel \
 		-j .rela -j .reloc -j .padding_end \
 		$(OBJCPY_FLAGS_TARGET) \
 	  $< $@
 
-$(BINARY_DIR)/%.elf:
+$(BINARY_DIR)/%.efi.elf:
 	@echo "[LD] $@"
 	@mkdir -p $(dir $@)
-	@$(LD) $(LD_FLAGS_ALL) $(LD_OBJECTS) -o $@ $(EFI_LIBS_TARGET) $(EFI_LIBS)
+	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_EFI) $(LD_OBJECTS) -o $@ $(EFI_LIBS_TARGET) $(EFI_LIBS)
 
 $(BINARY_DIR)/%.a:
 	@echo "[AR] $@"
@@ -107,18 +105,6 @@ info:
 	@echo Objects [$(OBJECTS)]
 
 usb: all mount $(patsubst $(BINARY_DIR)/%, /mnt/EFI/%, $(TARGETS)) shell umount
-
-#/mnt/kvm.ko: ../muse/linux-4.1.6/arch/x86/kvm/kvm.ko
-#	sudo cp $^ $@
-#
-#/mnt/kvm-intel.ko: ../muse/linux-4.1.6/arch/x86/kvm/kvm-intel.ko
-#	sudo cp $^ $@
-#
-#../muse/linux-4.1.6/arch/x86/kvm/kvm.ko:
-#	make -C ../muse/linux-4.1.6
-#
-#../muse/linux-4.1.6/arch/x86/kvm/kvm-intel.ko:
-#	make -C ../muse/linux-4.1.6
 
 shell:
 	sudo cp sources/shell_scripts/*.nsh /mnt
@@ -160,34 +146,5 @@ pre-launch:
 	cp img/hda-contents/startup{-qemu,}.nsh
 	./run_qemu.sh
 
-		# -bios /usr/share/ovmf/ovmf_x64.bin -m 8G
 launch: pre-launch
 	./run_qemu.sh
-#	qemu-system-x86_64 \
-#		-enable-kvm \
-#		-cpu host \
-#		-bios /usr/share/ovmf/x64/OVMF_CODE.fd \
-#		-L . \
-#		-m 8G \
-#		-drive file=fat:rw:img/hda-contents,format=raw \
-#		-cdrom img_arch/arch.iso \
-#		-drive file=img_arch/vdisk.qcow2 \
-#		-net nic,model=e1000 \
-#		-net tap,ifname=tap99,script=no,downscript=no \
-#		-debugcon file:debug.log \
-#		-global isa-debugcon.iobase=0x402 \
-#		-smp 1 \
-#		-S -s
-# 	qemu-system-x86_64 \
-# 		-bios /usr/share/ovmf/ovmf_code_x64.bin \
-# 		-L . \
-# 		-m 8G \
-# 		-drive file=fat:rw:img/hda-contents \
-# 		-cdrom img_arch/arch.iso \
-# 		-drive file=img_arch/vdisk.qcow2 -enable-kvm \
-# 		-cpu host -net nic,model=e1000 \
-# 		-net tap,ifname=tap99,script=no,downscript=no \
-# 		-net user,vlan=1 -net nic,vlan=1,model=e1000 -smp 1 \
-# 		-net dump -monitor stdio \
-# 		-gdb tcp::9999
-										

@@ -2,8 +2,8 @@ sp              := $(sp).x
 dirstack_$(sp)  := $(d)
 d               := $(dir)
 
-TARGET					:= $(call SRC_2_BIN, $(d)/efi.efi)
-TARGET_ELF					:= $(call SRC_2_BIN, $(d)/efi.elf)
+TARGET					:= $(call SRC_2_BIN, $(d)/$(notdir $(dir)).efi)
+TARGET_ELF		  := $(call SRC_2_BIN, $(d)/$(notdir $(dir)).efi.elf)
 TARGETS 				+= $(call SRC_2_BIN, $(TARGET))
 OBJS_$(d)				:= $(call SRC_2_OBJ, \
 										$(d)/efi.o $(d)/common/msr.o $(d)/smp.o $(d)/gdt.o $(d)/trampoline.o $(d)/common/string.o $(d)/common/screen.o $(d)/common/stdio.o $(d)/common/stdlib.o $(d)/common/cpu.o)
