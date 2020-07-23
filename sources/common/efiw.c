@@ -8,16 +8,31 @@ int efi_loaded_image_info(EFI_HANDLE image_handle, struct efi_loaded_image
   EFI_GUID guid = LOADED_IMAGE_PROTOCOL;
 
   efiw_status = uefi_call_wrapper(BS->HandleProtocol, 3, image_handle, &guid,
-      &img); 
+      &img);
 
-  if (!EFI_ERROR (efiw_status)) {
+  if (!EFI_ERROR(efiw_status)) {
     eli->start = (uint64_t)img->ImageBase;
     eli->end = eli->start + img->ImageSize;
+    eli->options = img->LoadOptions;
+    eli->options_size = img->LoadOptionsSize;
   }
   return efiw_status;
 }
 
 int efi_execute_image(EFI_HANDLE parent_image, uint8_t *buf, uint32_t size) {
+  EFI_HANDLE image_handle;
+  EFI_STATUS status;
+  status = uefi_call_wrapper(ST->BootServices->LoadImage, 6, 0, parent_image, 0,
+      buf, size, &image_handle);
+  if (status) {
+    return status;
+  }
+  status = uefi_call_wrapper(ST->BootServices->StartImage, 3, image_handle, 0,
+      0);
+  return status;
+}
+
+int efi_load_file(EFI_HANDLE parent_image, uint8_t *buf, uint32_t size) {
   EFI_HANDLE image_handle;
   EFI_STATUS status;
   status = uefi_call_wrapper(ST->BootServices->LoadImage, 6, 0, parent_image, 0,
@@ -51,9 +66,33 @@ void *efi_allocate_pool(uint64_t size) {
   return buf;
 }
 
+void efi_free_pool(void *pool) {
+  efiw_status = uefi_call_wrapper(ST->BootServices->FreePool, 1, pool);
+}
+
 void efi_reset_system(void) {
   efiw_status = uefi_call_wrapper(ST->RuntimeServices->ResetSystem, 4,
       EfiResetCold, EFI_SUCCESS, 0, NULL);
+}
+
+void *efi_allocate_pages_at(void *addr, uint64_t count) {
+  // allocate the page tables
+  efiw_status = uefi_call_wrapper(ST->BootServices->AllocatePages, 4,
+      AllocateAddress, EfiRuntimeServicesData, count, &addr);
+  switch (efiw_status) {
+    case EFI_SUCCESS:
+      break;
+    case EFI_OUT_OF_RESOURCES:
+      return NULL;
+    case EFI_INVALID_PARAMETER:
+      return NULL;
+    case EFI_NOT_FOUND:
+      return NULL;
+    default:
+      // Unrecognized error code
+      return NULL;
+  }
+  return (void *)addr;
 }
 
 void *efi_allocate_pages(uint64_t count) {
