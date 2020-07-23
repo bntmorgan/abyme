@@ -42,10 +42,10 @@ endif
 
 LD_FLAGS_SCRIPT = -T $(EFI_LDS)
 
-LD_FLAGS_ALL		= $(LD_FLAGS_SCRIPT) -nostdlib -shared -Bsymbolic -znocombreloc -fPIC \
-		--no-undefined -fPIE
+LD_FLAGS_ALL		= $(LD_FLAGS_SCRIPT) -nostdlib -Bsymbolic -znocombreloc \
+		--no-undefined
 
-LD_FLAGS_EFI		= $(EFI_LIBS_INCLUDE) $(EFI_CRT_OBJS)
+LD_FLAGS_EFI		= -shared -fPIC -fPIE $(EFI_LIBS_INCLUDE) $(EFI_CRT_OBJS)
 
 LD_FLAGS_ELF		=
 
@@ -84,6 +84,16 @@ $(BINARY_DIR)/%.efi: $(BINARY_DIR)/%.efi.elf
 		-j .rela -j .reloc -j .padding_end \
 		$(OBJCPY_FLAGS_TARGET) \
 	  $< $@
+
+$(BINARY_DIR)/%.bin: $(BINARY_DIR)/%.elf
+	@echo "[OC] $@"
+	@mkdir -p $(dir $@)
+	@objcopy -j .text -j .bss -j .data -O binary $^ $@
+
+$(BINARY_DIR)/%.elf:
+	@echo "[LD] $@"
+	@mkdir -p $(dir $@)
+	@$(LD) $(LD_FLAGS_ALL) $(LD_FLAGS_ELF) $(LD_OBJECTS) -o $@
 
 $(BINARY_DIR)/%.efi.elf:
 	@echo "[LD] $@"
