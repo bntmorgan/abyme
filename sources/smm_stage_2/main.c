@@ -8,6 +8,10 @@ struct kernel_state {
 
 int initialized = 0;
 
+int toto = 4;
+
+struct kernel_state state;
+
 // Initialize kernel
 void kernel_init(void) {
 }

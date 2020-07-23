@@ -72,14 +72,7 @@ typedef struct {
 #define R_X86_64_RELATIVE	8
 #define EM_X86_64		62
 
-uint64_t elf64_get_size(void *header);
-
-uint64_t elf64_get_alignment(void *header);
-
-uint64_t elf64_get_entry(void *header);
-
-void elf64_load_relocatable_segment(void *header, void *destination);
-
 Elf64_Phdr *elf64_get_segment(Elf64_Ehdr *elf64_header, uint32_t index);
+void elf64_init_bss(Elf64_Ehdr *elf64_header);
 
 #endif

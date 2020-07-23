@@ -20,8 +20,7 @@ hook:
   push %rax
 
   sub $0x8, %rsp
-  movl $0x00100000, 4(%rsp)
-  movl $0x00000000, 0(%rsp)
+  pushq $0x100000
   // Call hook
   call *(%rsp)
   add $0x8, %rsp

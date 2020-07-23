@@ -191,6 +191,10 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
     memcpy(location, (char *)src, phdr->p_filesz);
   }
 
+  // Initialize bss
+  INFO("Initializing bss section...\n");
+  elf64_init_bss(elf64_header);
+
   // Call entry point
   INFO("Entry point is @0x%016X\n", elf64_header->e_entry);
   void (*kernel_start)(void) = (void *)elf64_header->e_entry;
