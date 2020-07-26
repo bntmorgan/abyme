@@ -5,11 +5,7 @@
 #include "efi/efi_eric.h"
 #include "debug.h"
 #include "stdio.h"
-
-//
-// stdio putc pointer
-//
-extern void (*putc)(uint8_t);
+#include "shell.h"
 
 void put_nothing(uint8_t c) {}
 
@@ -66,6 +62,9 @@ void print_dmiuests(struct dmiuests *dmiuests) {
 
 EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image_handle, systab);
+
+  // Print to shell
+  putc = &shell_print;
 
   EFI_STATUS status = EFI_SUCCESS;
   uint32_t id;

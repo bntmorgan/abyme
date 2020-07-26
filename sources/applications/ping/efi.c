@@ -5,6 +5,7 @@
 #include "microudp.h"
 #include "string.h"
 #include "stdio.h"
+#include "shell.h"
 
 #define BUF_SIZE 1000
 
@@ -42,6 +43,9 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image, systab);
   EFI_STATUS status;
   EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID;
+
+  // Print to shell
+  putc = &shell_print;
 
   status = LibLocateProtocol(&guid_82579LM, (void **)&eth);
   if (EFI_ERROR(status)) {

@@ -1,6 +1,8 @@
 #include <efi.h>
 #include <efilib.h>
 #include "flash.h"
+#include "stdio.h"
+#include "shell.h"
 
 #include "efi/efi_flash.h" 
 
@@ -31,6 +33,9 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image_handle, systab);
   EFI_STATUS status;
   EFI_LOADED_IMAGE *image;
+
+  // Print to shell
+  putc = &shell_print;
 
   int ret = flash_init(&proto);
 

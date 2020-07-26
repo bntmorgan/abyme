@@ -5,12 +5,16 @@
 #include "debug.h"
 
 #include "stdio.h"
+#include "shell.h"
 
 EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image, systab);
   EFI_STATUS status;
   protocol_82579LM *eth;
-  EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID; 
+  EFI_GUID guid_82579LM = EFI_PROTOCOL_82579LM_GUID;
+
+  // Print to shell
+  putc = &shell_print;
 
   status = LibLocateProtocol(&guid_82579LM, (void **)&eth);
   if (EFI_ERROR(status)) {

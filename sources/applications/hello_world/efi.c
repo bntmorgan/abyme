@@ -1,9 +1,13 @@
 #include <efi.h>
 #include <efilib.h>
 #include "stdio.h"
+#include "shell.h"
 
 EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image, systab);
+
+  // Print to shell
+  putc = &shell_print;
 
   INFO("Hello World\n");
 

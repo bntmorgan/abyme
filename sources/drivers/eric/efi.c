@@ -5,16 +5,12 @@
 #include "efi/efi_eric.h"
 #include "debug.h"
 #include "stdio.h"
+#include "shell.h"
 
 #include "efiw.h"
 
 #define ERIC_VENDOR_ID  0x1AA5
 #define ERIC_DEVICE_ID  0xE51C
-
-//
-// stdio putc pointer
-//
-extern void (*putc)(uint8_t);
 
 void put_nothing(uint8_t c) {}
 
@@ -42,6 +38,9 @@ EFI_GUID guid_eric = EFI_PROTOCOL_ERIC_GUID;
 
 EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image_handle, systab);
+
+  // Print to shell
+  putc = &shell_print;
 
   EFI_STATUS status;
   EFI_LOADED_IMAGE *image;

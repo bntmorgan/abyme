@@ -6,7 +6,7 @@ TARGET					:= $(call SRC_2_BIN, $(d)/$(notdir $(dir)).efi)
 TARGET_ELF		  := $(call SRC_2_BIN, $(d)/$(notdir $(dir)).efi.elf)
 TARGETS 				+= $(call SRC_2_BIN, $(TARGET))
 OBJS_$(d)				:= $(call SRC_2_OBJ, \
-										$(d)/efi.o $(d)/common/stdio.o $(d)/common/screen.o \
+										$(d)/efi.o $(d)/common/stdio.o $(d)/common/shell.o \
 										$(d)/common/stdlib.o $(d)/common/debug.o $(d)/common/cpu.o \
 										$(d)/common/msr.o $(d)/common/string.o)
 OBJECTS 				+= $(OBJS_$(d))

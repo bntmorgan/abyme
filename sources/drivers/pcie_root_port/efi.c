@@ -5,6 +5,7 @@
 #include "efi/efi_eric.h"
 #include "debug.h"
 #include "stdio.h"
+#include "shell.h"
 
 // 
 // stdio putc pointer
@@ -19,6 +20,9 @@ void eric_disable_debug(void){
 
 EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image_handle, systab);
+
+  // Print to shell
+  putc = &shell_print;
 
   EFI_STATUS status = EFI_SUCCESS;
   uint32_t id;

@@ -3,6 +3,7 @@
 #include "stdio.h"
 #include "msr.h"
 #include "cpu.h"
+#include "shell.h"
 
 static uint16_t tsc_freq_MHz;
 static uint8_t tsc_divider;
@@ -39,6 +40,9 @@ void challenge_start(void) {
 
 EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image, systab);
+
+  // Print to shell
+  putc = &shell_print;
 
   uint64_t micros, a, b;
   // Init tsc

@@ -530,7 +530,6 @@ void debug_server_enable_putc() {
 }
 
 // change stdio putc pointer to our handler
-void no_putc(uint8_t value) {}
 void debug_server_disable_putc() {
   putc = &no_putc;
 }

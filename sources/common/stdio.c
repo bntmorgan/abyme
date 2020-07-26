@@ -1,9 +1,10 @@
 #include "stdio.h"
 
-#include "screen.h"
 #include "stdlib.h"
 
-void (*putc)(uint8_t) = &screen_print;
+void (*putc)(uint8_t) = NULL;
+
+void no_putc(uint8_t value) {}
 
 void printk_string(int8_t *string, int8_t minimum_length, int8_t padding) {
   int8_t *ptr = string;

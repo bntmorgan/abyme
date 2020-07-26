@@ -8,7 +8,7 @@ TARGETS 				+= $(call SRC_2_BIN, $(TARGET))
 OBJS_$(d)				:= $(call SRC_2_OBJ, \
 										$(d)/efi.o $(d)/common/msr.o $(d)/common/cpu.o \
 										$(d)/common/stdio.o $(d)/common/stdlib.o \
-										$(d)/common/screen.o)
+										$(d)/common/shell.o)
 OBJECTS 				+= $(OBJS_$(d))
 
 $(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d)

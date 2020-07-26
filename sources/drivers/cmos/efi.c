@@ -3,6 +3,7 @@
 
 #include "debug.h"
 #include "stdio.h"
+#include "shell.h"
 
 // 
 // stdio putc pointer
@@ -34,6 +35,9 @@ void read_from_cmos (unsigned char data []) {
 
 EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   InitializeLib(image_handle, systab);
+
+  // Print to shell
+  putc = &shell_print;
 
   EFI_STATUS status = EFI_SUCCESS;
 

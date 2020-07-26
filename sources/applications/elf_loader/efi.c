@@ -2,6 +2,7 @@
 #include <efilib.h>
 
 #include "stdio.h"
+#include "shell.h"
 #include "string.h"
 #include "debug.h"
 #include "efiw.h"
@@ -12,8 +13,10 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
   // Initialize gnuefi lib
   InitializeLib(image_handle, st);
 
+  // Print to shell
+  putc = &shell_print;
+
 #ifdef _QEMU
-  extern void (*putc)(uint8_t);
   putc = &qemu_putc;
 
   qemu_send_address("elf_loader.efi");
