@@ -2,7 +2,6 @@
 
 #include "screen.h"
 #include "stdlib.h"
-#include "systab.h"
 
 void (*putc)(uint8_t) = &screen_print;
 
