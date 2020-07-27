@@ -181,8 +181,19 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
       (((phdr->p_memsz & 0xfff) == 0) ? 0 : 1);
     INFO("Allocating 0x%016X pages for program segment @0x%016X\n", page_number,
         phdr->p_vaddr);
+    // Select associated memory type
+    uint8_t type;
+    if (phdr->p_flags == 05) { // R X
+      type = EfiBootServicesCode;
+    } else if (phdr->p_flags == 06) { // RW
+      type = EfiBootServicesData;
+    } else {
+      INFO("Fatal error: failed to set memory type...\n");
+      return 1;
+    }
+    INFO("EFI memory type is %d (3 rt code, 4 rt data)\n", type);
     char *location = efi_allocate_pages_at((void *)phdr->p_vaddr, page_number,
-        EfiBootServicesCode);
+        type);
     if (location == NULL) {
       INFO("Failed to allocate loading destination memory\n");
       continue;
