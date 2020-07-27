@@ -78,7 +78,7 @@ void read_core_state(struct core_gpr *gpr, struct core_cr *cr) {
     gpr->ds = cpu_read_ds();
     gpr->ss = cpu_read_ss();
     gpr->cs = cpu_read_cs();
-}   
+}
 
 void dump_core_state(struct core_gpr *gpr, struct core_cr *cr) {
   printk("cr0 : %08x, cr2 : %08x, cr3 : %08x, cr4 : %08x\n", cr->cr0, cr->cr2, cr->cr3, cr->cr4);

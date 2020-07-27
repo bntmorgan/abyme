@@ -47,7 +47,7 @@ LD_FLAGS_ALL		= $(LD_FLAGS_SCRIPT) -nostdlib -Bsymbolic -znocombreloc \
 
 LD_FLAGS_EFI		= -shared -fPIC -fPIE $(EFI_LIBS_INCLUDE) $(EFI_CRT_OBJS)
 
-LD_FLAGS_ELF		=
+LD_FLAGS_ELF		= --no-relax
 
 define SRC_2_OBJ
   $(foreach src,$(1),$(patsubst sources/%,$(BUILD_DIR)/%,$(src)))

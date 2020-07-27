@@ -181,7 +181,8 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
       (((phdr->p_memsz & 0xfff) == 0) ? 0 : 1);
     INFO("Allocating 0x%016X pages for program segment @0x%016X\n", page_number,
         phdr->p_vaddr);
-    char *location = efi_allocate_pages_at((void *)phdr->p_vaddr, page_number);
+    char *location = efi_allocate_pages_at((void *)phdr->p_vaddr, page_number,
+        EfiBootServicesCode);
     if (location == NULL) {
       INFO("Failed to allocate loading destination memory\n");
       continue;
@@ -202,6 +203,11 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
   INFO("Entry point is @0x%016X\n", elf64_header->e_entry);
   void (*kernel_start)(void) = (void *)elf64_header->e_entry;
   INFO("Calling entry point...\n");
+  kernel_start();
+  INFO("Done !\n");
+
+  // XXX maybe to remove
+  INFO("Calling entry point again to check prepared execution state...\n");
   kernel_start();
   INFO("Done !\n");
 

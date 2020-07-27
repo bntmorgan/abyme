@@ -44,7 +44,11 @@ void bsp_main() {
   INFO("GUEST GDT DONE\n");
   gdt_setup_host_gdt();
   INFO("HOST GDT DONE\n");
-  paging_setup_host_paging();
+  uint32_t p = sizeof(struct paging_ia32e) / 0x1000 +
+      (sizeof(struct paging_ia32e) % 0x1000 != 0 );
+  struct paging_ia32e *pages = efi_allocate_pages(p);
+  INFO("Pointer allocated 0x%016X of 0x%08x pages\n", (uintptr_t)pages, p);
+  paging_setup_host_paging(pages);
   INFO("PAGING HOST DONE\n");
   mtrr_create_ranges();
   INFO("MTRR CREATE RANGES DONE\n");

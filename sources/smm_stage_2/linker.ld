@@ -2,10 +2,18 @@ ENTRY (kernel_start)
 
 SECTIONS
 {
-  . = 0x00100000;
-  kernel_start = .;
-  .text   ALIGN (0x1000) : { *(.text)    }
-  .data   ALIGN (0x1000) : { *(.data)    }
+  . = 0x100000000;
+  /* Dirty ass useless hack to be compatible with common/debug.c */
+  ImageBase = .;
+  .text   ALIGN (0x1000) : {
+    *(.start)
+    *(.text)
+  }
+  .data   ALIGN (0x1000) : {
+    /* Dirty ass useless hack to be compatible with common/debug.c */
+    _data = .;
+    *(.data)
+  }
   .rodata ALIGN (0x1000) : { *(.rodata*) }
   .bss : ALIGN (0x1000)
   {

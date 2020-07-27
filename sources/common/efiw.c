@@ -75,10 +75,10 @@ void efi_reset_system(void) {
       EfiResetCold, EFI_SUCCESS, 0, NULL);
 }
 
-void *efi_allocate_pages_at(void *addr, uint64_t count) {
+void *efi_allocate_pages_at(void *addr, uint64_t count, uint8_t type) {
   // allocate the page tables
   efiw_status = uefi_call_wrapper(ST->BootServices->AllocatePages, 4,
-      AllocateAddress, EfiRuntimeServicesData, count, &addr);
+      AllocateAddress, type, count, &addr);
   switch (efiw_status) {
     case EFI_SUCCESS:
       break;

@@ -9,14 +9,10 @@ uint64_t paging_error;
 
 uint8_t max_phyaddr;
 
-void paging_setup_host_paging(void) {
+// Parameter is in memory allocated pages
+void paging_setup_host_paging(struct paging_ia32e *pages) {
 
-  uint32_t p = sizeof(struct paging_ia32e) / 0x1000 +
-      (sizeof(struct paging_ia32e) % 0x1000 != 0 );
-
-  paging_ia32e = efi_allocate_pages(p);
-  INFO("Pointer allocated 0x%016X of 0x%08x pages\n", (uintptr_t)paging_ia32e,
-      p);
+  paging_ia32e = pages;
 
   /* TODO: pcide dans le registre cr4 */
   INFO("SETTING HOST UP PAGING\n");
@@ -177,6 +173,7 @@ uint8_t walk_is_in_page(uint64_t l, uint64_t p, uint8_t size) {
   return (p & ~mask) == (l & ~mask);
 }
 
+// DEPRECATED... See next one
 int paging_walk(uint64_t cr3, uint64_t linear, uint64_t **e, uint64_t *a, uint8_t *s) {
   max_phyaddr = cpuid_get_maxphyaddr();
   // INFO("Max phy 0x%016x, 0x%016x\n", max_phyaddr, PAGING_MAXPHYADDR(max_phyaddr));

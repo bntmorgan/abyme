@@ -1,5 +1,10 @@
 #include <stdint.h>
 
+#include "stdio.h"
+#include "cpuid.h"
+#include "paging.h"
+#include "cpu.h"
+
 struct kernel_state {
   uint64_t cr3;
   uint64_t rbp;
@@ -8,23 +13,42 @@ struct kernel_state {
 
 int initialized = 0;
 
-int toto = 4;
-
 struct kernel_state state;
+
+// Page tables
+struct paging_ia32e pages;
 
 // Initialize kernel
 void kernel_init(void) {
+  // Set how to putc
+#ifdef _QEMU
+  putc = &qemu_putc;
+#endif
+  // Setup cpuid
+  cpuid_setup();
+  // Setup paging
+  paging_setup_host_paging(&pages);
+  INFO("INIT done mamene !\n");
 }
 
 // Set kernel configuration as memory for instance
 void kernel_set(void) {
+  // Save caller state
+  state.cr3 = cpu_read_cr3();
+
+  // Set our state
+  cpu_write_cr3(paging_get_host_cr3());
 }
 
 // Restore caller's configuration as memory for instance
 void kernel_restore(void) {
+  // Restore caller state
+  cpu_write_cr3(state.cr3);
 }
 
-void kernel_start(void) {
+// Program entry point. Specific .start section is used to force position in the
+// beginning of .text section. See linker.ld
+void __attribute__((section(".start"))) kernel_start(void) {
 
   // First call by the loader
   if (initialized == 0) {
@@ -34,6 +58,8 @@ void kernel_start(void) {
   }
 
   // Else we have to restore virtual memory and play !
+  INFO("Set execution state\n");
   kernel_set();
+  INFO("Restore caller's execution state\n");
   kernel_restore();
 }

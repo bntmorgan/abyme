@@ -85,7 +85,10 @@ void bsp_main(struct setup_state *state) {
   gdt_setup_host_gdt();
   gdt_print_host_gdt();
   INFO("HOST GDT DONE\n");
-  paging_setup_host_paging();
+  uint32_t p = sizeof(struct paging_ia32e) / 0x1000 +
+      (sizeof(struct paging_ia32e) % 0x1000 != 0 );
+  struct paging_ia32e *pages = efi_allocate_pages(p);
+  paging_setup_host_paging(pages);
   INFO("PAGING HOST DONE\n");
   mtrr_create_ranges();
   INFO("MTRR CREATE RANGES DONE\n");

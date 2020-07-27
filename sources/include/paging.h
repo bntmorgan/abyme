@@ -15,7 +15,7 @@ struct paging_ia32e {
 
 extern struct paging_ia32e *paging_ia32e;
 
-void paging_setup_host_paging(void);
+void paging_setup_host_paging(struct paging_ia32e *pages);
 
 uint64_t paging_get_host_cr3(void);
 
