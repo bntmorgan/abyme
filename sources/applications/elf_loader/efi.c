@@ -187,6 +187,8 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
       type = EfiBootServicesCode;
     } else if (phdr->p_flags == 06) { // RW
       type = EfiBootServicesData;
+    } else if (phdr->p_flags == 04) { // R
+      type = EfiBootServicesData;
     } else {
       INFO("Fatal error: failed to set memory type...\n");
       return 1;
