@@ -1,4 +1,4 @@
-cc						:= gcc
+CC						:= gcc
 AR						:= ar
 OBJDUMP				:= objdump
 PYTHON				:= python3

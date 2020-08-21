@@ -23,6 +23,8 @@ void kernel_init(void) {
   // Set how to putc
 #ifdef _QEMU
   putc = &qemu_putc;
+#else
+  putc = &no_putc;
 #endif
   // Setup cpuid
   cpuid_setup();
