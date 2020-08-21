@@ -18,7 +18,7 @@ int cr3_saved = 0;
 struct kernel_state state;
 
 // Page tables
-struct paging_ia32e pages;
+struct paging_ia32e __attribute__((section(".bss.zizi"))) pages;
 
 // Initialize kernel
 void kernel_init(void) {

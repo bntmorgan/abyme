@@ -19,7 +19,7 @@ SECTIONS
   {
     sbss = .;
     /* Force page tables to be at the beginning the aligned .bss section */
-    pages = .;
+    *(.bss.zizi)
     *(COMMON)
     *(.bss)
     ebss = .;
