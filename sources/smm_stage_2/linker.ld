@@ -18,6 +18,8 @@ SECTIONS
   .bss : ALIGN (0x1000)
   {
     sbss = .;
+    /* Force page tables to be at the beginning the aligned .bss section */
+    pages = .;
     *(COMMON)
     *(.bss)
     ebss = .;

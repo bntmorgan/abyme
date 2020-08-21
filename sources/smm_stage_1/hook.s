@@ -19,13 +19,30 @@ hook:
   push %rcx
   push %rax
 
+  // Save cr3
+
+  mov %cr3, %rax
+  push %rax
+
+  // Set smm_stage_2 overall id mapping, see sbss symbol in smm_stage_2.elf
+  // Page tables symbol is "pages".
+  // It has to be id mapping to fit with efi current memory configuration
+  movabs 0x100005000, %rax
+  mov %rax, %cr3
+
   sub $0x8, %rsp
+  // See kernel_start symbol in smm_stage_2.elf
   // Pushq $0x100000000
   movq $0x100000000, %rax
   pushq %rax
   // Call hook
   call *(%rsp)
   add $0x8, %rsp
+
+  // Restore cr3
+
+  pop %rax
+  mov %rax, %cr3
 
   // Restore GPRs
 
