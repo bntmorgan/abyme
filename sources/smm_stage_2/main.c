@@ -13,6 +13,8 @@ struct kernel_state {
 
 int initialized = 0;
 
+int cr3_saved = 0;
+
 struct kernel_state state;
 
 // Page tables
@@ -38,14 +40,21 @@ void kernel_set(void) {
   // Save caller state
   state.cr3 = cpu_read_cr3();
 
-  // Set our state
-  cpu_write_cr3(paging_get_host_cr3());
+  if (state.cr3 == paging_get_host_cr3()) {
+    cr3_saved = 0;
+  } else {
+    // Set our memory state
+    cpu_write_cr3(paging_get_host_cr3());
+    cr3_saved = 1;
+  }
 }
 
 // Restore caller's configuration as memory for instance
 void kernel_restore(void) {
-  // Restore caller state
-  cpu_write_cr3(state.cr3);
+  // Restore caller state if any
+  if (cr3_saved) {
+    cpu_write_cr3(state.cr3);
+  }
 }
 
 // Program entry point. Specific .start section is used to force position in the
