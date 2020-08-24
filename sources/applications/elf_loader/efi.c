@@ -8,7 +8,11 @@
 #include "efiw.h"
 #include "elf64.h"
 
+CHAR16 *default_elf = L"\\EFI\\smm_stage_2\\smm_stage_2.elf";
+
 EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
+
+  CHAR16 *path;
 
   // Initialize gnuefi lib
   InitializeLib(image_handle, st);
@@ -44,12 +48,14 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
     }
   }
 
+  path = default_elf;
   if (i == eli.options_size) {
-    Print(L"Missing filepath argument\n");
-    return EFI_NOT_FOUND;
+    Print(L"Missing filepath argument using %s as default\n", default_elf);
   } else {
-    Print(L"Trying to load %s\n", &eli.options[i]);
+    path = &eli.options[i];
   }
+
+  Print(L"Trying to load %s\n", path);
 
   EFI_STATUS status;
   EFI_GUID guid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
@@ -79,7 +85,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
 
   // Open target elf file
   status = uefi_call_wrapper(root->Open, 5,
-      root, &file_elf, &eli.options[i], EFI_FILE_MODE_READ,
+      root, &file_elf, path, EFI_FILE_MODE_READ,
       EFI_FILE_READ_ONLY | EFI_FILE_HIDDEN | EFI_FILE_SYSTEM);
   if (EFI_ERROR(status)) {
     INFO("Failed to open file\n");
