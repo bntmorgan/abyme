@@ -34,13 +34,13 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
     return EFI_NOT_FOUND;
   }
 
-  Print(L"Command line option : %s, size 0x%x\n", eli.options,
+  Print(L"Command line option : %s, size 0x%x bytes\n", eli.options,
       eli.options_size);
 
   int i;
 
   // This is null terminated, ignore last character
-  for (i = 0; i < eli.options_size; i++) {
+  for (i = 0; i < (eli.options_size >> 1); i++) {
     if ((eli.options[i] & (CHAR16) 0x00ff) == ' ') {
       Print(L"Space found at index 0x%x\n", i);
       i++;
@@ -49,7 +49,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
   }
 
   path = default_elf;
-  if (i == eli.options_size) {
+  if (i == (eli.options_size >> 1)) {
     Print(L"Missing filepath argument using %s as default\n", default_elf);
   } else {
     path = &eli.options[i];
