@@ -190,11 +190,11 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
     // Select associated memory type
     uint8_t type;
     if (phdr->p_flags == 05) { // R X
-      type = EfiBootServicesCode;
+      type = EfiRuntimeServicesCode;
     } else if (phdr->p_flags == 06) { // RW
-      type = EfiBootServicesData;
+      type = EfiRuntimeServicesData;
     } else if (phdr->p_flags == 04) { // R
-      type = EfiBootServicesData;
+      type = EfiRuntimeServicesData;
     } else {
       INFO("Fatal error: failed to set memory type...\n");
       return 1;

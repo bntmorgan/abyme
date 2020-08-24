@@ -17,11 +17,11 @@ $(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -D_QEMU
 $(TARGET_ELF)				:  LD_FLAGS_TARGET	:= 
 $(TARGET_ELF)				:  LD_OBJECTS	:= $(OBJS_$(d))
 # Runtime driver
-$(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-rtdrv-$(ARCH)
+#$(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-rtdrv-$(ARCH)
 # Bootservice driver
 #$(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-bsdrv-$(ARCH)
 # Application
-# $(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-app-$(ARCH)
+$(TARGET)				:  OBJCPY_FLAGS_TARGET	:= --target=efi-app-$(ARCH)
 $(TARGET_ELF)				:  $(OBJS_$(d))
 
 d               := $(dirstack_$(sp))
