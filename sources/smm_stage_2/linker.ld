@@ -2,7 +2,7 @@ ENTRY (kernel_start)
 
 SECTIONS
 {
-  . = 0x100000000;
+  . = 0x100000;
   /* Dirty ass useless hack to be compatible with common/debug.c */
   ImageBase = .;
   .text   ALIGN (0x1000) : {

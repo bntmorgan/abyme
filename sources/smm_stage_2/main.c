@@ -18,7 +18,7 @@ int cr3_saved = 0;
 struct kernel_state state;
 
 // Page tables
-struct paging_ia32e __attribute__((section(".bss.zizi"))) pages;
+struct paging_ia32e_1gb __attribute__((section(".bss.zizi"))) pages;
 
 // Initialize kernel
 void kernel_init(void) {
@@ -31,7 +31,7 @@ void kernel_init(void) {
   // Setup cpuid
   cpuid_setup();
   // Setup paging
-  paging_setup_host_paging(&pages);
+  paging_setup_host_paging_1gb(&pages);
   INFO("INIT done mamene !\n");
 }
 
@@ -40,11 +40,11 @@ void kernel_set(void) {
   // Save caller state
   state.cr3 = cpu_read_cr3();
 
-  if (state.cr3 == paging_get_host_cr3()) {
+  if (state.cr3 == (uint64_t)&pages.PML4[0]) {
     cr3_saved = 0;
   } else {
     // Set our memory state
-    cpu_write_cr3(paging_get_host_cr3());
+    cpu_write_cr3((uint64_t)&pages.PML4[0]);
     cr3_saved = 1;
   }
 }

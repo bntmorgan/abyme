@@ -21,43 +21,59 @@ void paging_setup_host_paging(struct paging_ia32e *pages) {
   uint64_t k;
   uint64_t l;
   for (i = 0; i < 512; i++) {
-    paging_ia32e->PML4[i] = ((uint64_t) &paging_ia32e->PDPT[i][0]) | 0x7;
+    pages->PML4[i] = ((uint64_t) &pages->PDPT[i][0]) | 0x7;
     for (j = 0; j < 512; j++) {
       if (i == 0 && j < MAX_ADDRESS_WIDTH_PDPT_1) {
         // 4ko frame : physical memory
-        paging_ia32e->PDPT[i][j] = ((uint64_t) &paging_ia32e->PD[j][0]) | 0x7;
+        pages->PDPT[i][j] = ((uint64_t) &pages->PD[j][0]) | 0x7;
         for (k = 0; k < 512; k++) {
-          paging_ia32e->PD[j][k] = ((uint64_t) &paging_ia32e->PT[j][k][0]) | 0x7;
+          pages->PD[j][k] = ((uint64_t) &pages->PT[j][k][0]) | 0x7;
           for (l = 0; l < 512; l++) {
-            paging_ia32e->PT[j][k][l] = ((i * 512 + j) << 30) | (k << 21) | (l << 12) | 0x7;
+            pages->PT[j][k][l] = ((i * 512 + j) << 30) | (k << 21) | (l << 12) | 0x7;
             /*if (k == 0 && l == 0) {
               INFO("Entry [%d][%d][%d][%d] : 0x%016X\n", i, j, k, l,
-                 paging_ia32e->PT[j][k][l]); 
+                 pages->PT[j][k][l]); 
             }
             if (k == 0 && l == 1) {
               INFO("Entry [%d][%d][%d][%d] : 0x%016X\n", i, j, k, l,
-                 paging_ia32e->PT[j][k][l]); 
+                 pages->PT[j][k][l]); 
             }
             if (k == 1 && l == 0) {
               INFO("Entry [%d][%d][%d][%d] : 0x%016X\n", i, j, k, l,
-                 paging_ia32e->PT[j][k][l]); 
+                 pages->PT[j][k][l]); 
             }*/
           }
         }
       } else {
         // 1GB frame
-        paging_ia32e->PDPT[i][j] = ((i * 512 + j) << 30) | (1 << 7) | 0x7;
+        pages->PDPT[i][j] = ((i * 512 + j) << 30) | (1 << 7) | 0x7;
         if (j == 0) {
-          // INFO("Entry [%d][%d] : 0x%016X\n", i, j, paging_ia32e->PDPT[i][j]); 
+          // INFO("Entry [%d][%d] : 0x%016X\n", i, j, pages->PDPT[i][j]); 
         }
       }
-//printk("%08X \n", paging_ia32e->PDPT[i][j]);
+//printk("%08X \n", pages->PDPT[i][j]);
 //if (j == 4) {
 //while (1);
 //}
     }
   }
 //while (1);
+}
+
+// Parameter is in memory allocated pages
+void paging_setup_host_paging_1gb(struct paging_ia32e_1gb *pages) {
+
+  /* TODO: pcide dans le registre cr4 */
+  INFO("SETTING HOST UP PAGING\n");
+  uint64_t i;
+  uint64_t j;
+  for (i = 0; i < 512; i++) {
+    pages->PML4[i] = ((uint64_t) &pages->PDPT[i][0]) | 0x7;
+    for (j = 0; j < 512; j++) {
+      // 1GB frame
+      pages->PDPT[i][j] = ((i * 512 + j) << 30) | (1 << 7) | 0x7;
+    }
+  }
 }
 
 uint64_t paging_get_host_cr3(void) {

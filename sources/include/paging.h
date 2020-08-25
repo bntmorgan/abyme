@@ -13,9 +13,16 @@ struct paging_ia32e {
   uint64_t PT[MAX_ADDRESS_WIDTH_PDPT_1][512][512]__attribute__((aligned(0x1000)));
 } __attribute__((aligned(8)));
 
+struct paging_ia32e_1gb {
+  uint64_t PML4[512]      __attribute__((aligned(0x1000)));
+  uint64_t PDPT[512][512] __attribute__((aligned(0x1000)));
+} __attribute__((aligned(8)));
+
 extern struct paging_ia32e *paging_ia32e;
 
 void paging_setup_host_paging(struct paging_ia32e *pages);
+
+void paging_setup_host_paging_1gb(struct paging_ia32e_1gb *pages);
 
 uint64_t paging_get_host_cr3(void);
 
