@@ -199,7 +199,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *st) {
       INFO("Fatal error: failed to set memory type...\n");
       return 1;
     }
-    INFO("EFI memory type is %d (3 rt code, 4 rt data)\n", type);
+    INFO("EFI memory type is %d (5 rt code, 6 rt data)\n", type);
     char *location = efi_allocate_pages_at((void *)phdr->p_vaddr, page_number,
         type);
     if (location == NULL) {
