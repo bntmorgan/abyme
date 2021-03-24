@@ -1,21 +1,16 @@
-abyme-challenge/
-  Le code des challenges envoyés depuis le périphérique de confiance vers
-  l'hyperviseur. Celui-ci doit les exécuter pour prouver son intégrité.
-  Code 100% LAAS.
+    ┏━┓┏┓ ╻ ╻┏┳┓┏━╸
+    ┣━┫┣┻┓┗┳┛┃┃┃┣╸
+    ╹ ╹┗━┛ ╹ ╹ ╹┗━╸
+       ┏━┓┏━╸┏━╸╻ ╻┏━┓┏━┓╻╻ ╻┏━╸
+       ┣┳┛┣╸ ┃  ┃ ┃┣┳┛┗━┓┃┃┏┛┣╸
+       ╹┗╸┗━╸┗━╸┗━┛╹┗╸┗━┛╹┗┛ ┗━╸
+          ╻ ╻╻ ╻┏━┓┏━╸┏━┓╻ ╻╻┏━┓┏━┓┏━┓
+          ┣━┫┗┳┛┣━┛┣╸ ┣┳┛┃┏┛┃┗━┓┃ ┃┣┳┛
+          ╹ ╹ ╹ ╹  ┗━╸╹┗╸┗┛ ╹┗━┛┗━┛╹┗╸         7_O_/
+             ╻  ╻┏┓ ┏━┓┏━┓┏━┓╻ ╻                (/
+             ┃  ┃┣┻┓┣┳┛┣━┫┣┳┛┗┳┛                /\/'
+             ┗━╸╹┗━┛╹┗╸╹ ╹╹┗╸ ╹                 7
 
-abyme-debug/
-  Client de débogage de l'hyperviseur et de ses machines virtuelles. Écrit en
-  python. Code 100% LAAS.
-
-abyme-linux/
-  Application/modules/scripts utiles pour mettre en place nos preuves de
-  concept. Contient notamment le driver de carte réseau Intel modifié, que l'on
-  protège. Pour rappel l'hypperviseur de sécurité teste son intégrité dans
-  l'environnement d'exécution sécurisé mis en place grâce à la chaine de
-  confiance périphérique de confiance -> hyperviseur.
-linux/tools/wireshark/dissector.lua
-  Dissecteur lua pour wirehark de notre protocole de débogage de machine
-  virtuelles.
 
 sources/
   Code de l'hyperviseur de sécurité. Code 100 % LAAS.
