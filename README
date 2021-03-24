@@ -24,6 +24,13 @@ sources/drivers/82579LM/
 sources/drivers/eric/
   Driver du périphérique de confiance.
 
+Submodules
+
+abyme-challenge/
+  Le code des challenges envoyés depuis le périphérique de confiance vers
+  l'hyperviseur. Celui-ci doit les exécuter pour prouver son intégrité.
+  Code 100% LAAS.
+
 edk2/
   Submodule for QEMU/OVMF firmware needed if using QEMU
 
@@ -42,6 +49,16 @@ edk2/
   For SMM debugging go and see :
     https://casualhacking.io/blog/2019/12/3/using-optionrom-to-overwrite-smmsmi-handlers-in-qemu
 
+gnu-efi/
+  Submodule for GNU efi toolchain to build efi applications
+
+  $ make
+
+uefi-gdb/
+  Submodule for efi applications and drivers debugging with gdb
+
+Working directories to create if needed (rules associated in make targets)
+
 img-arch/
   Archlinux cdrom and distro disk to be used with QEMU target
 
@@ -50,11 +67,3 @@ img-arch/
 
   And install eventually archlinux on vdisk.qcow2
   Note that you can work using the live disk only
-
-gnu-efi/
-  Submodule for GNU efi toolchain to build efi applications
-
-  $ make
-
-uefi-gdb/
-  Submodule for efi applications and drivers debugging with gdb
