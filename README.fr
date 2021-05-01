@@ -13,23 +13,23 @@
 
 
 sources/
-  Recursive hypervisor library code.
+  Code de l'hyperviseur de sécurité. Code 100 % LAAS.
 sources/drivers/vmm_rec/
-  Static recursive hypervisor library.
+  Bibliothèque statique d'hyperviseur récursif.
 sources/drivers/vmm_rec_env/
-  Implementation of a remote attestation prover using Abyme library.
+  Implémentation d'hyperviseur utilisant la bibliothèque précédente. CET
+  HYPERVISEUR EST L'ENVIRONNEMENT D'EXECUTION SECURISÉ.
 sources/drivers/82579LM/
-  Bare metal UEFI Intel e1000e network controller driver.
+  Driver de carte réseau générique Intel famille e1000.
 sources/drivers/eric/
-  ERIC PCIe peripheral UEFI driver.
-  ERIC can be used as an : DMA attack platform as well as a remote attestation
-      verifier.
+  Driver du périphérique de confiance.
 
 Submodules
 
 abyme-challenge/
-  There is the implementation of challenges sent from ERIC prover to Abyme
-  verifier in a remote attestation scheme.
+  Le code des challenges envoyés depuis le périphérique de confiance vers
+  l'hyperviseur. Celui-ci doit les exécuter pour prouver son intégrité.
+  Code 100% LAAS.
 
 edk2/
   Submodule for QEMU/OVMF firmware needed if using QEMU
