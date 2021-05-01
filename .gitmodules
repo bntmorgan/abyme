@@ -1,12 +1,12 @@
 [submodule "gnu-efi"]
 	path = gnu-efi
-	url = git@gitlab.com:bmorgan/gnu-efi.git
+	url = ../gnu-efi.git
 [submodule "uefi-gdb"]
 	path = uefi-gdb
-	url = git@gitlab.com:bmorgan/uefi-gdb.git
+	url = ../efi-gdb.git
 [submodule "abyme-challenge"]
 	path = abyme-challenge
-	url = git@gitlab.com:bmorgan/abyme-challenge.git
+	url = ../abyme-challenge.git
 [submodule "edk2"]
 	path = edk2
-	url = git@gitlab.com:bmorgan/edk2.git
+	url = ../edk2.git
