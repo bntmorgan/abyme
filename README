@@ -22,7 +22,7 @@ sources/drivers/82579LM/
   Bare metal UEFI Intel e1000e network controller driver.
 sources/drivers/eric/
   ERIC PCIe peripheral UEFI driver.
-  ERIC can be used as an : DMA attack platform as well as a remote attestation
+  ERIC can be used as : a DMA attack platform as well as a remote attestation
       verifier.
 
 Submodules
