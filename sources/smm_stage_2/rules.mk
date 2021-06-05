@@ -26,7 +26,7 @@ OBJS_$(d)				:= $(call SRC_2_OBJ, $(d)/common/stdlib.o $(d)/common/stdio.o \
 		$(d)/common/debug.o $(d)/common/paging.o $(d)/common/cpuid.o)
 OBJECTS 				+= $(OBJS_$(d))
 
-$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -D_QEMU
+$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -U_QEMU
 
 $(TARGET_ELF)				:  LD_FLAGS_SCRIPT 	:= -T $(d)/linker.ld
 

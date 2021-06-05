@@ -46,13 +46,11 @@ hook:
   // Set smm_stage_2 overall id mapping, see sbss symbol in smm_stage_2.elf
   // Page tables symbol is "pages".
   // It has to be id mapping to fit with efi current memory configuration
-  movabs 0x100005000, %rax
+  movabs $0x10005000, %rax
   mov %rax, %cr3
 
-  sub $0x8, %rsp
   // See kernel_start symbol in smm_stage_2.elf
-  // Pushq $0x100000000
-  movq $0x100000000, %rax
+  movq $0x10000000, %rax
   pushq %rax
   // Call hook
   call *(%rsp)

@@ -87,9 +87,6 @@ void __attribute__((section(".start"))) kernel_start(void) {
     return;
   }
 
-  // Else we have to restore virtual memory and play !
-  INFO("Set execution state\n");
-  kernel_set();
-  INFO("Restore caller's execution state\n");
-  kernel_restore();
+  // Elsewise we are in SMM mode, we can play !
+  INFO("Party harder\n");
 }
