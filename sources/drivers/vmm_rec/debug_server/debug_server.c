@@ -35,13 +35,8 @@ along with abyme.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MAX_INFO_SIZE 1024
 
-// XXX
-uint8_t buf2[ETHERNET_SIZE];
-union ethernet_buffer *buffer;
-void clear_buffer() {
-  memset(&buf2[0], 0, ETHERNET_SIZE);
-  buffer = (union ethernet_buffer *)&buf2[0];
-}
+static uint8_t buf_i[ETHERNET_SIZE];
+static uint8_t buf_o[ETHERNET_SIZE];
 
 extern void (*putc)(uint8_t);
 
@@ -208,18 +203,20 @@ void debug_server_init() {
 
     // XXX
     uint16_t len;
-    clear_buffer();
     microudp_start(eth->mac_addr, SERVER_IP);
 
     INFO("ARP request send\n");
-    len=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
-    eth->eth_send(buf2, len, 1);
 
-    clear_buffer();
+    memset(&buf_o[0], 0, ETHERNET_SIZE);
+    len = microudp_start_arp((union ethernet_buffer *)buf_o,
+        CLIENT_IP, ARP_OPCODE_REQUEST);
+    eth->eth_send(buf_o, len, 1);
 
-    eth->eth_recv(buf2, 1500, 1);
-    microudp_handle_frame(buffer);
-    clear_buffer();
+    memset(&buf_i[0], 0, ETHERNET_SIZE);
+
+    eth->eth_recv(buf_i, 1500, 1);
+    microudp_handle_frame((union ethernet_buffer *)buf_i, NULL);
+    INFO("ARP REPLY RECEIVED\n");
   }
 }
 
@@ -481,34 +478,35 @@ void debug_server_run(struct registers *regs) {
 }
 
 void debug_server_send(void *buf, uint32_t len) {
-  uint16_t size=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REQUEST);
-  eth->eth_send(buf2, size, 1);
-
-  clear_buffer();
-
-  len = microudp_fill(buffer, 6666, 6666, buf, len);
-  eth->eth_send(buf2, len, 1);
-  clear_buffer();
+  memset(&buf_o[0], 0, ETHERNET_SIZE);
+  len = microudp_fill((union ethernet_buffer *)buf_o, 6666, 6666, buf,
+      len);
+  eth->eth_send(buf_o, len, 1);
 }
 
 int32_t debug_server_recv(void *buf, uint32_t len) {
-  clear_buffer();
+  memset(&buf_i[0], 0, ETHERNET_SIZE);
   uint64_t tsc = cpu_rdtsc();
-  uint32_t size = eth->eth_recv(buf2, len, 1);
+  int size = eth->eth_recv(buf_i, len, 1);
+  if (size == -1) {
+    ERROR("Failed to receive a frame\n");
+  }
   uint32_t payload_size = size - sizeof(struct udp_frame) - sizeof(struct ethernet_header);
   // Handle ip stuff
-  uint32_t size2 = microudp_handle_frame(buffer);
+  uint32_t sizeo = microudp_handle_frame((union ethernet_buffer *)buf_i,
+      (union ethernet_buffer *)buf_o);
   // Size is > 0 we have to send a frame back to the sender machine
-  if (size2 > 0) {
-    eth->eth_send(buffer, size2, 1);
+  if (sizeo > 0) {
+    eth->eth_send(buf_o, sizeo, 1);
   }
   SERIAL_INFO("0x%016X : Size of frame : 0x%x \n", tsc, size);
-  SERIAL_DUMP((void *)buf2, 4, size, 8, 0, 6, 0);
+  SERIAL_DUMP((void *)buf_o, 4, size, 8, 0, 6, 0);
   SERIAL_NEW_LINE;
-  if (buffer->frame.eth_header.ethertype == ntohs(ETHERTYPE_IP) &&
-      // buffer->frame.contents.udp.ip.proto == htons(0x11) &&
-      buffer->frame.contents.udp.udp.dst_port == htons(6666)) {
-    memcpy(buf, &buffer->frame.contents.udp.payload[0], payload_size);
+  union ethernet_buffer *f = (union ethernet_buffer *)buf_i;
+  if (f->frame.eth_header.ethertype == ntohs(ETHERTYPE_IP) &&
+      // f->frame.contents.udp.ip.proto == htons(0x11) &&
+      f->frame.contents.udp.udp.dst_port == htons(6666)) {
+    memcpy(buf, &f->frame.contents.udp.payload[0], payload_size);
     SERIAL_INFO("This is 6666 udp protocol\n");
     return payload_size;
   } else {
@@ -531,12 +529,10 @@ void debug_server_putc(uint8_t value) {
     m->length = current_size;
 
     // XXX
-    clear_buffer();
-    uint16_t len = microudp_fill(buffer, 6666, 6666, sb, current_size +
-        sizeof(message_info));
-    eth->eth_send(buf2, len, 1);
-
-    clear_buffer();
+    memset(&buf_o[0], 0, ETHERNET_SIZE);
+    uint16_t len = microudp_fill((union ethernet_buffer *)buf_o, 6666, 6666, sb,
+        current_size + sizeof(message_info));
+    eth->eth_send(buf_o, len, 1);
 
     memset(&buf[0], 0, 0x1000); // Reset the buffer!
     current_size = 0;

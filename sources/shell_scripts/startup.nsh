@@ -3,10 +3,10 @@ echo changing terminal mode
 echo Startup !
 fs1:
 # vmm_rec.nsh
-# none.nsh
+none.nsh
 # rec_eric.nsh
 # cache.nsh
-env.nsh
+# env.nsh
 # supervisor.nsh
 # l2.nsh
 # l1_l2_eric.nsh

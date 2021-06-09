@@ -345,7 +345,7 @@ void eth_print_rx_descs();
 void eth_print_all();
 
 void eth_send(const void *buf, uint16_t len, uint8_t block);
-uint32_t eth_recv(void *buf, uint32_t len, uint8_t block);
+int eth_recv(void *buf, uint32_t len, uint8_t block);
 
 void eth_disable_debug(void);
 

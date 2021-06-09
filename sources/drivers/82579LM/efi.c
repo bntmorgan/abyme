@@ -38,6 +38,7 @@ EFI_STATUS efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *systab) {
   putc = &shell_print;
 
 #ifdef _QEMU
+  putc = &qemu_putc;
   qemu_send_address("82579LM.efi");
 #endif
 

@@ -26,7 +26,7 @@ OBJS_$(d)				:= $(call SRC_2_OBJ, \
 										$(d)/efi.o $(d)/82579LM.o $(d)/common/cpu.o $(d)/pci.o $(d)/debug_eth.o $(d)/api.o $(d)/common/string.o $(d)/common/stdio.o $(d)/common/shell.o $(d)/common/stdlib.o $(d)/common/efiw.o $(d)/common/msr.o $(d)/common/debug.o)
 OBJECTS 				+= $(OBJS_$(d))
 
-$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -U_NO_PRINTK
+$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -U_NO_PRINTK -D_QEMU
 
 $(TARGET_ELF)				:  LD_FLAGS_TARGET	:= 
 $(TARGET_ELF)				:  LD_OBJECTS	:= $(OBJS_$(d))

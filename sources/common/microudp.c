@@ -228,39 +228,49 @@ uint16_t microudp_fill(union ethernet_buffer* buffer, uint16_t src_port,
   return (sizeof(struct udp_frame)+len+sizeof(struct ethernet_header));
 }
 
-uint16_t microudp_handle_frame(union ethernet_buffer *buffer) {
-  uint16_t len;
+uint16_t microudp_handle_frame(union ethernet_buffer *in,
+    union ethernet_buffer *out) {
+  uint16_t len = 0;
 
   // Test if request receive
-  if(buffer->frame.eth_header.ethertype == htons(ETHERTYPE_ARP) &&
-    buffer->frame.contents.arp.opcode == htons(ARP_OPCODE_REQUEST) &&
-    buffer->frame.contents.arp.target_ip == SERVER_IP &&
-    buffer->frame.contents.arp.sender_ip == CLIENT_IP) {
+  if(in->frame.eth_header.ethertype == htons(ETHERTYPE_ARP) &&
+    in->frame.contents.arp.opcode == htons(ARP_OPCODE_REQUEST) &&
+    in->frame.contents.arp.target_ip == SERVER_IP &&
+    in->frame.contents.arp.sender_ip == CLIENT_IP) {
 
     //INFO("ARP request receive for us\n");
 
-    microudp_set_cache(buffer);
+    microudp_set_cache(in);
 
-    len=microudp_start_arp(buffer, CLIENT_IP, ARP_OPCODE_REPLY);
+    if (out == NULL) {
+      ERROR("Critical error : unexpected output frame\n");
+    }
+
+    len = microudp_start_arp(out, CLIENT_IP, ARP_OPCODE_REPLY);
 
   // Test if reply receive
-  } else if(buffer->frame.eth_header.ethertype == htons(ETHERTYPE_ARP) &&
-    buffer->frame.contents.arp.opcode == htons(ARP_OPCODE_REPLY) &&
-    buffer->frame.contents.arp.target_ip == SERVER_IP &&
-    buffer->frame.contents.arp.sender_ip == CLIENT_IP)  {
+  } else if(in->frame.eth_header.ethertype == htons(ETHERTYPE_ARP) &&
+    in->frame.contents.arp.opcode == htons(ARP_OPCODE_REPLY) &&
+    in->frame.contents.arp.target_ip == SERVER_IP &&
+    in->frame.contents.arp.sender_ip == CLIENT_IP)  {
 
-    microudp_set_cache(buffer);
+    microudp_set_cache(in);
 
   // Test if icmp echo request receive
-  } else if (buffer->frame.eth_header.ethertype == htons(ETHERTYPE_IP) &&
-            buffer->frame.contents.icmp.type == 0x08) {
+  } else if (in->frame.eth_header.ethertype == htons(ETHERTYPE_IP) &&
+            in->frame.contents.icmp.type == 0x08) {
 
     //INFO("ICMP request\n");
-    len = microudp_start_icmp(buffer, 0);
+
+    if (out == NULL) {
+      ERROR("Critical error : unexpected output frame\n");
+    }
+
+    len = microudp_start_icmp(out, 0);
 
   // Everything else for now is WTF
   } else {
-    INFO("WTF\n");
+    // INFO("UNSUPPORTED protocol\n");
   }
 
   return len;

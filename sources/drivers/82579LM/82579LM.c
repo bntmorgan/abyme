@@ -83,12 +83,12 @@ uint8_t eth_set_bar0() {
 }
 
 uint8_t eth_disable_interrupts() {
-// uint16_t reg_imc = cpu_mem_readd(bar0 + REG_IMC);
+  // uint16_t reg_imc = cpu_mem_readd(bar0 + REG_IMC);
   // Reset the card
   // XXX
-//  reg_imc |=  IMC_RXT0 | IMC_MDAC | IMC_PHYINT | IMC_LSECPN | IMC_SRPD | IMC_ACK |
-//    IMC_MNG;
-//  cpu_mem_writed(bar0 + REG_IMC, reg_imc);
+  //  reg_imc |=  IMC_RXT0 | IMC_MDAC | IMC_PHYINT | IMC_LSECPN | IMC_SRPD | IMC_ACK |
+  //    IMC_MNG;
+  //  cpu_mem_writed(bar0 + REG_IMC, reg_imc);
   cpu_mem_writed(bar0 + REG_IMC, 0xffffffff);
   cpu_mem_readd(bar0 + REG_ICR);
 
@@ -112,18 +112,18 @@ uint8_t eth_reset() {
   INFO("We reset the ethernet controller to ensure having a clear configuration\n");
   // Remove the lan init done
   INFO("Remove LAN init done\n");
-//  reg_status = cpu_mem_readd(bar0 + REG_STATUS);
-//  cpu_mem_writed(bar0 + REG_STATUS, reg_status & ~(STATUS_LAN_INIT_DONE));
-//  reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
-//  cpu_mem_writed(bar0 + REG_CTRL, reg_ctrl);
+  //  reg_status = cpu_mem_readd(bar0 + REG_STATUS);
+  //  cpu_mem_writed(bar0 + REG_STATUS, reg_status & ~(STATUS_LAN_INIT_DONE));
+  //  reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
+  //  cpu_mem_writed(bar0 + REG_CTRL, reg_ctrl);
   // Reset the card
   INFO("Reset card\n");
   reg_ctrl = cpu_mem_readd(bar0 + REG_CTRL);
   cpu_mem_writed(bar0 + REG_CTRL, reg_ctrl | CTRL_SWRST);
   // Get control of the hardware
-//  INFO("Get control of hardware\n");
-//  reg_ctrl_ext = cpu_mem_readd(bar0 + REG_CTRL_EXT);
-//  cpu_mem_writed(bar0 + REG_CTRL_EXT, reg_ctrl_ext | CTRL_EXT_DRV_LOAD);
+  //  INFO("Get control of hardware\n");
+  //  reg_ctrl_ext = cpu_mem_readd(bar0 + REG_CTRL_EXT);
+  //  cpu_mem_writed(bar0 + REG_CTRL_EXT, reg_ctrl_ext | CTRL_EXT_DRV_LOAD);
   wait(10000000);
   return 0;
 }
@@ -182,28 +182,28 @@ int eth_setup() {
 
 uint8_t eth_set_memory_type() {
   /*INFO("Install the right memory type for rx_bufs...\n");
-  if (pat_set_memory_type_range((uint64_t)rx_bufs, MEMORY_TYPE_UC, RX_DESC_COUNT
-        * NET_BUF_SIZE)) {
-    INFO("Failed to install the right memory type for rx_bufs...\n");
-    return -1;
-  }
-  INFO("Install the right memory type for tx_bufs...\n");
-  if (pat_set_memory_type_range((uint64_t)tx_bufs, MEMORY_TYPE_UC, TX_DESC_COUNT
-        * NET_BUF_SIZE)) {
-    INFO("Failed to install the right memory type for tx_bufs...\n");
-    return -1;
-  }
+    if (pat_set_memory_type_range((uint64_t)rx_bufs, MEMORY_TYPE_UC, RX_DESC_COUNT
+   * NET_BUF_SIZE)) {
+   INFO("Failed to install the right memory type for rx_bufs...\n");
+   return -1;
+   }
+   INFO("Install the right memory type for tx_bufs...\n");
+   if (pat_set_memory_type_range((uint64_t)tx_bufs, MEMORY_TYPE_UC, TX_DESC_COUNT
+   * NET_BUF_SIZE)) {
+   INFO("Failed to install the right memory type for tx_bufs...\n");
+   return -1;
+   }
   // XXX
   INFO("Install the right memory type for rx_bufs...\n");
   if (pat_set_memory_type_range((uint64_t)rx_descs, MEMORY_TYPE_UC, 0x1000)) {
-    INFO("Failed to install the right memory type for rx_bufs...\n");
-    return -1;
+  INFO("Failed to install the right memory type for rx_bufs...\n");
+  return -1;
   }
   // XXX
   INFO("Install the right memory type for tx_bufs...\n");
   if (pat_set_memory_type_range((uint64_t)tx_descs, MEMORY_TYPE_UC, 0x1000)) {
-    INFO("Failed to install the right memory type for tx_bufs...\n");
-    return -1;
+  INFO("Failed to install the right memory type for tx_bufs...\n");
+  return -1;
   }*/
   return 0;
 }
@@ -212,7 +212,7 @@ int eth_init() {
   // uint32_t extcnf_ctrl;
   /*if (eth_set_memory_type()) {
     return -1;
-  }*/
+    }*/
   // Change the cache policy for the buffers and descriptors with PAT
   INFO("Experimental Intel 82579LM Ethernet driver initialization\n\r");
   eth_disable_interrupts();
@@ -220,8 +220,8 @@ int eth_init() {
   eth_disable_interrupts();
   // Gain acces to the shared registers
   /* uint32_t extcnf_ctrl = cpu_mem_readd(bar0 + REG_EXTCNF_CTRL);
-  extcnf_ctrl &= ~EXTCNF_CNTRL_GATEPHYCONF;
-  cpu_mem_writed(bar0 + REG_EXTCNF_CTRL, extcnf_ctrl | EXTCNF_CTRL_SWFLAG);*/
+     extcnf_ctrl &= ~EXTCNF_CNTRL_GATEPHYCONF;
+     cpu_mem_writed(bar0 + REG_EXTCNF_CTRL, extcnf_ctrl | EXTCNF_CTRL_SWFLAG);*/
   INFO("Initializing ethernet\n");
   // Get the mac address
   uint32_t laddr_l = cpu_mem_readd(bar0 + REG_RAL);
@@ -261,20 +261,20 @@ int eth_init() {
   cpu_mem_writed(bar0 + REG_RDH, 0);
   cpu_mem_writed(bar0 + REG_RDT, RX_DESC_COUNT - 1);
   cpu_mem_writed(bar0 + REG_RCTL, RCTL_EN | RCTL_SBP | /*RCTL_UPE | RCTL_MPE
-      | */RCTL_LBM_NONE | RTCL_RDMTS_HALF | RCTL_BAM | RCTL_SECRC | RCTL_BSIZE_2048);
-  // Transmit setup
-  for (i = 0; i < TX_DESC_COUNT; i++) {
-    trans_desc *tx_desc = tx_descs + i;
-    tx_desc->status = TSTA_DD;      // mark descriptor as 'complete'
-    //INFO("@0x%x tx_desc[0x%x]{addr: 0x%x, status: 0x%x}\n", tx_desc, i, tx_desc->addr, tx_desc->status);
-  }
+                                                         | */RCTL_LBM_NONE | RTCL_RDMTS_HALF | RCTL_BAM | RCTL_SECRC | RCTL_BSIZE_2048);
+    // Transmit setup
+    for (i = 0; i < TX_DESC_COUNT; i++) {
+      trans_desc *tx_desc = tx_descs + i;
+      tx_desc->status = TSTA_DD;      // mark descriptor as 'complete'
+      //INFO("@0x%x tx_desc[0x%x]{addr: 0x%x, status: 0x%x}\n", tx_desc, i, tx_desc->addr, tx_desc->status);
+    }
   cpu_mem_writed(bar0 + REG_TDBAL, (uintptr_t)tx_descs);
   cpu_mem_writed(bar0 + REG_TDBAH, (uintptr_t)tx_descs >> 32);
   cpu_mem_writed(bar0 + REG_TDLEN, TX_DESC_COUNT * sizeof(trans_desc));
   cpu_mem_writed(bar0 + REG_TDH, 0);
   cpu_mem_writed(bar0 + REG_TDT, 0);
-//  cpu_mem_writed(bar0 + REG_TCTL, TCTL_EN | TCTL_PSP | (15 << TCTL_CT_SHIFT)
-//      | (64 << TCTL_COLD_SHIFT) | TCTL_RTLC);
+  //  cpu_mem_writed(bar0 + REG_TCTL, TCTL_EN | TCTL_PSP | (15 << TCTL_CT_SHIFT)
+  //      | (64 << TCTL_COLD_SHIFT) | TCTL_RTLC);
   cpu_mem_writed(bar0 + REG_TCTL, TCTL_EN | TCTL_PSP | TCTL_RTLC);
   // Finally dump the registers
   eth_print_registers_general();
@@ -288,20 +288,20 @@ int eth_init() {
 static inline void eth_wait_tx(uint8_t idx) {
   trans_desc *tx_desc = tx_descs + idx;
   // Wait until the packet is send
-  INFO("WAIT status idx(0x%x), status(0x%x)\n", idx, tx_desc->status & 0xf);
-	// XXX
+  // INFO("WAIT status idx(0x%x), status(0x%x)\n", idx, tx_desc->status & 0xf);
+  // XXX
   while (!(tx_desc->status & 0xf)) {
     wait((uint64_t)100000000000);
-    INFO("WAIT status idx(0x%x), status(0x%x)\n", idx, tx_desc->status & 0xf);
+    // INFO("WAIT status idx(0x%x), status(0x%x)\n", idx, tx_desc->status & 0xf);
   }
 }
 
 void eth_send(const void *buf, uint16_t len, uint8_t block) {
-	// Current transmition descriptor index
+  // Current transmition descriptor index
   static uint8_t idx = 0;
   // Wait for the precedent descriptor being ready
   eth_wait_tx(idx);
-	// Copy the buf into the tx_buf
+  // Copy the buf into the tx_buf
   trans_desc *tx_desc = tx_descs + idx;
   uint8_t *b = tx_bufs + (idx * NET_BUF_SIZE);
   memcpy(b, (void *)buf, len);
@@ -315,16 +315,16 @@ void eth_send(const void *buf, uint16_t len, uint8_t block) {
 
   // Increment the current tx decriptor
   idx = (idx + 1) & (TX_DESC_COUNT - 1);
-  INFO("TX idx 0x%x\n", idx);
+  // INFO("TX idx 0x%x\n", idx);
   cpu_mem_writed(bar0 + REG_TDT, idx);
   // Should be before the incrementation instead we wait for the next, which is
   // true until the queue might be full
   if (block) {
     eth_wait_tx(idx);
   }
-  eth_print_all();
-  eth_print_tx_descs();
-  eth_print_rx_descs();
+  // eth_print_all();
+  // eth_print_tx_descs();
+  // eth_print_rx_descs();
 }
 
 static inline void eth_wait_rx(uint8_t idx) {
@@ -335,40 +335,49 @@ static inline void eth_wait_rx(uint8_t idx) {
   }
 }
 
-uint32_t eth_recv(void *buf, uint32_t len, uint8_t block) {
+int eth_recv(void *buf, uint32_t len, uint8_t block) {
   // Current receive descriptor index
   static uint8_t idx = 0;
+  static uint64_t rx_count = 0;
 
-	// Wait for a packet
+  // Wait for a packet
   if (block) {
     eth_wait_rx(idx);
   }
   // Copy the buf into the rx_buf
   recv_desc *rx_desc = rx_descs + idx;
   uint32_t l = 0;
-  while ((rx_desc->status & RSTA_DD) && (l < len)) {
-// XXX
-//    if (rx_desc->errors) {
-//       INFO("Packet Error: (0x%02x)\n", rx_desc->errors);
-//       INFO("Packet Status: (0x%02x)\n", rx_desc->status);
-//		} else {
-      uint8_t *b = rx_bufs + (idx * NET_BUF_SIZE);
-      uint32_t len = rx_desc->len;
-      memcpy((void *)buf, b, len);
-      // desc->addr = (u64)(uintptr_t)buf->start;
-      buf = (uint8_t *)buf + len;
-      l += len;
-//    }
+
+  if (rx_desc->status & RSTA_DD) {
+    // XXX
+    //    if (rx_desc->errors) {
+    //       INFO("Packet Error: (0x%02x)\n", rx_desc->errors);
+    //       INFO("Packet Status: (0x%02x)\n", rx_desc->status);
+    //		} else {
+    uint8_t *b = rx_bufs + (idx * NET_BUF_SIZE);
+    uint32_t len = rx_desc->len;
+    memcpy((void *)buf, b, len);
+    // desc->addr = (u64)(uintptr_t)buf->start;
+    l = len;
+    //    }
 
     rx_desc->status = 0;
-		// XXX
-		rx_desc->errors = 0;
+    // XXX
+    rx_desc->errors = 0;
 
-		// Flush data cache line
+    // Flush data cache line
     cpu_clflush(rx_desc);
     cpu_mem_writed(bar0 + REG_RDT, idx);
     idx = (idx + 1) & (RX_DESC_COUNT - 1);
+
+    // Add to counter
+    rx_count++;
+
+    INFO("Frame received : 0x%016x\n", rx_count);
+  } else {
+    return -1;
   }
+
   return l;
 }
 

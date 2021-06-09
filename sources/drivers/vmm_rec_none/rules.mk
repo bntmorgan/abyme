@@ -26,7 +26,7 @@ OBJS_$(d)				:= $(call SRC_2_OBJ, $(d)/ids.o)
 
 OBJECTS 				+= $(OBJS_$(d))
 
-$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -I$(d)/vmm_rec -U_DEBUG_SERVER \
+$(OBJS_$(d))		:  CC_FLAGS_TARGET	:= -I$(d) -I$(d)/vmm_rec -D_DEBUG_SERVER \
 											-U_NO_PRINTK
 
 $(TARGET_ELF)				:  LD_FLAGS_SCRIPT 	:= -T $(LIBVMM_SRC_PATH)/efi.ld

@@ -59,7 +59,7 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systab) {
   INFO("Wait for ARP is-at reply\n");
   memset(&buf[0], 0, ETHERNET_SIZE);
   eth->eth_recv(buf, ETHERNET_SIZE, 1);
-  microudp_handle_frame(eb);
+  microudp_handle_frame(eb, NULL);
 
   INFO("DONE\n");
 

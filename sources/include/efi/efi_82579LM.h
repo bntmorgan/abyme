@@ -42,7 +42,7 @@ typedef struct _protocol_82579LM {
   uint32_t (*recv)(void *, uint32_t, uint8_t);
   // Ethernet send and receive
   void (*eth_send)(const void *buf, uint16_t len, uint8_t block);
-  uint32_t (*eth_recv)(void *buf, uint32_t len, uint8_t block);
+  int (*eth_recv)(void *buf, uint32_t len, uint8_t block);
   int (*get_level)(void);
   int (*uninstall)(void);
   struct {

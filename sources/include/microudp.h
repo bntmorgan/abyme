@@ -150,5 +150,6 @@ void microudp_set_cache(union ethernet_buffer *buffer);
 uint16_t microudp_start_arp(union ethernet_buffer *buffer, uint32_t ip,
                             uint16_t opcode);
 
-uint16_t microudp_handle_frame(union ethernet_buffer* buffer);
+uint16_t microudp_handle_frame(union ethernet_buffer *in,
+    union ethernet_buffer *out);
 #endif//__MICROUDP_H__

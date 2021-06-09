@@ -3,8 +3,8 @@ mode 100 31
 echo Startup !
 fs0:
 # vmm_rec.nsh
-# none.nsh
-loader.nsh
+none.nsh
+# loader.nsh
 # rec_eric.nsh
 # cache.nsh
 # env.nsh
